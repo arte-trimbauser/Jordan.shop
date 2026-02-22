@@ -1,8 +1,7 @@
-require("dotenv").config();
+require("dotenv").config({ path: "./.env" }); // Garante a leitura do .env na raiz
 const { Client, GatewayIntentBits, Partials } = require("discord.js");
 const express = require("express");
 
-// Cria o client
 const client = new Client({ 
   intents: [
     GatewayIntentBits.Guilds, 
@@ -12,20 +11,19 @@ const client = new Client({
   partials: [Partials.Channel] 
 });
 
-// Eventos
+// Importação dos Eventos
 const readyEvent = require("./events/ready");
 const errorEvent = require("./events/error");
 const interactionCreateEvent = require("./events/interactionCreate");
 
-// Ativa eventos
+// Ativação dos Eventos
 client.once("ready", () => readyEvent(client));
 errorEvent(client);
-interactionCreateEvent(client); // <- aqui, passa o client
+interactionCreateEvent(client);
 
-// Express
+// Servidor Web (para manter o bot vivo no Replit/Render)
 const app = express();
 app.get("/healthz", (req, res) => res.send("OK"));
-app.listen(process.env.PORT || 10000, () => console.log("🌐 Servidor web ativo") );
+app.listen(process.env.PORT || 10000, () => console.log("🌐 Servidor web ativo"));
 
-// Login
 client.login(process.env.DISCORD_TOKEN);
