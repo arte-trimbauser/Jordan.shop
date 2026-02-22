@@ -322,7 +322,7 @@ Outras quantidades  ➟ Negociado em ticket`,
     { label: "Aegis", description: "EUR €70.00 USD $75.60 BRL R$378.00", value: "• Aegis EUR €70.00 USD $75.60 BRL R$378.00" },
     { label: "Advanced", description: "EUR €120.00 USD $129.60 BRL R$648.00", value: "• Advanced EUR €120.00 USD $129.60 BRL R$648.00" }
     ],
-    ticketMessage: (tipo) => "obrigado(a) por criar um ticket, em breve algum staff te ajudara"
-    embedImage: "https://i.postimg.cc/pVzDGPGt/imagem-2025-10-25-183004200.png" // Link da logo Sneak Solutions
+    ticketMessage: (tipo) => "obrigado(a) por criar um ticket, em breve algum staff te ajudara",
+    embedImage: "https://i.postimg.cc/pVzDGPGt/imagem-2025-10-25-183004200.png" 
   }
 ];
