@@ -316,7 +316,7 @@ Outras quantidades  ➟ Negociado em ticket`,
     id: "1456982867799445751",
     title: "Standard Bypass Prices",
     color: "#EBEBEB",
-    embedDesc: "• **Public**\n\nEUR €35.00\nUSD $37.80\nBRL R$189.00\n\n• **Aegis**\n\nEUR €70.00\nUSD $75.60\nBRL R$378.00\n\n• **Advanced**\n\nEUR €120.00\nUSD $129.60\nBRL R$648.00\n\n© Todos os direitos Da SneaK Solutions®",
+    embedDesc: "• **Public**\n\nEUR €35.00\nUSD $37.80\nBRL R$189.00\n\n• **Aegis**\n\nEUR €70.00\nUSD $75.60\nBRL R$378.00\n\n• **Advanced**\n\nEUR €120.00\nUSD $129.60\nBRL R$648.00\n\n©️ Todos os direitos Da SneaK Solutions®",
   options: [
     { label: "Public", description: "EUR €35.00 USD $37.80 BRL R$189.00", value: "• Public EUR €35.00 USD $37.80 BRL R$189.00" },
     { label: "Aegis", description: "EUR €70.00 USD $75.60 BRL R$378.00", value: "• Aegis EUR €70.00 USD $75.60 BRL R$378.00" },
