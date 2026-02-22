@@ -323,5 +323,6 @@ Outras quantidades  ➟ Negociado em ticket`,
     { label: "Advanced", description: "EUR €120.00 USD $129.60 BRL R$648.00", value: "• Advanced EUR €120.00 USD $129.60 BRL R$648.00" }
     ],
     ticketMessage: (tipo) => "obrigado(a) por criar um ticket, em breve algum staff te ajudara"
+    embedImage: "https://i.postimg.cc/pVzDGPGt/imagem-2025-10-25-183004200.png" // Link da logo Sneak Solutions
   }
 ];
