@@ -156,12 +156,12 @@ module.exports = [
 {
     id: "1456982867799445751",
     title: "Standard Bypass Prices",
-    color: "#2b2d31",
+    color: "#EBEBEB",
     embedDesc: "• **Public**\n\nEUR €35.00\nUSD $37.80\nBRL R$189.00\n\n• **Aegis**\n\nEUR €70.00\nUSD $75.60\nBRL R$378.00\n\n• **Advanced**\n\nEUR €120.00\nUSD $129.60\nBRL R$648.00\n\n© Todos os direitos Da SneaK Solutions®",
-    options: [
-      { label: "Public", description: "€35.00 / R$189.00", value: "bypass_public" },
-      { label: "Aegis", description: "€70.00 / R$378.00", value: "bypass_aegis" },
-      { label: "Advanced", description: "€120.00 / R$648.00", value: "bypass_advanced" }
+  options: [
+    { label: "Public", description: "EUR €35.00 USD $37.80 BRL R$189.00", value: "• Public EUR €35.00 USD $37.80 BRL R$189.00" },
+    { label: "Aegis", description: "EUR €70.00 USD $75.60 BRL R$378.00", value: "• Aegis EUR €70.00 USD $75.60 BRL R$378.00" },
+    { label: "Advanced", description: "EUR €120.00 USD $129.60 BRL R$648.00", value: "• Advanced EUR €120.00 USD $129.60 BRL R$648.00" }
     ],
     ticketMessage: (tipo) => "obrigado(a) por criar um ticket, em breve algum staff te ajudara"
   }
