@@ -1,13 +1,46 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField } = require("discord.js");
 const config = require("../config");
-const isStaff = require("../helpers/isStaff");
-const sendTranscript = require("../helpers/sendTranscript");
-const menus = require("../menus");
+const OpenAI = require('openai');
+
+// --- Configuração OpenAI ---
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const memory = new Map();
+const MAX_HISTORY = 6;
+const SYSTEM_PROMPT = `És um assistente inteligente no Discord (Jordan Shop). Respondes em PT-PT.`;
 
 module.exports = async (client) => {
   client.on("interactionCreate", async (interaction) => {
     try {
       const { channel, user, customId, member } = interaction;
+
+      /* ================== 1. SLASH COMMANDS (/chat) ================== */
+      if (interaction.isChatInputCommand()) {
+        if (interaction.commandName === 'chat') {
+          const userPrompt = interaction.options.getString('mensagem');
+          await interaction.deferReply();
+
+          if (!memory.has(user.id)) memory.set(user.id, []);
+          const history = memory.get(user.id);
+          history.push({ role: 'user', content: userPrompt });
+
+          try {
+            const completion = await openai.chat.completions.create({
+              model: 'gpt-4o-mini',
+              messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...history],
+              temperature: 0.7
+            });
+
+            const reply = completion.choices[0].message.content;
+            history.push({ role: 'assistant', content: reply });
+            if (history.length > MAX_HISTORY) history.shift();
+
+            return await interaction.editReply(reply);
+          } catch (err) {
+            console.error(err);
+            return await interaction.editReply('❌ Erro na OpenAI.');
+          }
+        }
+      }
 
       /* ================== 1. SELEÇÃO NO MENU (TERMOS) ================== */
       if (interaction.isStringSelectMenu() && customId === "menu_ticket") {
