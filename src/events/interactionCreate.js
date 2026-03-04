@@ -1,108 +1,76 @@
-const { 
-    EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, 
-    PermissionsBitField, StringSelectMenuBuilder 
-} = require("discord.js");
-const config = require("../config");
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField, MessageFlags } = require("discord.js");
 const discordTranscripts = require("discord-html-transcripts");
-const fs = require("fs");
 const path = require("path");
+const fs = require("fs");
 
-// Função para gerar e guardar o log no site
-async function sendTranscript(channel, userTag) {
+async function saveLog(channel) {
     try {
-        // Caminho absoluto para a pasta na raiz do projeto
-        const pastaTranscripts = path.resolve(__dirname, "../../transcripts");
-        
-        if (!fs.existsSync(pastaTranscripts)) {
-            fs.mkdirSync(pastaTranscripts, { recursive: true });
-        }
+        const pasta = path.resolve(__dirname, "../../transcripts");
+        if (!fs.existsSync(pasta)) fs.mkdirSync(pasta, { recursive: true });
 
-        const attachment = await discordTranscripts.createTranscript(channel, {
-            limit: -1,
-            filename: `ticket-${channel.name}.html`,
+        const transcript = await discordTranscripts.createTranscript(channel, {
+            limit: -1, 
+            filename: `ticket-${channel.name}.html`, 
             saveImages: true,
             poweredBy: false
         });
 
         const nomeFicheiro = `ticket-${channel.name}.html`.replace(/\s+/g, '_');
-        const caminhoCompleto = path.join(pastaTranscripts, nomeFicheiro);
-        
-        fs.writeFileSync(caminhoCompleto, attachment.attachment);
-        console.log(`✅ Log guardado em: ${caminhoCompleto}`);
-
-        const logChannel = await channel.guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID).catch(() => null);
-        if (logChannel) {
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setLabel("Ver no Site")
-                    .setURL(`https://jordan-shop-site.onrender.com/transcripts/${nomeFicheiro}`)
-                    .setStyle(ButtonStyle.Link)
-            );
-            await logChannel.send({ 
-                content: `📄 Ticket: ${channel.name} | Fechado por: ${userTag}`, 
-                components: [row], 
-                files: [attachment] 
-            });
-        }
-    } catch (err) {
-        console.error("❌ Erro ao gerar transcript:", err);
+        fs.writeFileSync(path.join(pasta, nomeFicheiro), transcript.attachment);
+        console.log(`✅ Log guardado em: ${path.join(pasta, nomeFicheiro)}`);
+        return nomeFicheiro;
+    } catch (e) {
+        console.error("❌ Erro ao salvar log:", e);
+        return null;
     }
 }
 
 module.exports = async (client) => {
     client.on("interactionCreate", async (interaction) => {
         try {
-            const { channel, user, member, customId: cid } = interaction;
+            const { channel, user, customId: cid } = interaction;
 
-            // --- ABERTURA DE TICKET (O QUE ESTAVA A FALHAR) ---
             if (interaction.isStringSelectMenu() && cid === "menu_ticket") {
-                const tipo = interaction.values[0];
-                const row = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId(`aceitar_termos_${tipo}`).setLabel("Aceitar Termos").setStyle(ButtonStyle.Success),
-                    new ButtonBuilder().setCustomId("recusar_termos").setLabel("Recusar").setStyle(ButtonStyle.Danger)
+                const item = interaction.values[0];
+                const btn = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId(`confirm_${item}`).setLabel("Confirmar Abertura").setStyle(ButtonStyle.Success)
                 );
-                return interaction.reply({ content: "📜 Aceitas os termos da Jordan Shop?", components: [row], ephemeral: true });
+                return interaction.reply({ content: `Abrir ticket para ${item}?`, components: [btn], flags: [MessageFlags.Ephemeral] });
             }
 
-            if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
-                const tipo = cid.replace("aceitar_termos_", "");
-                await interaction.update({ content: "⏳ A criar o teu ticket...", components: [], ephemeral: true });
-                
-                let category = interaction.guild.channels.cache.find(c => c.name === config.CATEGORY_NAME && c.type === 4);
-                if (!category) category = await interaction.guild.channels.create({ name: config.CATEGORY_NAME, type: 4 });
+            if (interaction.isButton() && cid.startsWith("confirm_")) {
+                const tipo = cid.replace("confirm_", "");
+                await interaction.update({ content: "⏳ A criar canal...", components: [], flags: [MessageFlags.Ephemeral] });
 
                 const canal = await interaction.guild.channels.create({
-                    name: `ticket-${tipo}-${user.username}`.toLowerCase(),
-                    parent: category.id,
-                    topic: user.id,
+                    name: `ticket-${tipo}-${user.username}`,
+                    type: 0,
                     permissionOverwrites: [
                         { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-                        { id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-                        ...config.STAFF_ROLES.map(id => ({ id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }))
+                        { id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
                     ]
                 });
 
-                const row = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId("close_ticket").setLabel("❌ Fechar").setStyle(ButtonStyle.Danger)
+                const closeBtn = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId("close_now").setLabel("Fechar Ticket").setStyle(ButtonStyle.Danger)
                 );
-                await canal.send({ content: `✅ Ticket aberto para ${user}!\nProduto: **${tipo.toUpperCase()}**`, components: [row] });
-                return interaction.editReply({ content: `Teu ticket: <#${canal.id}>` });
+                await canal.send({ content: `✅ Ticket de **${tipo.toUpperCase()}** aberto!`, components: [closeBtn] });
             }
 
-            // --- FECHO DE TICKET ---
-            if (interaction.isButton() && cid === "close_ticket") {
-                const row = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId("confirm_close").setLabel("Confirmar Fecho").setStyle(ButtonStyle.Danger)
-                );
-                return interaction.reply({ content: "Queres mesmo fechar este ticket?", components: [row], ephemeral: true });
-            }
+            if (interaction.isButton() && cid === "close_now") {
+                // Resolve o erro Unknown Interaction dando tempo ao bot
+                await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+                
+                const nomeFicheiro = await saveLog(channel);
+                
+                if (nomeFicheiro) {
+                    await interaction.editReply(`✅ Log arquivado! Podes ver no site em breve.`);
+                } else {
+                    await interaction.editReply(`⚠️ Erro ao salvar log, mas o canal será fechado.`);
+                }
 
-            if (interaction.isButton() && cid === "confirm_close") {
-                await interaction.update({ content: "📂 A arquivar e a apagar...", components: [] });
-                await sendTranscript(channel, user.tag);
                 setTimeout(() => channel.delete().catch(() => {}), 3000);
             }
-
         } catch (err) {
             console.error("Erro na interação:", err);
         }
