@@ -7,6 +7,8 @@ const config = require("../config");
 const menus = require("../menus");
 const discordTranscripts = require("discord-html-transcripts");
 const OpenAI = require('openai');
+const fs = require("fs");
+const path = require("path");
 
 // --- Configuração OpenAI ---
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -20,7 +22,7 @@ const clienteCooldown = new Map();
 const staffCooldown = new Map();
 const CLIENTE_WAIT = 5 * 60 * 1000;
 const STAFF_WAIT = 2 * 60 * 1000;
-const DEV_IDS = ["TEU_ID_AQUI"]; // Coloca aqui o teu ID de Discord
+const DEV_IDS = ["1447241549489639661"]; 
 
 // --- Helpers de Pagamento e Países ---
 const COUNTRIES = [
@@ -46,29 +48,45 @@ function isStaff(member) {
            member.permissions?.has(PermissionsBitField.Flags.Administrator);
 }
 
-function validateDateStr(dateStr) {
-    if (!dateStr) return false;
-    const re1 = /^([0-2]\d|3[01])\/(0\d|1[0-2])\/\d{4}$/;
-    const re2 = /^\d{4}-(0[1-9]|1[0-2])-([0-2]\d|3[01])$/;
-    return re1.test(dateStr) || re2.test(dateStr);
-}
-
-// Helper para Transcrição
+// NOVA FUNÇÃO DE TRANSCRIPT (LIGAÇÃO AO SITE)
 async function sendTranscript(channel, userTag, format) {
-    const logChannel = await channel.guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID).catch(() => null);
-    if (!logChannel) return;
+    try {
+        const logChannel = await channel.guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID).catch(() => null);
+        
+        // Garante que a pasta existe no servidor
+        const pastaTranscripts = path.join(__dirname, "../../transcripts");
+        if (!fs.existsSync(pastaTranscripts)) fs.mkdirSync(pastaTranscripts, { recursive: true });
 
-    const attachment = await discordTranscripts.createTranscript(channel, {
-        limit: -1,
-        filename: `ticket-${channel.name}.${format}`,
-        saveImages: true,
-        poweredBy: false
-    });
+        const attachment = await discordTranscripts.createTranscript(channel, {
+            limit: -1,
+            filename: `ticket-${channel.name}.html`,
+            saveImages: true,
+            poweredBy: false
+        });
 
-    await logChannel.send({
-        content: `📄 Transcrição de ${channel.name} | Fechado por: ${userTag}`,
-        files: [attachment]
-    });
+        // Guarda o ficheiro para o site ler
+        const nomeFicheiro = `ticket-${channel.name}.html`.replace(/\s+/g, '_');
+        fs.writeFileSync(path.join(pastaTranscripts, nomeFicheiro), attachment.attachment);
+
+        if (logChannel) {
+            const embed = new EmbedBuilder()
+                .setTitle("📄 Transcrição Arquivada")
+                .setDescription(`**Canal:** \`${channel.name}\`\n**Fechado por:** \`${userTag}\``)
+                .setColor("#b00000")
+                .setTimestamp();
+
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setLabel("Ver no Painel Web")
+                    .setURL(`https://jordan-shop-site.onrender.com/transcripts/${nomeFicheiro}`)
+                    .setStyle(ButtonStyle.Link)
+            );
+
+            await logChannel.send({ embeds: [embed], components: [row], files: [attachment] });
+        }
+    } catch (err) {
+        console.error("Erro ao gerar transcript:", err);
+    }
 }
 
 module.exports = async (client) => {
@@ -95,7 +113,7 @@ module.exports = async (client) => {
                     if (history.length > MAX_HISTORY) history.shift();
                     return await interaction.editReply(reply);
                 } catch (err) {
-                    return await interaction.editReply('❌ Erro na OpenAI. Verifica a tua API Key.');
+                    return await interaction.editReply('❌ Erro na OpenAI.');
                 }
             }
 
@@ -103,8 +121,25 @@ module.exports = async (client) => {
             if (interaction.isStringSelectMenu() && cid === "menu_ticket") {
                 const tipo = interaction.values[0];
                 const termosEmbed = new EmbedBuilder()
-                    .setTitle("⚖️ Termos de Serviço - Jordan Shop")
-                    .setDescription("Teus termos aqui...") // Coloca o teu texto longo aqui
+                    .setTitle("📜 Termos de Serviço")
+                    .setDescription(`
+🔁 **Termos de Serviço de Reembolso**
+Não oferecemos reembolsos após a conclusão de uma compra ou serviço.
+
+🔄 **Termos de Serviço de Substituição**
+A substituição só é possível com um voucher.
+Sem voucher = sem garantia ou substituição.
+
+👤 **Termos de Serviço da Conta**
+Altere e-mail e senha imediatamente. Não nos responsabilizamos após a entrega.
+
+💸 **Termos de Serviço do PayPal**
+Pagamentos via "Amigos e Familiares" – sem mensagem.
+
+🌐 **Idioma do Ticket**
+Suporte apenas em Português.
+
+**Atenciosamente, Jordan.**`)
                     .setColor("#ff0000");
 
                 const row = new ActionRowBuilder().addComponents(
@@ -162,32 +197,11 @@ module.exports = async (client) => {
                 }
             }
 
-            /* ================== 4. SISTEMA DE VENDA ================== */
-            if (interaction.isButton() && cid === "sale_yes") {
-                if (!isStaff(member)) return;
-                
-                const rows = [
-                    new ActionRowBuilder().addComponents(
-                        new StringSelectMenuBuilder().setCustomId("sale_country_select").setPlaceholder("País").addOptions(COUNTRIES)
-                    ),
-                    new ActionRowBuilder().addComponents(
-                        new StringSelectMenuBuilder().setCustomId("sale_payment_select").setPlaceholder("Pagamento").addOptions(PAYMENT_METHODS)
-                    ),
-                    new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId("sale_date_modal").setLabel("🗓️ Data").setStyle(ButtonStyle.Primary),
-                        new ButtonBuilder().setCustomId("sale_register").setLabel("✅ Finalizar").setStyle(ButtonStyle.Success)
-                    )
-                ];
-
-                saleDrafts.set(channel.id, { date: null, country: null, payment: null });
-                return interaction.reply({ content: "Preenche os dados da venda:", components: rows, ephemeral: true });
-            }
-
-            // ... (Restante da lógica de SelectMenus e Modals para Venda)
-            if (cid === "sale_no") {
+            /* ================== 4. FINALIZAÇÃO (TRANSCRIPT) ================== */
+            if (interaction.isButton() && cid === "sale_no") {
+                await interaction.update({ content: "📂 A gerar transcrição e a fechar...", components: [] });
                 await sendTranscript(channel, user.tag, "html");
-                await interaction.reply("Apagando canal...");
-                setTimeout(() => channel.delete(), 2000);
+                setTimeout(() => channel.delete().catch(() => {}), 3000);
             }
 
         } catch (err) {
