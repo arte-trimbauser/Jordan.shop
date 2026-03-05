@@ -36,15 +36,25 @@ const client = new Client({
     ]
 });
 
-// Importa o teu ficheiro de interações que corrigimos
-const interactionHandler = require('./src/interactionCreate'); 
+// 1. IMPORTA O HANDLER (Caminho corrigido para a pasta events)
+const interactionHandler = require('./events/interactionCreate'); 
+
+// 2. LIGA O BOT
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ]
+});
+
+// 3. PASSA O CLIENT PARA O HANDLER
 interactionHandler(client);
 
 client.once('ready', () => {
-    console.log(`✅ Bot ${client.user.tag} está ONLINE no Discord!`);
+    console.log(`✅ Bot ${client.user.tag} está ONLINE!`);
 });
 
-// Usa o Token que está no teu .env do Render
 client.login(process.env.DISCORD_TOKEN);
 
 app.listen(PORT, () => {
