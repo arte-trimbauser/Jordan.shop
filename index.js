@@ -40,14 +40,34 @@ app.get('/api/transcripts', (req, res) => {
     });
 });
 
-// Rota específica para abrir/baixar um log
 app.get('/transcripts/:name', (req, res) => {
-    const filePath = path.join(transcriptsDir, req.params.name);
+    const fileName = req.params.name;
+    const filePath = path.join(transcriptsDir, fileName);
+
+    // 1. Tenta encontrar o caminho exato
     if (fs.existsSync(filePath)) {
-        res.sendFile(filePath);
-    } else {
-        res.status(404).send("❌ Erro: Este registo não existe no servidor (pode ter sido apagado num reinício).");
+        return res.sendFile(filePath);
     }
+
+    // 2. Se não encontrou, procura por qualquer ficheiro que contenha esse nome na pasta
+    // (Isso resolve o problema do "ticket-ticket-")
+    const files = fs.readdirSync(transcriptsDir);
+    const foundFile = files.find(f => f.includes(fileName.replace('ticket-', '')));
+
+    if (foundFile) {
+        return res.sendFile(path.join(transcriptsDir, foundFile));
+    }
+
+    // 3. Se mesmo assim não der:
+    console.log("❌ Arquivo não encontrado:", fileName);
+    res.status(404).send(`
+        <body style="background: #1a1a1a; color: white; text-align: center; font-family: sans-serif; padding-top: 50px;">
+            <h1>404 - Log Não Encontrado</h1>
+            <p>O ficheiro <b>${fileName}</b> não existe no servidor.</p>
+            <p>Dica: Feche um ticket novo no Discord para gerar um log atualizado.</p>
+            <a href="/" style="color: #5865F2;">Voltar ao Início</a>
+        </body>
+    `);
 });
 
 // Sistema de Login OAuth2
