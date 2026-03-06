@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jordan Shop | Painel de Administração</title>
+    <style>
+        :root {
+            --bg-color: #0b0b0b;
+            --sidebar-color: #1a0000;
+            --accent-color: #b00000;
+            --text-color: #ffffff;
+            --card-bg: #151515;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Barra Lateral */
+        .sidebar {
+            width: 250px;
+            background-color: var(--sidebar-color);
+            border-right: 2px solid var(--accent-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sidebar h2 {
+            text-align: center;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--accent-color);
+            padding-bottom: 10px;
+        }
+
+        .menu-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: left;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .menu-btn:hover {
+            background-color: #ff0000;
+            transform: translateX(5px);
+        }
+
+        /* Área de Conteúdo */
+        .main-content {
+            flex-grow: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .header-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border: 1px solid #333;
+        }
+
+        /* Estilo dos Transcripts */
+        .transcript-card {
+            background: var(--card-bg);
+            border: 1px solid #333;
+            border-left: 5px solid var(--accent-color);
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .transcript-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .view-btn {
+            background: #222;
+            color: white;
+            border: 1px solid var(--accent-color);
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .view-btn:hover {
+            background: var(--accent-color);
+        }
+
+        iframe {
+            width: 100%;
+            height: 500px;
+            border: 1px solid var(--accent-color);
+            margin-top: 15px;
+            border-radius: 5px;
+            background: white; /* Para leitura clara do transcript */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>Jordan Shop v1.0</h2>
+        <button class="menu-btn" onclick="location.reload()">🏠 Home</button>
+        <button class="menu-btn" onclick="carregarTranscripts()">📄 Transcripts</button>
+        <button class="menu-btn">💰 Vendas</button>
+        <button class="menu-btn">🛡️ Reivindicações</button>
+        <button class="menu-btn">🤖 Bot Online</button>
+    </div>
+
+    <div class="main-content">
+        <div class="header-status">
+            <h1 id="page-title">Painel de Administração</h1>
+            <span style="color: #00ff00;">● Bot Online</span>
+        </div>
+
+        <div id="conteudo-dinamico">
+            <p>Selecione uma opção no menu lateral para gerir a loja.</p>
+        </div>
+    </div>
+
+    <script>
+        async function carregarTranscripts() {
+            const container = document.getElementById('conteudo-dinamico');
+            document.getElementById('page-title').innerText = "Gestão de Transcripts";
+            
+            container.innerHTML = "<p>A ler a pasta de logs...</p>";
+
+            try {
+                // Faz o pedido à API que criámos no index.js
+                const response = await fetch('/api/transcripts');
+                const logs = await response.json();
+
+                if (logs.length === 0) {
+                    container.innerHTML = "<p style='color: #888;'>Nenhum registo encontrado na pasta 'transcripts'.</p>";
+                    return;
+                }
+
+                // Cria a lista de ficheiros
+                container.innerHTML = logs.map(nome => `
+                    <div class="transcript-card">
+                        <div class="transcript-info">
+                            <span><strong>Ficheiro:</strong> ${nome}</span>
+                            <button class="view-btn" onclick="toggleLog('${nome}')">Visualizar Log</button>
+                        </div>
+                        <div id="container-${nome}" style="display:none;">
+                            <iframe src="/transcripts/${nome}"></iframe>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                container.innerHTML = "<p style='color: red;'>Erro ao carregar API. Verifica se o Bot está ligado no Render.</p>";
+            }
+        }
+
+        function toggleLog(id) {
+            const el = document.getElementById(`container-${id}`);
+            if (el.style.display === "none") {
+                el.style.display = "block";
+            } else {
+                el.style.display = "none";
+            }
+        }
+    </script>
+
+</body>
+</html>

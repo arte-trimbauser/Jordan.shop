@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jordan Shop - Login</title>
+    <link rel="icon" type="image/png" href="logo.png">
+
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; background: #000; }
+        
+        .site-container {
+            width: 100%; height: 100%;
+            background: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1)), url('login.jpg');
+            background-size: cover; background-position: center;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+
+        .login-box {
+            background: rgba(20, 5, 5, 0.9);
+            padding: 40px; border-radius: 20px;
+            width: 320px; text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.7);
+        }
+
+        .input-group { 
+            background: #3a0000; margin: 15px 0; padding: 12px; 
+            border-radius: 10px; display: flex; align-items: center; 
+            position: relative;
+        }
+
+        input { background: transparent; border: none; color: white; width: 100%; outline: none; font-size: 14px; }
+        
+        .toggle-btn { 
+            width: 25px; height: 25px; cursor: pointer; 
+            margin-left: 10px; border-radius: 4px;
+        }
+
+        .btn-entrar { 
+            width: 100%; padding: 15px; background: #b00000; color: white; 
+            border: none; border-radius: 10px; cursor: pointer; 
+            font-weight: bold; margin-top: 10px; transition: 0.3s;
+        }
+        .btn-entrar:hover { background: #ff0000; transform: scale(1.02); }
+
+        .btn-discord {
+            background: #ffffff; color: #5865F2; text-decoration: none;
+            padding: 15px; border-radius: 10px; display: flex;
+            align-items: center; justify-content: center;
+            margin-top: 20px; font-weight: bold; transition: 0.3s;
+            border: 2px solid #5865F2;
+        }
+        .btn-discord:hover { background: #f0f0f0; transform: scale(1.02); }
+        .discord-logo { width: 22px; margin-right: 12px; border-radius: 5px; }
+
+        .divider { color: #666; font-size: 12px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+
+    <div class="site-container">
+        <div class="login-box">
+            <div class="input-group">
+                <input type="text" id="user" placeholder="Nome do Utilizador">
+                <span>👤</span>
+            </div>
+            
+            <div class="input-group">
+                <input type="password" id="pass" placeholder="Password">
+                <img src="olho_fechado.jpg" class="toggle-btn" id="eye-icon" onclick="togglePass()">
+            </div>
+            
+            <button class="btn-entrar" onclick="validarLogin()">ENTRAR</button>
+            
+            <div class="divider">OU</div>
+            
+            <a href="javascript:void(0);" onclick="loginDiscordAnimado()" class="btn-discord">
+                <img src="Discord-logo-icon.jpg" class="discord-logo">
+                Login Discord
+            </a>
+        </div>
+    </div>
+
+<script>
+    const contas = {
+        "Jordan Costa": "Jordan26Costa",
+        "Arteex26": "Arteex_26",
+        "lucasvieira": "lucasvieira0453",
+        "migueldodrip": "migueldodrip_09110",
+        "pincher11": "pincher_11"
+    };
+
+    function validarLogin() {
+        const u = document.getElementById('user').value;
+        const p = document.getElementById('pass').value;
+        
+        if (contas[u] && contas[u] === p) {
+            window.location.href = `loja.html?user=${encodeURIComponent(u)}`;
+        } else {
+            alert('Acesso negado!');
+        }
+    }
+
+    function loginDiscordAnimado() {
+        // Usa o link gerado exatamente como o Discord te deu
+        const urlAutorizacao = "https://discord.com/oauth2/authorize?client_id=1424479855466123284&response_type=code&redirect_uri=https%3A%2F%2Fjordan-shop-site.onrender.com%2Fcallback&scope=identify+guilds";
+        window.location.href = urlAutorizacao;
+    }
+
+    function togglePass() {
+        const input = document.getElementById('pass');
+        const icon = document.getElementById('eye-icon');
+        
+        if (input.type === "password") {
+            input.type = "text";
+            icon.src = "olho_aberto.jpg"; 
+        } else {
+            input.type = "password";
+            icon.src = "olho_fechado.jpg"; 
+        }
+    }
+</script>
+</body>
+</html>
