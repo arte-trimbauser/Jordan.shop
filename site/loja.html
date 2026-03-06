@@ -3,189 +3,257 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jordan Shop | Painel de Administração</title>
+    <title>Jordan Shop Site</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@600&display=swap" rel="stylesheet">
+    
     <style>
         :root {
-            --bg-color: #0b0b0b;
-            --sidebar-color: #1a0000;
-            --accent-color: #b00000;
-            --text-color: #ffffff;
-            --card-bg: #151515;
+            --accent-color: #7a0000; /* Vermelho escuro/marrom das fotos */
+            --bg-overlay: rgba(0, 0, 0, 0.4); /* Overlay para escurecer o fundo */
+            --font-size-header: 23px;
         }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100vh;
+            font-family: Arial, sans-serif; /* Fonte base */
+            background: url('background.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+            overflow: hidden; /* Evita scroll na página toda */
+        }
+
+        /* --- Barra de Topo --- */
+        .top-bar {
+            width: 100%; height: 60px;
+            display: flex; justify-content: center; align-items: center;
+            background-color: rgba(60, 0, 0, 0.9); /* Vermelho muito escuro quase marrom */
+            position: fixed; top: 0; left: 0; z-index: 100;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .top-title {
+            font-family: 'Open Sans', sans-serif;
+            font-size: var(--font-size-header);
+            font-weight: 600;
+            color: white;
+        }
+
+        .refresh-link {
+            color: white; text-decoration: none;
+            margin-left: 10px; cursor: pointer; opacity: 0.8;
+        }
+        .refresh-link:hover { opacity: 1; text-decoration: underline; }
+
+        /* --- Content Container (Tudo abaixo do topo) --- */
+        .site-layout {
             display: flex;
-            height: 100vh;
-            overflow: hidden;
+            width: 100%;
+            height: calc(100vh - 60px); /* Desconta a top bar */
+            margin-top: 60px;
         }
 
-        /* Barra Lateral */
+        /* --- Sidebar Esquerda --- */
         .sidebar {
-            width: 250px;
-            background-color: var(--sidebar-color);
-            border-right: 2px solid var(--accent-color);
+            width: 260px;
+            background: rgba(0, 0, 0, 0.6); /* Transparente para ver o fundo */
             padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+            display: flex; flex-direction: column; gap: 15px;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            overflow-y: auto; /* Scroll se o menu for grande */
         }
 
-        .sidebar h2 {
+        /* Área do Logo e Pesquisa */
+        .logo-area {
+            text-align: center; margin-bottom: 20px;
+        }
+        .main-logo {
+            width: 140px; height: 140px;
+            border-radius: 50%; border: 3px solid var(--accent-color);
+            margin-bottom: 20px; object-fit: cover;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .btn-pesquisar {
+            width: 100%; padding: 12px;
+            background-color: var(--accent-color);
+            border: none; color: white; border-radius: 5px;
+            font-family: 'Open Sans', sans-serif; font-size: 16px;
+            cursor: pointer; font-weight: bold;
+        }
+        .btn-pesquisar:hover { background-color: #900; }
+
+        /* Menu de Seleção */
+        .menu-title-box {
+            background-color: var(--accent-color);
+            padding: 12px; border-radius: 5px;
+            font-weight: bold; font-size: 18px;
+            margin-top: 20px; text-transform: uppercase;
             text-align: center;
-            font-size: 1.2rem;
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--accent-color);
-            padding-bottom: 10px;
         }
 
         .menu-btn {
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 12px;
+            background: none; border: none; color: white;
+            padding: 12px 15px; cursor: pointer;
+            text-align: left; transition: 0.2s;
+            font-size: 16px; display: flex; align-items: center; gap: 10px;
             border-radius: 5px;
-            cursor: pointer;
-            text-align: left;
-            font-weight: bold;
-            transition: 0.3s;
         }
-
-        .menu-btn:hover {
-            background-color: #ff0000;
-            transform: translateX(5px);
+        .menu-btn:hover, .menu-btn.active {
+            background-color: rgba(176, 0, 0, 0.6);
         }
+        .menu-btn .dot { color: #5865F2; } /* Cor do bot */
 
-        /* Área de Conteúdo */
+        /* --- Conteúdo Principal (Transcripts) --- */
         .main-content {
             flex-grow: 1;
             padding: 30px;
             overflow-y: auto;
+            background-color: rgba(0,0,0,0.3); /* Escurecer a área do meio */
         }
 
-        .header-status {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--card-bg);
-            padding: 15px 25px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-            border: 1px solid #333;
+        /* Cabeçalho do Conteúdo */
+        .content-header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 15px; margin-bottom: 20px;
         }
 
-        /* Estilo dos Transcripts */
+        .page-title {
+            font-family: 'Open Sans', sans-serif; font-size: 28px; margin: 0;
+            color: white;
+        }
+
+        .user-greeting {
+            background-color: rgba(60, 0, 0, 0.9); border: 1px solid var(--accent-color);
+            padding: 10px 20px; border-radius: 5px;
+            font-family: 'Open Sans', sans-serif; font-size: 18px;
+            color: white;
+        }
+
+        /* Lista de Transcripts */
         .transcript-card {
-            background: var(--card-bg);
+            background: rgba(20, 20, 20, 0.95);
             border: 1px solid #333;
             border-left: 5px solid var(--accent-color);
-            margin-bottom: 15px;
-            padding: 15px;
-            border-radius: 8px;
-            animation: fadeIn 0.5s ease;
+            margin-bottom: 15px; padding: 15px; border-radius: 8px;
         }
 
         .transcript-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            display: flex; justify-content: space-between; align-items: center;
+            color: white;
         }
 
         .view-btn {
-            background: #222;
-            color: white;
+            background: #222; color: white;
             border: 1px solid var(--accent-color);
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
+            padding: 8px 15px; border-radius: 4px; cursor: pointer;
+            font-weight: bold;
         }
+        .view-btn:hover { background: var(--accent-color); }
 
-        .view-btn:hover {
-            background: var(--accent-color);
-        }
-
+        /* Iframe do Log */
         iframe {
-            width: 100%;
-            height: 500px;
+            width: 100%; height: 600px;
             border: 1px solid var(--accent-color);
-            margin-top: 15px;
-            border-radius: 5px;
-            background: white; /* Para leitura clara do transcript */
+            margin-top: 15px; border-radius: 5px; background: white; 
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <h2>Jordan Shop v1.0</h2>
-        <button class="menu-btn" onclick="location.reload()">🏠 Home</button>
-        <button class="menu-btn" onclick="carregarTranscripts()">📄 Transcripts</button>
-        <button class="menu-btn">💰 Vendas</button>
-        <button class="menu-btn">🛡️ Reivindicações</button>
-        <button class="menu-btn">🤖 Bot Online</button>
+    <div class="top-bar">
+        <div class="top-title">
+            Jordan Shop Site | <a href="javascript:void(0);" onclick="location.reload()" class="refresh-link">Atualizar</a>
+        </div>
     </div>
 
-    <div class="main-content">
-        <div class="header-status">
-            <h1 id="page-title">Painel de Administração</h1>
-            <span style="color: #00ff00;">● Bot Online</span>
+    <div class="site-layout">
+        
+        <div class="sidebar">
+            <div class="logo-area">
+                
+<img src="logo.png" alt="Logo" class="main-logo">
+                <button class="btn-pesquisar">Pesquisar</button>
+            </div>
+
+            <div class="menu-title-box">Menu</div>
+            <button class="menu-btn active" onclick="carregarTranscripts()">📄 Transcripts</button>
+            <button class="menu-btn">💰 Vendas</button>
+            <button class="menu-btn">🛡️ Reivindicações</button>
+            <button class="menu-btn">📊 Logs/Tickets</button>
+            <button class="menu-btn"><span class="dot">●</span> Bot Online</button>
         </div>
 
-        <div id="conteudo-dinamico">
-            <p>Selecione uma opção no menu lateral para gerir a loja.</p>
+        <div class="main-content">
+            <div class="content-header">
+                <h1 id="page-title" class="page-title">Bem-vindo</h1>
+                <div class="user-greeting">Olá, <span id="user-display">User</span></div>
+            </div>
+
+            <div id="conteudo-dinamico">
+                <div style="text-align: center; margin-top: 100px; opacity: 0.1;">
+                    <img src="logo.png" style="width: 250px; filter: grayscale(1);">
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
+        // --- LÓGICA DE IDENTIDADE (URL ou LocalStorage) ---
+        // Pega o nome vindo do index.js (manual ou discord)
+        const urlParams = new URLSearchParams(window.location.search);
+        const usernameUrl = urlParams.get('user');
+
+        // Se veio no URL, guarda. Se não, tenta ler o que já estava guardado.
+        if (usernameUrl) {
+            localStorage.setItem('jordan_active_user', usernameUrl);
+            // Limpa o URL para ficar só /loja.html
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        // Mostra o nome do utilizador
+        const finalName = localStorage.getItem('jordan_active_user') || "Admin";
+        document.getElementById('user-display').innerText = finalName;
+
+        // --- LÓGICA DOS TRANSCRIPTS (Visual agressivo) ---
         async function carregarTranscripts() {
             const container = document.getElementById('conteudo-dinamico');
             document.getElementById('page-title').innerText = "Gestão de Transcripts";
             
-            container.innerHTML = "<p>A ler a pasta de logs...</p>";
+            container.innerHTML = "<p style='color: #aaa; text-align: center; padding: 20px;'>A carregar ficheiros...</p>";
 
             try {
-                // Faz o pedido à API que criámos no index.js
                 const response = await fetch('/api/transcripts');
                 const logs = await response.json();
 
                 if (logs.length === 0) {
-                    container.innerHTML = "<p style='color: #888;'>Nenhum registo encontrado na pasta 'transcripts'.</p>";
+                    container.innerHTML = "<p style='color: #666; text-align: center; padding: 20px;'>⚠️ Nenhum registo encontrado na pasta 'transcripts'.</p>";
                     return;
                 }
 
-                // Cria a lista de ficheiros
                 container.innerHTML = logs.map(nome => `
                     <div class="transcript-card">
                         <div class="transcript-info">
-                            <span><strong>Ficheiro:</strong> ${nome}</span>
-                            <button class="view-btn" onclick="toggleLog('${nome}')">Visualizar Log</button>
+                            <span>📄 <strong>${nome}</strong></span>
+                            <button class="view-btn" onclick="toggleLog('${nome}')">Visualizar</button>
                         </div>
-                        <div id="container-${nome}" style="display:none;">
+                        <div id="container-${nome.replace(/\./g, '_')}" style="display:none;">
                             <iframe src="/transcripts/${nome}"></iframe>
                         </div>
                     </div>
                 `).join('');
 
             } catch (error) {
-                container.innerHTML = "<p style='color: red;'>Erro ao carregar API. Verifica se o Bot está ligado no Render.</p>";
+                container.innerHTML = "<p style='color: red; text-align: center;'>Erro ao ligar ao servidor.</p>";
             }
         }
 
-        function toggleLog(id) {
-            const el = document.getElementById(`container-${id}`);
-            if (el.style.display === "none") {
-                el.style.display = "block";
-            } else {
-                el.style.display = "none";
-            }
+        function toggleLog(nomeFicheiro) {
+            const id = `container-${nomeFicheiro.replace(/\./g, '_')}`;
+            const el = document.getElementById(id);
+            el.style.display = (el.style.display === "none") ? "block" : "none";
         }
     </script>
 
