@@ -1,19 +1,18 @@
 {
-  "name": "jordan-bot",
+  "name": "jordan-shop-bot-discord",
   "version": "1.0.0",
-  "description": "Bot Discord com tickets e integração com Express para health check",
-  "main": "src/index.js",
+  "description": "Bot e Site da Jordan Shop",
+  "main": "index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "start": "node index.js"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "axios": "^1.6.0",
+    "axios": "^1.6.2",
     "discord.js": "^14.15.0",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2"
   }
 }
