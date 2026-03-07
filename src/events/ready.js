@@ -2,7 +2,11 @@ const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require("dis
 const menus = require("../menus");
 const { LOG_CHANNEL_ID } = process.env;
 
-module.exports = async (client) => {
+module.exports = (client) => {
+
+client.once("ready", async () => {
+
+  if (!client.user) return;
 
   console.log(`✅ Bot online como ${client.user.tag}`);
 
@@ -79,4 +83,5 @@ module.exports = async (client) => {
 
   }
 
+});
 };
