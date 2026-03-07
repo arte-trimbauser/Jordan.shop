@@ -35,7 +35,9 @@ const caminho=path.join(pastaTranscripts,nome);
 
 fs.writeFileSync(caminho,attachment.attachment);
 
-const messages = await channel.messages.fetch({limit:-1});
+/* criar txt */
+
+const messages = await channel.messages.fetch({limit:100});
 
 let txt="";
 
@@ -48,14 +50,23 @@ path.join(pastaTranscripts,`ticket-${channel.name}.txt`),
 txt
 );
 
+/* link site */
+
+const transcriptURL = `https://jordan-shop-site.onrender.com/transcripts/${nome}`;
+
 const logChannel = await channel.guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID).catch(()=>null);
 
 if(logChannel){
 
 const embed = new EmbedBuilder()
 .setTitle("📄 Transcrição Arquivada")
-.setDescription(`Canal: ${channel.name}\nFechado por: ${userTag}`)
-.setColor("#ff0000");
+.setDescription(`Canal: ${channel.name}
+Fechado por: ${userTag}
+
+🔗 Ver transcript:
+${transcriptURL}`)
+.setColor("#ff0000")
+.setTimestamp();
 
 await logChannel.send({
 embeds:[embed],
@@ -72,7 +83,9 @@ client.on("interactionCreate",async interaction=>{
 
 try{
 
-const {channel,user,member,customId:cid}=interaction;
+const {channel,user,customId:cid}=interaction;
+
+/* MENU TICKET */
 
 if(interaction.isStringSelectMenu() && cid==="menu_ticket"){
 
@@ -83,10 +96,12 @@ c=>c.name===config.CATEGORY_NAME && c.type===4
 );
 
 if(!category){
+
 category=await interaction.guild.channels.create({
 name:config.CATEGORY_NAME,
 type:4
 });
+
 }
 
 const canal = await interaction.guild.channels.create({
@@ -123,7 +138,7 @@ new ButtonBuilder()
 );
 
 await canal.send({
-content:`<@${user.id}> obrigado(a) por criar um ticket, em breve algum staff te ajudara.`,
+content:`<@${user.id}> obrigado(a) por criar um ticket, em breve algum staff te ajudará.`,
 components:[row]
 });
 
@@ -134,11 +149,13 @@ ephemeral:true
 
 }
 
+/* CLAIM TICKET */
+
 if(interaction.isButton() && cid==="claim_ticket"){
 
 await interaction.update({
 
-content:`Ticket reivindicado por <@${user.id}>`,
+content:`🛡 Ticket ${channel.name} reivindicado por <@${user.id}>`,
 
 components:[
 new ActionRowBuilder().addComponents(
@@ -165,6 +182,8 @@ new ButtonBuilder()
 });
 
 }
+
+/* CHAMAR STAFF */
 
 if(interaction.isButton() && cid==="call_staff"){
 
@@ -207,6 +226,8 @@ ephemeral:true
 
 }
 
+/* SELECIONAR STAFF */
+
 if(interaction.isStringSelectMenu() && cid==="select_staff"){
 
 const staffId=interaction.values[0];
@@ -219,6 +240,8 @@ components:[]
 });
 
 }
+
+/* FECHAR TICKET */
 
 if(interaction.isButton() && cid==="close_ticket"){
 
@@ -255,6 +278,8 @@ setTimeout(()=>channel.delete().catch(()=>{}),5000);
 
 }
 
+/* CONFIRMAR COM TRANSCRIPT */
+
 if(interaction.isButton() && cid==="confirm_close_transcript"){
 
 await interaction.update({
@@ -267,6 +292,8 @@ await sendTranscript(channel,user.tag);
 setTimeout(()=>channel.delete().catch(()=>{}),5000);
 
 }
+
+/* FECHAR SEM TRANSCRIPT */
 
 if(interaction.isButton() && cid==="confirm_close_no_transcript"){
 
