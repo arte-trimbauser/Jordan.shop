@@ -1,177 +1,290 @@
-const { 
-    EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, 
-    PermissionsBitField, StringSelectMenuBuilder, ModalBuilder, 
-    TextInputBuilder, TextInputStyle 
+const {
+EmbedBuilder,
+ActionRowBuilder,
+ButtonBuilder,
+ButtonStyle,
+PermissionsBitField,
+StringSelectMenuBuilder
 } = require("discord.js");
+
 const config = require("../config");
-const menus = require("../menus");
 const discordTranscripts = require("discord-html-transcripts");
-const OpenAI = require('openai');
 const fs = require("fs");
 const path = require("path");
 
-// --- Configuração OpenAI (Igual ao teu original) ---
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const memory = new Map();
-const MAX_HISTORY = 6;
-const SYSTEM_PROMPT = `És um assistente inteligente no Discord (Jordan Shop). Respondes em PT-PT.`;
-
-// --- Variáveis de Sistema ---
-const saleDrafts = new Map();
-const clienteCooldown = new Map();
 const staffCooldown = new Map();
+const STAFF_WAIT = 5 * 60 * 1000;
 
-// ======= FUNÇÃO DE TRANSCRIPT CORRIGIDA (LIGAÇÃO AO SITE) =======
-async function sendTranscript(channel, userTag) {
-    try {
-        const logChannel = await channel.guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID).catch(() => null);
-        
-        // Pasta onde o teu index.js vai ler os ficheiros para o site
-        const pastaTranscripts = path.join(__dirname, "../../transcripts");
-        if (!fs.existsSync(pastaTranscripts)) fs.mkdirSync(pastaTranscripts, { recursive: true });
+async function sendTranscript(channel,userTag){
 
-        // Cria o ficheiro HTML profissional
-        const attachment = await discordTranscripts.createTranscript(channel, {
-            limit: -1,
-            filename: `ticket-${channel.name}.html`,
-            saveImages: true,
-            poweredBy: false
-        });
+const pastaTranscripts = path.join(__dirname,"../../transcripts");
 
-        // Nome limpo para o URL do site
-        const nomeFicheiro = `ticket-${channel.name}.html`.replace(/\s+/g, '_');
-        const caminhoFicheiro = path.join(pastaTranscripts, nomeFicheiro);
-        
-        // GUARDA O FICHEIRO (Não apagar para o site conseguir mostrar!)
-        fs.writeFileSync(caminhoFicheiro, attachment.attachment);
-
-        if (logChannel) {
-            const embed = new EmbedBuilder()
-                .setTitle("📄 Transcrição Arquivada")
-                .setDescription(`**Canal:** \`${channel.name}\`\n**Fechado por:** \`${userTag}\``)
-                .setColor("#b00000")
-                .setTimestamp();
-
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setLabel("Ver no Painel Web")
-                    .setURL(`https://jordan-shop-site.onrender.com/transcripts/${nomeFicheiro}`)
-                    .setStyle(ButtonStyle.Link)
-            );
-
-            await logChannel.send({ embeds: [embed], components: [row], files: [attachment] });
-        }
-    } catch (err) {
-        console.error("Erro ao gerar transcript:", err);
-    }
+if(!fs.existsSync(pastaTranscripts)){
+fs.mkdirSync(pastaTranscripts,{recursive:true});
 }
 
-// ======= CORE DO BOT =======
-module.exports = async (client) => {
-    client.on("interactionCreate", async (interaction) => {
-        try {
-            const { channel, user, member, customId: cid } = interaction;
+const attachment = await discordTranscripts.createTranscript(channel,{
+limit:-1,
+filename:`ticket-${channel.name}.html`,
+saveImages:true,
+poweredBy:false
+});
 
-            /* ================== 1. SLASH COMMANDS (/chat) ================== */
-            if (interaction.isChatInputCommand() && interaction.commandName === 'chat') {
-                const userPrompt = interaction.options.getString('mensagem');
-                await interaction.deferReply();
-                if (!memory.has(user.id)) memory.set(user.id, []);
-                const history = memory.get(user.id);
-                history.push({ role: 'user', content: userPrompt });
+const nome=`ticket-${channel.name}.html`.replace(/\s+/g,"_");
+const caminho=path.join(pastaTranscripts,nome);
 
-                const completion = await openai.chat.completions.create({
-                    model: 'gpt-4o-mini',
-                    messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...history],
-                    temperature: 0.7
-                });
-                const reply = completion.choices[0].message.content;
-                history.push({ role: 'assistant', content: reply });
-                if (history.length > MAX_HISTORY) history.shift();
-                return await interaction.editReply(reply);
-            }
+fs.writeFileSync(caminho,attachment.attachment);
 
-            /* ================== 2. TICKETS E TERMOS (TEUS TERMOS ORIGINAIS) ================== */
-            if (interaction.isStringSelectMenu() && cid === "menu_ticket") {
-                const tipo = interaction.values[0];
-                const termosEmbed = new EmbedBuilder()
-                    .setTitle("📜 Termos de Serviço")
-                    .setDescription(`
-🔁 **Termos de Serviço de Reembolso**
-Não oferecemos reembolsos após a conclusão de uma compra ou serviço.
+const messages = await channel.messages.fetch({limit:-1});
 
-🔄 **Termos de Serviço de Substituição**
-A substituição só é possível com um voucher.
-Sem voucher = sem garantia ou substituição.
+let txt="";
 
-👤 **Termos de Serviço da Conta**
-Altere e-mail e senha imediatamente. Não nos responsabilizamos após a entrega.
+messages.reverse().forEach(m=>{
+txt+=`${m.author.tag}: ${m.content}\n`;
+});
 
-💸 **Termos de Serviço do PayPal**
-Pagamentos via "Amigos e Familiares" – sem mensagem.
+fs.writeFileSync(
+path.join(pastaTranscripts,`ticket-${channel.name}.txt`),
+txt
+);
 
-🌐 **Idioma do Ticket**
-Suporte apenas em Português.
+const logChannel = await channel.guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID).catch(()=>null);
 
-**Atenciosamente, Jordan.**`)
-                    .setColor("#ff0000");
+if(logChannel){
 
-                const row = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId(`aceitar_termos_${tipo}`).setLabel("Aceitar").setStyle(ButtonStyle.Success),
-                    new ButtonBuilder().setCustomId("recusar_termos").setLabel("Recusar").setStyle(ButtonStyle.Danger)
-                );
-                return interaction.reply({ embeds: [termosEmbed], components: [row], ephemeral: true });
-            }
+const embed = new EmbedBuilder()
+.setTitle("📄 Transcrição Arquivada")
+.setDescription(`Canal: ${channel.name}\nFechado por: ${userTag}`)
+.setColor("#ff0000");
 
-            // CRIAÇÃO DO TICKET
-            if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
-                const tipo = cid.replace("aceitar_termos_", "");
-                await interaction.update({ content: "⏳ A criar ticket...", embeds: [], components: [] });
-                
-                let category = interaction.guild.channels.cache.find(c => c.name === config.CATEGORY_NAME && c.type === 4);
-                if (!category) category = await interaction.guild.channels.create({ name: config.CATEGORY_NAME, type: 4 });
+await logChannel.send({
+embeds:[embed],
+files:[attachment]
+});
 
-                const canal = await interaction.guild.channels.create({
-                    name: `ticket-${tipo.split('_')[0]}-${user.username}`.toLowerCase(),
-                    parent: category.id,
-                    topic: user.id,
-                    permissionOverwrites: [
-                        { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-                        { id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-                        ...config.STAFF_ROLES.map(id => ({ id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }))
-                    ]
-                });
+}
 
-                const row = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId("claim_ticket").setLabel("🛡 Reivindicar").setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder().setCustomId("close_ticket").setLabel("❌ Fechar").setStyle(ButtonStyle.Danger)
-                );
-                await canal.send({ content: `✅ <@${user.id}> Ticket aberto!\n**Produto:** ${tipo.toUpperCase()}`, components: [row] });
-                return interaction.editReply({ content: `Ticket: <#${canal.id}>` });
-            }
+}
 
-            /* ================== 3. REIVINDICAÇÃO E FECHO ================== */
-            if (interaction.isButton() && cid === "close_ticket") {
-                // Lógica de fecho com a pergunta da venda (Igual ao teu original)
-                const row = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId("sale_yes").setLabel("✅ Venda").setStyle(ButtonStyle.Success),
-                    new ButtonBuilder().setCustomId("sale_no").setLabel("❌ Não").setStyle(ButtonStyle.Danger)
-                );
-                return interaction.reply({ content: "Houve venda?", components: [row] });
-            }
+module.exports = async(client)=>{
 
-            /* ================== 4. FINALIZAÇÃO E TRANSCRIPT ================== */
-            if (interaction.isButton() && cid === "sale_no") {
-                await interaction.update({ content: "📂 A gerar transcrição e a fechar...", components: [] });
-                
-                // CHAMA A FUNÇÃO DE TRANSCRIPT QUE GUARDA NO SITE
-                await sendTranscript(channel, user.tag);
+client.on("interactionCreate",async interaction=>{
 
-                setTimeout(() => channel.delete().catch(() => {}), 5000);
-            }
+try{
 
-        } catch (err) {
-            console.error("Erro no InteractionCreate:", err);
-        }
-    });
+const {channel,user,member,customId:cid}=interaction;
+
+if(interaction.isStringSelectMenu() && cid==="menu_ticket"){
+
+const tipo=interaction.values[0];
+
+let category = interaction.guild.channels.cache.find(
+c=>c.name===config.CATEGORY_NAME && c.type===4
+);
+
+if(!category){
+category=await interaction.guild.channels.create({
+name:config.CATEGORY_NAME,
+type:4
+});
+}
+
+const canal = await interaction.guild.channels.create({
+name:`ticket-${tipo}-${user.username}`.toLowerCase(),
+parent:category.id,
+topic:user.id,
+permissionOverwrites:[
+{ id:interaction.guild.id,deny:[PermissionsBitField.Flags.ViewChannel]},
+{ id:user.id,allow:[PermissionsBitField.Flags.ViewChannel,PermissionsBitField.Flags.SendMessages]},
+...config.STAFF_ROLES.map(id=>({
+id,
+allow:[PermissionsBitField.Flags.ViewChannel,PermissionsBitField.Flags.SendMessages]
+}))
+]
+});
+
+const row = new ActionRowBuilder().addComponents(
+
+new ButtonBuilder()
+.setCustomId("claim_ticket")
+.setLabel("Reivindicar")
+.setStyle(ButtonStyle.Secondary),
+
+new ButtonBuilder()
+.setCustomId("call_staff")
+.setLabel("🔔 Chamar Staff")
+.setStyle(ButtonStyle.Primary),
+
+new ButtonBuilder()
+.setCustomId("close_ticket")
+.setLabel("Fechar")
+.setStyle(ButtonStyle.Danger)
+
+);
+
+await canal.send({
+content:`<@${user.id}> obrigado(a) por criar um ticket, em breve algum staff te ajudara.`,
+components:[row]
+});
+
+return interaction.reply({
+content:`Ticket criado: <#${canal.id}>`,
+ephemeral:true
+});
+
+}
+
+if(interaction.isButton() && cid==="claim_ticket"){
+
+await interaction.update({
+
+content:`Ticket reivindicado por <@${user.id}>`,
+
+components:[
+new ActionRowBuilder().addComponents(
+
+new ButtonBuilder()
+.setCustomId("claim_ticket")
+.setLabel("Reivindicado")
+.setStyle(ButtonStyle.Success)
+.setDisabled(true),
+
+new ButtonBuilder()
+.setCustomId("call_staff")
+.setLabel("🔔 Chamar Staff")
+.setStyle(ButtonStyle.Primary),
+
+new ButtonBuilder()
+.setCustomId("close_ticket")
+.setLabel("Fechar")
+.setStyle(ButtonStyle.Danger)
+
+)
+]
+
+});
+
+}
+
+if(interaction.isButton() && cid==="call_staff"){
+
+const isDev = config.DEV_IDS.includes(user.id);
+
+if(!isDev){
+
+const last=staffCooldown.get(user.id);
+
+if(last && Date.now()-last<STAFF_WAIT){
+
+const remaining=Math.ceil((STAFF_WAIT-(Date.now()-last))/60000);
+
+return interaction.reply({
+content:`faltam ${remaining} minutos até poder chamar staff novamente.`,
+ephemeral:true
+});
+
+}
+
+staffCooldown.set(user.id,Date.now());
+
+}
+
+const options=config.STAFF_MEMBERS.map(s=>({
+label:s.label,
+value:s.id
+}));
+
+const select = new StringSelectMenuBuilder()
+.setCustomId("select_staff")
+.setPlaceholder("Seleciona o staff")
+.addOptions(options);
+
+return interaction.reply({
+content:"Seleciona o staff que queres chamar:",
+components:[new ActionRowBuilder().addComponents(select)],
+ephemeral:true
+});
+
+}
+
+if(interaction.isStringSelectMenu() && cid==="select_staff"){
+
+const staffId=interaction.values[0];
+
+await channel.send(`🔔 <@${staffId}> foi chamado por <@${user.id}>`);
+
+return interaction.update({
+content:"staff chamado.",
+components:[]
+});
+
+}
+
+if(interaction.isButton() && cid==="close_ticket"){
+
+const messages = await channel.messages.fetch({limit:100});
+
+if(messages.size<5){
+
+const row = new ActionRowBuilder().addComponents(
+
+new ButtonBuilder()
+.setCustomId("confirm_close_transcript")
+.setLabel("Fechar com transcript")
+.setStyle(ButtonStyle.Success),
+
+new ButtonBuilder()
+.setCustomId("confirm_close_no_transcript")
+.setLabel("Fechar sem transcript")
+.setStyle(ButtonStyle.Secondary)
+
+);
+
+return interaction.reply({
+content:"Este ticket tem poucas mensagens. Precisas de transcript?",
+components:[row]
+});
+
+}
+
+await interaction.reply("A gerar transcript e fechar...");
+
+await sendTranscript(channel,user.tag);
+
+setTimeout(()=>channel.delete().catch(()=>{}),5000);
+
+}
+
+if(interaction.isButton() && cid==="confirm_close_transcript"){
+
+await interaction.update({
+content:"A gerar transcript...",
+components:[]
+});
+
+await sendTranscript(channel,user.tag);
+
+setTimeout(()=>channel.delete().catch(()=>{}),5000);
+
+}
+
+if(interaction.isButton() && cid==="confirm_close_no_transcript"){
+
+await interaction.update({
+content:"Ticket fechado.",
+components:[]
+});
+
+setTimeout(()=>channel.delete().catch(()=>{}),3000);
+
+}
+
+}catch(err){
+
+console.error("Erro interaction:",err);
+
+}
+
+});
+
 };
