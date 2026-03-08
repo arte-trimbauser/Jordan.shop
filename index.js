@@ -12,6 +12,7 @@ const CLIENT_ID = "1424479855466123284";
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = "https://jordan-shop-site.onrender.com/callback";
 const GUILD_ID = "1393629457599828040";
+const REQUIRED_ROLE_ID = "1393658313006383176"; // O ID do cargo que me deste
 
 const sitePath = path.join(__dirname, "site");
 const transcriptsDir = path.join(__dirname, "transcripts");
@@ -71,7 +72,7 @@ app.get("/callback", async (req, res) => {
         code,
         grant_type: "authorization_code",
         redirect_uri: REDIRECT_URI,
-        scope: "identify guilds",
+        scope: "identify guilds guilds.members.read", // Scope necessário para ver cargos
       }),
       {
         headers: {
@@ -82,27 +83,34 @@ app.get("/callback", async (req, res) => {
 
     const accessToken = tokenRes.data.access_token;
 
+    // Obtém dados básicos do utilizador
     const userRes = await axios.get("https://discord.com/api/users/@me", {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
-    const guildsRes = await axios.get(
-      "https://discord.com/api/users/@me/guilds",
+    // Obtém os dados do membro especificamente neste servidor (GUILD_ID)
+    const memberRes = await axios.get(
+      `https://discord.com/api/users/@me/guilds/${GUILD_ID}/member`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
       }
     );
 
-    const isMember = guildsRes.data.find((g) => g.id === GUILD_ID);
+    const userRoles = memberRes.data.roles; // Lista de IDs de cargos do utilizador
+    const permissions = BigInt(memberRes.data.permissions);
+    
+    // Verifica se tem o cargo específico OU se é Administrador (0x8)
+    const hasRole = userRoles.includes(REQUIRED_ROLE_ID);
+    const isAdmin = (permissions & 0x8n) === 0x8n;
 
-    if (isMember && (BigInt(isMember.permissions) & 0x8n) === 0x8n) {
+    if (hasRole || isAdmin) {
       res.redirect(`/loja.html?user=${encodeURIComponent(userRes.data.username)}`);
     } else {
-      res.send("Acesso negado");
+      res.send("Acesso negado: Não tens o cargo necessário no servidor.");
     }
   } catch (e) {
     console.error("Erro OAuth:", e);
-    res.send("Erro login Discord");
+    res.send("Erro login Discord ou não estás no servidor.");
   }
 });
 
