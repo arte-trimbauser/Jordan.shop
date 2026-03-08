@@ -6,7 +6,7 @@ module.exports = {
     { label: "Arteex", id: "996454465555136675" }
   ],
 
-  DEV_IDS: ["996454465555136675"],
+  DEV_IDS: ["996454465555136675","1393658313006383176"],
 
   CATEGORY_NAME: "Tickets",
 
