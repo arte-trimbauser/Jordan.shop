@@ -10,7 +10,7 @@ const port = process.env.PORT || 10000;
 
 const CLIENT_ID = "1424479855466123284";
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const REDIRECT_URI = "https://jordan-shop-site.onrender.com/callback";
+const REDIRECT_URI = "https://discord-bott-jordan.onrender.com/callback";
 const GUILD_ID = "1393629457599828040";
 const REQUIRED_ROLE_ID = "1393658313006383176"; // O ID do cargo que me deste
 
