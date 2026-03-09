@@ -138,11 +138,11 @@
         }
     }
 
-    function loginDiscordAnimado() {
-        // Link atualizado com os novos scopes: identify, guilds e guilds.members.read
-        const urlAutorizacao = "https://discord.com/oauth2/authorize?client_id=1424479855466123284&response_type=code&redirect_uri=https%3A%2F%2Fjordan-shop-site.onrender.com%2Fcallback&scope=identify+guilds+guilds.members.read";
-        window.location.href = urlAutorizacao;
-    }
+function loginDiscordAnimado() {
+    // Link 100% verificado para o domínio discord-bott-jordan
+    const urlAutorizacao = "https://discord.com/oauth2/authorize?client_id=1424479855466123284&response_type=code&redirect_uri=https%3A%2F%2Fdiscord-bott-jordan.onrender.com%2Fcallback&scope=identify+guilds+guilds.members.read";
+    window.location.href = urlAutorizacao;
+}
 
     function togglePass() {
         const input = document.getElementById('pass');
