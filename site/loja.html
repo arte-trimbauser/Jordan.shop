@@ -3,196 +3,247 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jordan Shop | Staff Panel</title>
-    <!-- Fonte Open Sans -->
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>Jordan Shop | Painel Staff</title>
+    <!-- Fonte Profissional Open Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary-red: #8b0000;
-            --dark-bg: #1a1a1a;
-            --sidebar-gray: #4a4a4a;
-            --glass: rgba(0, 0, 0, 0.6);
+            --overlay-dark: rgba(0, 0, 0, 0.8);
+            --transition-speed: 0.4s;
         }
 
-        body {
+        * { box-sizing: border-box; }
+
+        body, html {
             margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
             font-family: 'Open Sans', sans-serif;
-            background: url('seu-fundo-jordan.png') no-repeat center center fixed;
-            background-size: cover;
             color: white;
-            overflow: hidden;
+            overflow: hidden; /* Impede scroll desnecessário */
         }
 
-        /* Tela de Boas-Vindas (3 segundos) */
-        #welcome-overlay {
+        /* Imagem de Fundo em Toda a Tela */
+        .bg-full {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('menu.png') no-repeat center center;
+            background-size: cover;
+            z-index: -2;
+        }
+
+        /* Camada Escura para Legibilidade */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--overlay-dark);
+            z-index: -1;
+        }
+
+        /* Tela de Boas-Vindas (Splash Screen) */
+        #welcome-screen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: black;
+            background: #000;
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 1000;
-            transition: opacity 1s ease-out;
+            z-index: 9999;
+            transition: opacity 0.8s ease;
         }
 
-        #welcome-overlay.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .welcome-text {
-            font-size: 2rem;
-            font-weight: bold;
+        .welcome-content {
             text-align: center;
-            animation: fadeInOut 3s forwards;
+            animation: pulse 2s infinite;
         }
 
-        /* Layout Principal */
-        .container {
-            display: grid;
-            grid-template-columns: 250px 1fr;
-            grid-template-rows: 60px 1fr;
-            height: 100vh;
-        }
-
-        /* Header Superior */
+        /* Header */
         header {
-            grid-column: 1 / 3;
             background: var(--primary-red);
+            height: 60px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-            animation: slideDown 0.5s ease;
+            padding: 0 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
 
-        .header-title { font-weight: 700; font-size: 1.2rem; }
+        .logo-area { font-weight: 800; font-size: 1.3rem; }
+        .refresh-btn { cursor: pointer; text-decoration: underline; font-size: 0.9rem; margin-left: 10px; opacity: 0.8; }
+        .user-tag { background: rgba(0,0,0,0.4); padding: 8px 15px; border-radius: 5px; font-weight: 600; }
+
+        /* Layout */
+        .container {
+            display: flex;
+            height: calc(100vh - 60px);
+        }
 
         /* Sidebar */
-        nav {
-            background: var(--sidebar-gray);
-            padding: 20px 10px;
+        aside {
+            width: 260px;
+            background: rgba(40, 40, 40, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 15px;
+            border-right: 1px solid rgba(255,255,255,0.1);
         }
 
-        .nav-item {
-            background: var(--primary-red);
+        .search-box {
+            width: 100%;
             padding: 12px;
             border-radius: 5px;
-            text-align: center;
-            cursor: pointer;
-            transition: 0.3s;
-            text-decoration: none;
+            border: none;
+            background: rgba(255,255,255,0.1);
             color: white;
+            outline: none;
+            border-bottom: 2px solid transparent;
+            transition: 0.3s;
+        }
+
+        .search-box:focus { border-bottom: 2px solid var(--primary-red); }
+
+        .nav-btn {
+            background: var(--primary-red);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 6px;
             font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-speed);
+            text-align: center;
+            text-decoration: none;
         }
 
-        .nav-item:hover {
-            transform: scale(1.05);
-            filter: brightness(1.2);
-        }
+        .nav-btn:hover { transform: translateX(10px); filter: brightness(1.3); }
 
-        /* Conteúdo Central */
+        /* Conteúdo Principal */
         main {
-            padding: 40px;
-            background: var(--glass);
-            backdrop-filter: blur(5px);
+            flex: 1;
             display: flex;
             flex-direction: column;
+            justify-content: center;
             align-items: center;
+            padding: 50px;
             text-align: center;
         }
 
-        .user-badge {
-            background: var(--primary-red);
-            padding: 5px 15px;
-            border-radius: 5px;
+        h1 { font-size: 4rem; margin: 0; font-weight: 800; text-shadow: 4px 4px 10px rgba(0,0,0,1); }
+        .subtitle { font-size: 1.4rem; opacity: 0.8; margin-top: 10px; }
+
+        /* Status de Desenvolvimento */
+        #dev-alert {
+            margin-top: 30px;
+            padding: 15px 25px;
+            border: 2px solid #ffcc00;
+            color: #ffcc00;
+            background: rgba(0,0,0,0.5);
+            border-radius: 10px;
+            display: none;
+            font-weight: bold;
+            animation: fadeIn 0.4s;
         }
 
-        .status-badge {
-            margin-top: 20px;
-            padding: 10px;
-            border: 1px solid yellow;
-            color: yellow;
-            border-radius: 5px;
-            font-size: 0.8rem;
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
         }
 
-        /* Animações */
-        @keyframes fadeInOut {
-            0% { opacity: 0; transform: scale(0.9); }
-            20% { opacity: 1; transform: scale(1); }
-            80% { opacity: 1; }
-            100% { opacity: 0; }
-        }
-
-        @keyframes slideDown {
-            from { transform: translateY(-100%); }
-            to { transform: translateY(0); }
-        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <!-- Overlay de Boas-Vindas -->
-    <div id="welcome-overlay">
-        <div class="welcome-text">
-            Olá, Bem-vindo ao Painel da<br>
-            <span style="color: #8b0000;">JORDAN SHOP STAFF</span>
+    <!-- Splash Screen -->
+    <div id="welcome-screen">
+        <div class="welcome-content">
+            <h2 style="font-size: 3rem;">OLÁ, BEM-VINDO AO PAINEL DA<br>
+            <span style="color: var(--primary-red);">JORDAN SHOP STAFF</span></h2>
         </div>
     </div>
 
+    <!-- Fundo e Overlay -->
+    <div class="bg-full"></div>
+    <div class="overlay"></div>
+
+    <!-- Topo -->
+    <header>
+        <div class="logo-area">
+            Jordan Shop Site | <span class="refresh-btn" onclick="location.reload()">Atualizar</span>
+        </div>
+        <div class="user-tag">Olá, <span id="nav-username">Staff</span></div>
+    </header>
+
     <div class="container">
-        <!-- Parte Superior -->
-        <header>
-            <div class="header-title">Jordan Shop Site | Atualizar</div>
-            <div class="user-badge">Olá, <span id="username-display">Carregando...</span></div>
-        </header>
-
-        <!-- Menu Lateral -->
-        <nav>
-            <a href="index.html" class="nav-item">MENU (Início)</a>
-            <div class="nav-item">Transcripts</div>
-            <div class="nav-item">Vendas</div>
-            <div class="nav-item" onclick="showDevAlert()">Reivindicações</div>
-            <div class="nav-item">Bot Online</div>
-        </nav>
-
-        <!-- Conteúdo Principal -->
-        <main>
-            <h1>Bem-Vindo <span id="welcome-user">@user</span></h1>
-            <p>Aqui é o menu de gestão da Jordan Shop.</p>
+        <!-- Lateral -->
+        <aside>
+            <input type="text" id="search" class="search-box" placeholder="Pesquisar categoria...">
             
-            <div id="dev-alert" class="status-badge" style="display:none;">
-                ⚠️ Esta aba ainda está em desenvolvimento.
-            </div>
+            <!-- Link para a raiz do site no Render -->
+            <a href="/" class="nav-btn">MENU (Início)</a>
+            
+            <button class="nav-btn" onclick="window.location.href='/transcripts'">Transcripts</button>
+            <button class="nav-btn" onclick="showDev()">Vendas</button>
+            <button class="nav-btn" onclick="showDev()">Reivindicações</button>
+            <button class="nav-btn" onclick="showDev()">Bot Online</button>
+        </aside>
 
-            <img src="menu.png" alt="Menu" style="margin-top: 30px; max-width: 200px; cursor: pointer;" onclick="location.reload()">
+        <!-- Centro -->
+        <main>
+            <h1 id="main-welcome">Bem-Vindo @user</h1>
+            <p class="subtitle">Gestão Interna Jordan Shop - Acesso Restrito</p>
+
+            <div id="dev-alert">
+                ⚠️ AVISO: Esta secção está atualmente em desenvolvimento.
+            </div>
         </main>
     </div>
 
     <script>
-        // 1. Lógica para pegar o nome do usuário da URL
+        // 1. Lógica do Nome Dinâmico
         const urlParams = new URLSearchParams(window.location.search);
-        const username = urlParams.get('user') || 'Staff';
-        
-        document.getElementById('username-display').innerText = username;
-        document.getElementById('welcome-user').innerText = username;
+        const user = urlParams.get('user') || 'Staff';
+        document.getElementById('nav-username').innerText = user;
+        document.getElementById('main-welcome').innerText = "Bem-Vindo " + user;
 
-        // 2. Transição de 3 segundos
+        // 2. Temporizador da tela de Boas-Vindas (3 segundos)
         setTimeout(() => {
-            document.getElementById('welcome-overlay').classList.add('hidden');
+            const splash = document.getElementById('welcome-screen');
+            splash.style.opacity = '0';
+            setTimeout(() => splash.style.display = 'none', 800);
         }, 3000);
 
-        // 3. Função para o alerta de desenvolvimento
-        function showDevAlert() {
-            const alert = document.getElementById('dev-alert');
-            alert.style.display = 'block';
-            setTimeout(() => { alert.style.display = 'none'; }, 4000);
+        // 3. Função Alerta Desenvolvimento
+        function showDev() {
+            const alertBox = document.getElementById('dev-alert');
+            alertBox.style.display = 'block';
+            setTimeout(() => { alertBox.style.display = 'none'; }, 4000);
         }
+
+        // 4. Sistema de Pesquisa no Menu
+        document.getElementById('search').addEventListener('input', function(e) {
+            const filter = e.target.value.toLowerCase();
+            const buttons = document.querySelectorAll('.nav-btn');
+            
+            buttons.forEach(btn => {
+                if(btn.innerText.toLowerCase().includes(filter)) {
+                    btn.style.display = "block";
+                } else {
+                    btn.style.display = "none";
+                }
+            });
+        });
     </script>
 </body>
 </html>
