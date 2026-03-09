@@ -129,10 +129,6 @@ require("./src/events/interactionCreate")(client);
 require("./src/events/ready")(client);
 require("./src/events/error")(client);
 
-client.once("ready", () => {
-  console.log(`✅ Bot online como ${client.user.tag}`);
-});
-
 client.login(process.env.DISCORD_TOKEN);
 
 /* iniciar site */
