@@ -12,132 +12,123 @@ const CLIENT_ID = "1424479855466123284";
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = "https://discord-bott-jordan.onrender.com/callback";
 const GUILD_ID = "1393629457599828040";
-const REQUIRED_ROLE_ID = "1393658313006383176"; // O ID do cargo que me deste
+const REQUIRED_ROLE_ID = "1393658313006383176";
 
 const sitePath = path.join(__dirname, "site");
 const transcriptsDir = path.join(__dirname, "transcripts");
 
-/* cria pasta transcripts se não existir */
-if (!fs.existsSync(transcriptsDir)) {
-  fs.mkdirSync(transcriptsDir, { recursive: true });
+/* --- CORREÇÃO ENOTDIR: Garante que transcripts é uma PASTA --- */
+if (fs.existsSync(transcriptsDir)) {
+    const stats = fs.lstatSync(transcriptsDir);
+    if (!stats.isDirectory()) {
+        console.log("⚠️ Detectado ficheiro 'transcripts', removendo para criar pasta real...");
+        fs.unlinkSync(transcriptsDir);
+        fs.mkdirSync(transcriptsDir, { recursive: true });
+    }
+} else {
+    fs.mkdirSync(transcriptsDir, { recursive: true });
 }
 
 app.use(express.static(sitePath));
 app.use("/transcripts", express.static(transcriptsDir));
 
-/* página inicial */
+/* Página inicial */
 app.get("/", (req, res) => {
-  res.sendFile(path.join(sitePath, "login.html"));
+    res.sendFile(path.join(sitePath, "login.html"));
 });
 
-/* API transcripts */
+/* API para listar transcripts no teu site */
 app.get("/api/transcripts", (req, res) => {
-  fs.readdir(transcriptsDir, (err, files) => {
-    if (err) return res.json([]);
-
-    const transcripts = files
-      .filter((f) => f.endsWith(".html"))
-      .map((f) => ({
-        name: f,
-        url: `/transcripts/${f}`,
-      }));
-
-    res.json(transcripts);
-  });
-});
-
-/* abrir transcript */
-app.get("/transcripts/:name", (req, res) => {
-  const filePath = path.join(transcriptsDir, req.params.name);
-
-  if (fs.existsSync(filePath)) {
-    return res.sendFile(filePath);
-  }
-
-  res.status(404).send("Transcript não encontrado");
-});
-
-/* login discord */
-app.get("/callback", async (req, res) => {
-  const { code } = req.query;
-
-  if (!code) return res.send("Erro login");
-
-  try {
-    const tokenRes = await axios.post(
-      "https://discord.com/api/oauth2/token",
-      new URLSearchParams({
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        code,
-        grant_type: "authorization_code",
-        redirect_uri: REDIRECT_URI,
-        scope: "identify guilds guilds.members.read", // Scope necessário para ver cargos
-      }),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      }
-    );
-
-    const accessToken = tokenRes.data.access_token;
-
-    // Obtém dados básicos do utilizador
-    const userRes = await axios.get("https://discord.com/api/users/@me", {
-      headers: { Authorization: `Bearer ${accessToken}` },
+    fs.readdir(transcriptsDir, (err, files) => {
+        if (err) return res.json([]);
+        const transcripts = files
+            .filter((f) => f.endsWith(".html"))
+            .map((f) => ({
+                name: f,
+                url: `/transcripts/${f}`,
+            }));
+        res.json(transcripts);
     });
+});
 
-    // Obtém os dados do membro especificamente neste servidor (GUILD_ID)
-    const memberRes = await axios.get(
-      `https://discord.com/api/users/@me/guilds/${GUILD_ID}/member`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    );
-
-    const userRoles = memberRes.data.roles; // Lista de IDs de cargos do utilizador
-    const permissions = BigInt(memberRes.data.permissions);
-    
-    // Verifica se tem o cargo específico OU se é Administrador (0x8)
-    const hasRole = userRoles.includes(REQUIRED_ROLE_ID);
-    const isAdmin = (permissions & 0x8n) === 0x8n;
-
-    if (hasRole || isAdmin) {
-      res.redirect(`/loja.html?user=${encodeURIComponent(userRes.data.username)}`);
-    } else {
-      res.send("Acesso negado: Não tens o cargo necessário no servidor.");
+/* Abrir transcript específico */
+app.get("/transcripts/:name", (req, res) => {
+    const filePath = path.join(transcriptsDir, req.params.name);
+    if (fs.existsSync(filePath)) {
+        return res.sendFile(filePath);
     }
-  } catch (e) {
-    console.error("Erro OAuth:", e);
-    res.send("Erro login Discord ou não estás no servidor.");
-  }
+    res.status(404).send("Transcript não encontrado");
 });
 
-/* BOT DISCORD */
+/* Login Discord (OAuth2) */
+app.get("/callback", async (req, res) => {
+    const { code } = req.query;
+    if (!code) return res.send("Erro: Código de autorização não encontrado.");
 
+    try {
+        const tokenRes = await axios.post(
+            "https://discord.com/api/oauth2/token",
+            new URLSearchParams({
+                client_id: CLIENT_ID,
+                client_secret: CLIENT_SECRET,
+                code,
+                grant_type: "authorization_code",
+                redirect_uri: REDIRECT_URI,
+                scope: "identify guilds guilds.members.read",
+            }),
+            { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+        );
+
+        const accessToken = tokenRes.data.access_token;
+
+        const userRes = await axios.get("https://discord.com/api/users/@me", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        const memberRes = await axios.get(
+            `https://discord.com/api/users/@me/guilds/${GUILD_ID}/member`,
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+
+        const userRoles = memberRes.data.roles;
+        const permissions = BigInt(memberRes.data.permissions || 0);
+        
+        const hasRole = userRoles.includes(REQUIRED_ROLE_ID);
+        const isAdmin = (permissions & 0x8n) === 0x8n;
+
+        if (hasRole || isAdmin) {
+            res.redirect(`/loja.html?user=${encodeURIComponent(userRes.data.username)}`);
+        } else {
+            res.status(403).send("Acesso negado: Não tens o cargo necessário no servidor.");
+        }
+    } catch (e) {
+        console.error("Erro OAuth:", e.response?.data || e.message);
+        res.status(500).send("Erro no login Discord. Verifica se estás no servidor.");
+    }
+});
+
+/* --- BOT DISCORD --- */
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
-  ],
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+    ],
 });
 
+// Importante: Passar o app ou os caminhos se necessário, mas aqui mantemos a tua estrutura
 require("./src/events/interactionCreate")(client);
 require("./src/events/ready")(client);
 require("./src/events/error")(client);
 
 client.login(process.env.DISCORD_TOKEN);
 
-/* iniciar site */
-
+/* Iniciar site */
 app.listen(port, () => {
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("✅ Site está online!");
-  console.log("O site foi iniciado com sucesso e está pronto para uso.");
-  console.log(`🌐 Porta: ${port}`);
-  console.log(`🔗 https://jordan-shop-site.onrender.com`);
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("✅ Sistema Jordan Shop Online!");
+    console.log(`🌐 Porta: ${port}`);
+    console.log(`🔗 Link: https://discord-bott-jordan.onrender.com`);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 });
