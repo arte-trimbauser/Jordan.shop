@@ -1,13 +1,14 @@
+require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const axios = require("axios");
 const { Client, GatewayIntentBits } = require("discord.js");
-require("dotenv").config();
 
 const app = express();
 const port = process.env.PORT || 10000;
 
+// CONFIGURAÇÃO OFICIAL
 const CLIENT_ID = "1424479855466123284";
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = "https://discord-bott-jordan.onrender.com/callback";
@@ -21,7 +22,7 @@ const transcriptsDir = path.join(__dirname, "transcripts");
 if (fs.existsSync(transcriptsDir)) {
     const stats = fs.lstatSync(transcriptsDir);
     if (!stats.isDirectory()) {
-        console.log("⚠️ Detectado ficheiro 'transcripts', removendo para criar pasta real...");
+        console.log("⚠️ Removendo ficheiro inválido para criar pasta 'transcripts'...");
         fs.unlinkSync(transcriptsDir);
         fs.mkdirSync(transcriptsDir, { recursive: true });
     }
@@ -29,15 +30,16 @@ if (fs.existsSync(transcriptsDir)) {
     fs.mkdirSync(transcriptsDir, { recursive: true });
 }
 
+// Servir ficheiros do site e da pasta de logs
 app.use(express.static(sitePath));
 app.use("/transcripts", express.static(transcriptsDir));
 
-/* Página inicial */
+/* Rota Principal */
 app.get("/", (req, res) => {
     res.sendFile(path.join(sitePath, "login.html"));
 });
 
-/* API para listar transcripts no teu site */
+/* API para listar transcripts no site */
 app.get("/api/transcripts", (req, res) => {
     fs.readdir(transcriptsDir, (err, files) => {
         if (err) return res.json([]);
@@ -51,19 +53,10 @@ app.get("/api/transcripts", (req, res) => {
     });
 });
 
-/* Abrir transcript específico */
-app.get("/transcripts/:name", (req, res) => {
-    const filePath = path.join(transcriptsDir, req.params.name);
-    if (fs.existsSync(filePath)) {
-        return res.sendFile(filePath);
-    }
-    res.status(404).send("Transcript não encontrado");
-});
-
 /* Login Discord (OAuth2) */
 app.get("/callback", async (req, res) => {
     const { code } = req.query;
-    if (!code) return res.send("Erro: Código de autorização não encontrado.");
+    if (!code) return res.send("Erro: Código de autorização ausente.");
 
     try {
         const tokenRes = await axios.post(
@@ -99,11 +92,11 @@ app.get("/callback", async (req, res) => {
         if (hasRole || isAdmin) {
             res.redirect(`/loja.html?user=${encodeURIComponent(userRes.data.username)}`);
         } else {
-            res.status(403).send("Acesso negado: Não tens o cargo necessário no servidor.");
+            res.status(403).send("<h1>❌ Acesso Negado</h1><p>Precisas do cargo de Staff no servidor.</p>");
         }
     } catch (e) {
         console.error("Erro OAuth:", e.response?.data || e.message);
-        res.status(500).send("Erro no login Discord. Verifica se estás no servidor.");
+        res.status(500).send("Erro no login Discord.");
     }
 });
 
@@ -117,10 +110,11 @@ const client = new Client({
     ],
 });
 
-// Importante: Passar o app ou os caminhos se necessário, mas aqui mantemos a tua estrutura
+// Importa os teus eventos (ready, interactionCreate, etc)
 require("./src/events/interactionCreate")(client);
-require("./src/events/ready")(client);
-require("./src/events/error")(client);
+// Garante que os caminhos abaixo batem com os teus ficheiros
+if (fs.existsSync("./src/events/ready.js")) require("./src/events/ready")(client);
+if (fs.existsSync("./src/events/error.js")) require("./src/events/error")(client);
 
 client.login(process.env.DISCORD_TOKEN);
 
