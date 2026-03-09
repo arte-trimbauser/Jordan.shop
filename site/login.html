@@ -5,29 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jordan Shop - Login</title>
     <link rel="icon" type="image/png" href="logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;800&display=swap" rel="stylesheet">
 
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; background: #000; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Open Sans', sans-serif; background: #000; overflow: hidden; }
         
         .site-container {
             width: 100%; height: 100%;
-            background: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1)), url('login.jpg');
+            background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('login.jpg');
             background-size: cover; background-position: center;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             position: relative;
         }
 
-        /* Estilo da Mensagem de Erro no Topo/Meio */
+        /* Mensagem de Erro */
         #error-message {
-            position: absolute;
-            top: 20px;
-            background: rgba(255, 0, 0, 0.8);
-            color: white;
-            padding: 12px 25px;
-            border-radius: 10px;
-            font-weight: bold;
-            display: none; /* Escondido por padrão */
-            z-index: 1000;
+            position: absolute; top: 20px;
+            background: rgba(220, 0, 0, 0.9);
+            color: white; padding: 12px 25px;
+            border-radius: 10px; font-weight: bold;
+            display: none; z-index: 1000;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             border: 1px solid #ff4444;
             animation: fadeIn 0.5s ease-in-out;
@@ -39,56 +36,68 @@
         }
 
         .login-box {
-            background: rgba(20, 5, 5, 0.9);
+            background: rgba(15, 5, 5, 0.92);
             padding: 40px; border-radius: 20px;
-            width: 320px; text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.7);
+            width: 340px; text-align: center;
+            border: 1px solid rgba(139, 0, 0, 0.3);
+            box-shadow: 0 15px 45px rgba(0,0,0,0.8);
+        }
+
+        .welcome-title {
+            background: rgba(139, 0, 0, 0.8);
+            padding: 10px; border-radius: 8px;
+            margin-bottom: 25px; font-weight: bold; font-size: 0.85rem;
+            color: white; text-transform: uppercase;
         }
 
         .input-group { 
-            background: #3a0000; margin: 15px 0; padding: 12px; 
-            border-radius: 10px; display: flex; align-items: center; 
-            position: relative;
+            background: rgba(255, 255, 255, 0.05); margin: 15px 0; padding: 12px; 
+            border-radius: 8px; display: flex; align-items: center; 
+            border: 1px solid rgba(255, 255, 255, 0.1); transition: 0.3s;
         }
+        .input-group:focus-within { border-color: #8b0000; background: rgba(255, 255, 255, 0.1); }
 
         input { background: transparent; border: none; color: white; width: 100%; outline: none; font-size: 14px; }
         
+        /* Botão do Olho */
         .toggle-btn { 
-            width: 25px; height: 25px; cursor: pointer; 
-            margin-left: 10px; border-radius: 4px;
+            width: 22px; height: 22px; cursor: pointer; 
+            margin-left: 10px; border-radius: 4px; transition: 0.2s;
         }
+        .toggle-btn:hover { transform: scale(1.1); }
 
         .btn-entrar { 
-            width: 100%; padding: 15px; background: #b00000; color: white; 
-            border: none; border-radius: 10px; cursor: pointer; 
-            font-weight: bold; margin-top: 10px; transition: 0.3s;
+            width: 100%; padding: 15px; background: #8b0000; color: white; 
+            border: none; border-radius: 8px; cursor: pointer; 
+            font-weight: 800; margin-top: 10px; transition: 0.3s;
+            text-transform: uppercase; letter-spacing: 1px;
         }
-        .btn-entrar:hover { background: #ff0000; transform: scale(1.02); }
+        .btn-entrar:hover { background: #ff0000; box-shadow: 0 0 20px rgba(255, 0, 0, 0.4); }
+
+        .divider { color: #666; font-size: 11px; margin: 20px 0; font-weight: bold; }
 
         .btn-discord {
             background: #ffffff; color: #5865F2; text-decoration: none;
-            padding: 15px; border-radius: 10px; display: flex;
+            padding: 14px; border-radius: 8px; display: flex;
             align-items: center; justify-content: center;
-            margin-top: 20px; font-weight: bold; transition: 0.3s;
-            border: 2px solid #5865F2;
+            font-weight: bold; transition: 0.3s;
+            border: 1px solid #5865F2; font-size: 0.9rem;
         }
-        .btn-discord:hover { background: #f0f0f0; transform: scale(1.02); }
-        .discord-logo { width: 22px; margin-right: 12px; border-radius: 5px; }
-
-        .divider { color: #666; font-size: 12px; margin: 15px 0; }
+        .btn-discord:hover { background: #f0f0f0; transform: translateY(-2px); }
+        .discord-logo { width: 20px; margin-right: 12px; }
     </style>
 </head>
 <body>
 
     <div class="site-container">
-        <!-- Elemento de Erro -->
         <div id="error-message">Acesso Negado!</div>
 
         <div class="login-box">
+            <div class="welcome-title">Login Jordan Shop Site</div>
+            
             <div class="input-group">
                 <input type="text" id="user" placeholder="Nome do Utilizador">
-                <span>👤</span>
+                <span style="opacity: 0.6;">👤</span>
             </div>
             
             <div class="input-group">
@@ -108,6 +117,7 @@
     </div>
 
 <script>
+    // Tuas contas configuradas
     const contas = {
         "Jordan Costa": "Jordan26Costa",
         "Arteex26": "Arteex_26",
@@ -120,11 +130,7 @@
         const erroDiv = document.getElementById('error-message');
         erroDiv.innerText = texto;
         erroDiv.style.display = 'block';
-        
-        // Esconde o erro automaticamente após 4 segundos
-        setTimeout(() => {
-            erroDiv.style.display = 'none';
-        }, 4000);
+        setTimeout(() => { erroDiv.style.display = 'none'; }, 4000);
     }
 
     function validarLogin() {
@@ -132,17 +138,17 @@
         const p = document.getElementById('pass').value;
         
         if (contas[u] && contas[u] === p) {
+            // Redireciona para o painel com o nome do user
             window.location.href = `loja.html?user=${encodeURIComponent(u)}`;
         } else {
-            mostrarErro('❌ Nome de utilizador ou password incorretos!');
+            mostrarErro('❌ Utilizador ou Password incorretos!');
         }
     }
 
-function loginDiscordAnimado() {
-    // Link 100% verificado para o domínio discord-bott-jordan
-    const urlAutorizacao = "https://discord.com/oauth2/authorize?client_id=1424479855466123284&response_type=code&redirect_uri=https%3A%2F%2Fdiscord-bott-jordan.onrender.com%2Fcallback&scope=identify+guilds+guilds.members.read";
-    window.location.href = urlAutorizacao;
-}
+    function loginDiscordAnimado() {
+        const urlAutorizacao = "https://discord.com/oauth2/authorize?client_id=1424479855466123284&response_type=code&redirect_uri=https%3A%2F%2Fdiscord-bott-jordan.onrender.com%2Fcallback&scope=identify+guilds+guilds.members.read";
+        window.location.href = urlAutorizacao;
+    }
 
     function togglePass() {
         const input = document.getElementById('pass');
@@ -157,7 +163,6 @@ function loginDiscordAnimado() {
         }
     }
 
-    // Verifica se voltou do servidor com erro na URL
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('error')) {
