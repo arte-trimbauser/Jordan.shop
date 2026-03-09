@@ -14,6 +14,28 @@
             background: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1)), url('login.jpg');
             background-size: cover; background-position: center;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
+            position: relative;
+        }
+
+        /* Estilo da Mensagem de Erro no Topo/Meio */
+        #error-message {
+            position: absolute;
+            top: 20px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-weight: bold;
+            display: none; /* Escondido por padrão */
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border: 1px solid #ff4444;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .login-box {
@@ -60,6 +82,9 @@
 <body>
 
     <div class="site-container">
+        <!-- Elemento de Erro -->
+        <div id="error-message">Acesso Negado!</div>
+
         <div class="login-box">
             <div class="input-group">
                 <input type="text" id="user" placeholder="Nome do Utilizador">
@@ -91,6 +116,17 @@
         "pincher11": "pincher_11"
     };
 
+    function mostrarErro(texto) {
+        const erroDiv = document.getElementById('error-message');
+        erroDiv.innerText = texto;
+        erroDiv.style.display = 'block';
+        
+        // Esconde o erro automaticamente após 4 segundos
+        setTimeout(() => {
+            erroDiv.style.display = 'none';
+        }, 4000);
+    }
+
     function validarLogin() {
         const u = document.getElementById('user').value;
         const p = document.getElementById('pass').value;
@@ -98,13 +134,13 @@
         if (contas[u] && contas[u] === p) {
             window.location.href = `loja.html?user=${encodeURIComponent(u)}`;
         } else {
-            alert('Acesso negado!');
+            mostrarErro('❌ Nome de utilizador ou password incorretos!');
         }
     }
 
     function loginDiscordAnimado() {
-        // Usa o link gerado exatamente como o Discord te deu
-        const urlAutorizacao = "https://discord.com/oauth2/authorize?client_id=1424479855466123284&response_type=code&redirect_uri=https%3A%2F%2Fjordan-shop-site.onrender.com%2Fcallback&scope=identify+guilds";
+        // Link atualizado com os novos scopes: identify, guilds e guilds.members.read
+        const urlAutorizacao = "https://discord.com/oauth2/authorize?client_id=1424479855466123284&response_type=code&redirect_uri=https%3A%2F%2Fjordan-shop-site.onrender.com%2Fcallback&scope=identify+guilds+guilds.members.read";
         window.location.href = urlAutorizacao;
     }
 
@@ -118,6 +154,14 @@
         } else {
             input.type = "password";
             icon.src = "olho_fechado.jpg"; 
+        }
+    }
+
+    // Verifica se voltou do servidor com erro na URL
+    window.onload = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('error')) {
+            mostrarErro('❌ Erro: Não tens o cargo necessário no Discord.');
         }
     }
 </script>
