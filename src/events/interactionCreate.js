@@ -10,6 +10,7 @@ const {
 
 const config = require("../config");
 const discordTranscripts = require("discord-html-transcripts");
+const sendCallDM = require("../helpers/sendCallDM"); // Importando o teu helper de DM
 const fs = require("fs");
 const path = require("path");
 
@@ -47,7 +48,7 @@ async function sendTranscript(channel, userTag) {
 module.exports = async (client) => {
     client.on("interactionCreate", async (interaction) => {
         try {
-            const { channel, user, customId: cid } = interaction;
+            const { channel, user, customId: cid, guild } = interaction;
 
             /* 1. MENU -> TERMOS */
             if (interaction.isStringSelectMenu() && cid === "menu_ticket") {
@@ -92,7 +93,7 @@ module.exports = async (client) => {
                     return interaction.update({ embeds: [pagEmbed], components: [rowPag], flags: [MessageFlags.Ephemeral] });
                 }
 
-                /* 3. REIVINDICAR (COM EMOJI E LOG DE STAFF) */
+                /* 3. REIVINDICAR (DINÂMICO) */
                 if (cid === "claim_ticket") {
                     const info = channel.topic ? channel.topic.split("|") : ["?", "Não especificado"];
                     const metodo = info[1];
@@ -107,11 +108,45 @@ module.exports = async (client) => {
                     });
                 }
 
-                /* CHAMAR STAFF & FECHAR */
+                /* 4. CHAMAR STAFF (DINÂMICO + DM) */
                 if (cid === "call_staff") {
-                    const options = config.STAFF_MEMBERS.map(s => ({ label: s.label, value: s.id }));
-                    const select = new StringSelectMenuBuilder().setCustomId("select_staff").setPlaceholder("Seleciona o staff").addOptions(options);
-                    return interaction.reply({ content: "Chamar staff:", components: [new ActionRowBuilder().addComponents(select)], flags: [MessageFlags.Ephemeral] });
+                    // Cooldown Check
+                    const isDev = config.DEV_IDS.includes(user.id);
+                    if (!isDev) {
+                        const last = staffCooldown.get(user.id);
+                        if (last && Date.now() - last < STAFF_WAIT) {
+                            const remaining = Math.ceil((STAFF_WAIT - (Date.now() - last)) / 60000);
+                            return interaction.reply({ content: `Aguarde ${remaining} min para chamar novamente.`, flags: [MessageFlags.Ephemeral] });
+                        }
+                        staffCooldown.set(user.id, Date.now());
+                    }
+
+                    // Scan de Staff Online com os cargos do config.js
+                    const members = await guild.members.fetch();
+                    const staffDisponivel = members.filter(m => 
+                        m.roles.cache.some(r => config.STAFF_ROLES.includes(r.id)) && !m.user.bot
+                    );
+
+                    if (staffDisponivel.size === 0) {
+                        return interaction.reply({ content: "❌ Nenhum Staff configurado encontrado.", flags: [MessageFlags.Ephemeral] });
+                    }
+
+                    const options = staffDisponivel.map(m => ({
+                        label: m.displayName,
+                        value: m.id,
+                        description: `Cargo: ${m.roles.highest.name}`
+                    })).slice(0, 25);
+
+                    const select = new StringSelectMenuBuilder()
+                        .setCustomId("select_staff")
+                        .setPlaceholder("Seleciona o staff para notificar")
+                        .addOptions(options);
+
+                    return interaction.reply({ 
+                        content: "Selecione o staff que deseja chamar:", 
+                        components: [new ActionRowBuilder().addComponents(select)], 
+                        flags: [MessageFlags.Ephemeral] 
+                    });
                 }
 
                 if (cid === "close_ticket") {
@@ -121,22 +156,38 @@ module.exports = async (client) => {
                 }
             }
 
-            /* 4. CRIAÇÃO DO CANAL APÓS PAGAMENTO */
+            /* 5. SELECIONAR STAFF -> DISPARA DM HELPER */
+            if (interaction.isStringSelectMenu() && cid === "select_staff") {
+                const staffId = interaction.values[0];
+                
+                // Chamada do teu Helper de DM intercalada aqui
+                await sendCallDM({
+                    toUserId: staffId,
+                    fromUser: user,
+                    channel: channel,
+                    isStaffCall: false
+                });
+
+                await channel.send(`🔔 <@${staffId}> foi chamado via DM por <@${user.id}>`);
+                return interaction.update({ content: "✅ Staff notificado com sucesso!", components: [] });
+            }
+
+            /* 6. CRIAÇÃO DO CANAL APÓS PAGAMENTO */
             if (interaction.isStringSelectMenu() && cid.startsWith("pagamento_")) {
                 const tipo = cid.replace("pagamento_", "");
                 const metodo = interaction.values[0];
 
                 await interaction.update({ content: "⏳ A abrir ticket...", embeds: [], components: [] });
 
-                let category = interaction.guild.channels.cache.find(c => c.name === config.CATEGORY_NAME && c.type === 4);
-                if (!category) category = await interaction.guild.channels.create({ name: config.CATEGORY_NAME, type: 4 });
+                let category = guild.channels.cache.find(c => c.name === config.CATEGORY_NAME && c.type === 4);
+                if (!category) category = await guild.channels.create({ name: config.CATEGORY_NAME, type: 4 });
 
-                const canal = await interaction.guild.channels.create({
+                const canal = await guild.channels.create({
                     name: `ticket-${tipo}-${user.username}`.toLowerCase(),
                     parent: category.id,
-                    topic: `${user.id}|${metodo}`, // Guarda o ID e Método no tópico
+                    topic: `${user.id}|${metodo}`, 
                     permissionOverwrites: [
-                        { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+                        { id: guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
                         { id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
                         ...config.STAFF_ROLES.map(id => ({ id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }))
                     ]
@@ -156,12 +207,6 @@ module.exports = async (client) => {
                 return interaction.editReply({ content: `Ticket criado: <#${canal.id}>` });
             }
 
-            if (interaction.isStringSelectMenu() && cid === "select_staff") {
-                const staffId = interaction.values[0];
-                await channel.send(`🔔 <@${staffId}> foi chamado por <@${user.id}>`);
-                return interaction.update({ content: "Staff chamado.", components: [] });
-            }
-
-        } catch (err) { console.error(err); }
+        } catch (err) { console.error("Erro na Interação:", err); }
     });
 };
