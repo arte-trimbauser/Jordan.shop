@@ -76,24 +76,35 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds, 
         GatewayIntentBits.GuildMessages, 
-        GatewayIntentBits.GuildMembers
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.MessageContent
     ] 
 });
 
-require("./src/events/interactionCreate")(client);
+// Tentar carregar eventos com proteção de erro
+try {
+    const interactionHandler = require("./src/events/interactionCreate");
+    interactionHandler(client);
+    console.log("✅ Eventos de interação carregados.");
+} catch (err) {
+    console.error("⚠️ Erro ao carregar eventos (interactionCreate):", err.message);
+}
 
 client.once("ready", () => {
-    console.log(`✅ Bot online como ${client.user.tag}`);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log(`✅ BOT ONLINE: ${client.user.tag}`);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 });
 
-client.login(process.env.DISCORD_TOKEN);
+// Login com log de erro explícito
+client.login(process.env.DISCORD_TOKEN).catch(err => {
+    console.error("❌ ERRO NO LOGIN DO BOT:", err.message);
+});
 
-// INICIAR SERVIDOR COM O TEU VISUAL
 // INICIAR SERVIDOR
 app.listen(port, "0.0.0.0", () => {
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("✅ Site está online!\n");
-    console.log("O site foi iniciado com sucesso e está pronto para uso.\n");
+    console.log("🚀 SERVIDOR WEB ONLINE");
     console.log(`🌐 Porta: ${port}`);
     console.log(`🔗 https://discord-bott-jordan.onrender.com`);
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
