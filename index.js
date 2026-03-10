@@ -89,9 +89,9 @@ client.once("ready", () => {
 client.login(process.env.DISCORD_TOKEN);
 
 // INICIAR SERVIDOR COM O TEU VISUAL
-app.listen(port, () => {
+// INICIAR SERVIDOR
+app.listen(port, "0.0.0.0", () => {
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("Menu\n");
     console.log("✅ Site está online!\n");
     console.log("O site foi iniciado com sucesso e está pronto para uso.\n");
     console.log(`🌐 Porta: ${port}`);
