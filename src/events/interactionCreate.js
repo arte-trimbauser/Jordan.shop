@@ -11,7 +11,7 @@ const STAFF_WAIT = 5 * 60 * 1000;
 
 module.exports = async (client) => {
     client.on("interactionCreate", async (interaction) => {
-        const { channel, user, guild, customId: cid } = interaction;
+        const { channel, user, guild, customId: cid, member } = interaction;
 
         // --- BOTÃO: CHAMAR STAFF ---
         if (interaction.isButton() && cid === "call_staff") {
@@ -23,10 +23,10 @@ module.exports = async (client) => {
                 return interaction.reply({ content: `⏳ Como não és developer, tens de esperar **${falta} segundos** para chamar de novo.`, flags: [MessageFlags.Ephemeral] });
             }
 
-            // Ordenação: Cargo (Topo) > Nome (ABC)
+            // Ordenação: Cargo (Topo/Hierarquia) > Nome (ABC)
             const members = await guild.members.fetch({ withPresences: true });
             const staffList = members
-                .filter(m => isStaff(m) && !m.user.bot) // Usa o teu helper isStaff
+                .filter(m => isStaff(m) && !m.user.bot)
                 .sort((a, b) => {
                     const roleDiff = b.roles.highest.position - a.roles.highest.position;
                     if (roleDiff !== 0) return roleDiff;
@@ -35,7 +35,12 @@ module.exports = async (client) => {
 
             if (staffList.size === 0) return interaction.reply({ content: "❌ Ninguém da staff online.", flags: [MessageFlags.Ephemeral] });
 
-            const options = staffList.map(m => ({ label: m.displayName, value: m.id, description: `Cargo: ${m.roles.highest.name}` })).slice(0, 25);
+            const options = staffList.map(m => ({ 
+                label: m.displayName, 
+                value: m.id, 
+                description: `Cargo: ${m.roles.highest.name}` 
+            })).slice(0, 25);
+
             const menu = new StringSelectMenuBuilder().setCustomId("select_staff").setPlaceholder("Escolhe o Staff").addOptions(options);
             
             if (!isDev) staffCooldown.set(user.id, Date.now());
@@ -50,36 +55,59 @@ module.exports = async (client) => {
         // --- SELEÇÃO DE STAFF (DM) ---
         if (interaction.isStringSelectMenu() && cid === "select_staff") {
             const staffId = interaction.values[0];
-            // Usa o teu helper sendCallDM
             await sendCallDM({ 
                 toUserId: staffId, 
                 fromUser: user, 
                 channel: channel, 
-                isStaffCall: isStaff(await guild.members.fetch(user.id)) 
+                isStaffCall: isStaff(member) 
             });
 
             return interaction.update({ content: `✅ <@${staffId}> foi notificado por DM!`, components: [] });
         }
 
+        // --- BOTÃO: REIVINDICAR (CLAIM) ---
+        if (interaction.isButton() && cid === "claim_ticket") {
+            if (!isStaff(member)) {
+                return interaction.reply({ content: "❌ Apenas a staff pode reivindicar tickets!", flags: [MessageFlags.Ephemeral] });
+            }
+
+            const systemId = "1457415165380268134"; // ID que pediste
+
+            const embedClaim = new EmbedBuilder()
+                .setTitle("🛡️ Ticket Reivindicado")
+                .setDescription(`O staff <@${user.id}> reivindicou este ticket.\n\n🆔 **ID do Sistema:** \`${systemId}\``)
+                .setColor("#00ff00")
+                .setTimestamp();
+
+            // Desativar botão de claim
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId("claim_ticket").setLabel("🛡️ Reivindicado").setStyle(ButtonStyle.Success).setDisabled(true),
+                new ButtonBuilder().setCustomId("call_staff").setLabel("🔔 Chamar Staff").setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId("close_ticket").setLabel("Fechar").setStyle(ButtonStyle.Danger)
+            );
+
+            await interaction.update({ components: [row] });
+            return channel.send({ content: `✅ O ticket foi assumido por <@${user.id}>!`, embeds: [embedClaim] });
+        }
+
         // --- BOTÃO: FECHAR TICKET ---
         if (interaction.isButton() && cid === "close_ticket") {
-            await interaction.reply({ content: "📂 A gerar transcrição e a guardar no GitHub/Site..." });
-            
-            // Usa o teu helper sendTranscript
+            await interaction.reply({ content: "📂 A gerar transcrição e a guardar no GitHub..." });
             await sendTranscript(channel, user.tag);
-
             setTimeout(() => channel.delete().catch(() => {}), 5000);
         }
 
-        // --- ABRIR TICKET (PAGAMENTO) ---
-        if (interaction.isStringSelectMenu() && cid.startsWith("pagamento_")) {
+        // --- ABRIR TICKET (Corrigido para o teu menu_ticket) ---
+        if (interaction.isStringSelectMenu() && (cid === "menu_ticket" || cid.startsWith("pagamento_"))) {
             const metodo = interaction.values[0];
-            const tipo = cid.replace("pagamento_", "");
+            
+            // Impede o user de clicar no menu de seleção de staff como se fosse abrir ticket
+            if (cid === "select_staff") return;
 
             await interaction.update({ content: "⏳ A abrir o teu ticket...", embeds: [], components: [] });
 
             const canal = await guild.channels.create({
-                name: `ticket-${tipo}-${user.username}`,
+                name: `ticket-${metodo}-${user.username}`,
                 parent: config.CATEGORY_ID,
                 permissionOverwrites: [
                     { id: guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
@@ -91,6 +119,7 @@ module.exports = async (client) => {
             const irParaTicket = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setLabel("Ir para o Ticket").setStyle(ButtonStyle.Link).setURL(`https://discord.com/channels/${guild.id}/${canal.id}`)
             );
+            
             await interaction.followUp({ content: `✅ Ticket criado: <#${canal.id}>`, components: [irParaTicket], flags: [MessageFlags.Ephemeral] });
 
             const embedTicket = new EmbedBuilder()
