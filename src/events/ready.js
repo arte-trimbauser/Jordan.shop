@@ -7,7 +7,7 @@ module.exports = (client) => {
     console.log(`✅ Jordan Shop Online: ${client.user.tag}`);
 
     client.user.setPresence({
-      activities: [{ name: "Jordan Shop", type: ActivityType.Competing }],
+      activities: [{ name: "Jordan Shop | discord.gg/6hhZeqb7Qk", type: ActivityType.Competing }],
       status: "online"
     });
 
