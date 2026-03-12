@@ -8,12 +8,12 @@ module.exports = async (client) => {
 
   // CONFIGURAÇÃO COMPETING
   client.user.setPresence({
-    activities: [{ 
-      name: "Jordan Shop | discord.gg/6hhZeqb7Qk", 
-      type: ActivityType.Competing // Tipo 5: A competir em...
-    }],
-    status: "online"
-  });
+  activities: [{
+    name: "Jordan Shop",
+    type: ActivityType.Playing
+  }],
+  status: "online"
+});
 
   // Hora atual
   const now = new Date();
