@@ -5,9 +5,13 @@ module.exports = (client) => {
     client.once("ready", async () => {
         if (!client.user) return;
 
-        // 1. STATUS / PRESENÇA
+ // 1. STATUS / PRESENÇA (Link visível)
         client.user.setPresence({
-            activities: [{ name: "Jordan Shop | discord.gg/6hhZeqb7Qk", type: ActivityType.Watching }],
+            activities: [{ 
+                name: "Jordan Shop | discord.gg/6hhZeqb7Qk", 
+                type: ActivityType.Custom, // Custom permite mostrar o texto melhor
+                state: "🔗 discord.gg/6hhZeqb7Qk" 
+            }],
             status: "online"
         });
 
