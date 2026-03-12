@@ -20,7 +20,7 @@ module.exports = async (client) => {
 
             if (!isDev && last && (Date.now() - last < STAFF_WAIT)) {
                 const falta = Math.ceil((STAFF_WAIT - (Date.now() - last)) / 1000);
-                return interaction.reply({ content: `⏳ Como não és developer, tens de esperar **${falta} segundos** para chamar de novo.`, flags: [MessageFlags.Ephemeral] });
+                return interaction.reply({ content: `⏳ Tens de esperar **${falta} segundos** para chamar de novo um novo Staff.`, flags: [MessageFlags.Ephemeral] });
             }
 
             // Ordenação: Cargo (Topo/Hierarquia) > Nome (ABC)
