@@ -7,10 +7,13 @@ const { Client, GatewayIntentBits } = require("discord.js");
 const app = express();
 const port = process.env.PORT || 10000;
 
-// Configurações de caminhos
+// Configuração de Pastas e Transcripts
 const sitePath = path.join(__dirname, "site");
+const transcriptsPath = path.join(__dirname, "transcripts");
+
 app.use(express.static(sitePath));
-app.use("/transcripts", express.static(path.join(__dirname, "transcripts")));
+// Permite que o link do transcript funcione no navegador
+app.use("/transcripts", express.static(transcriptsPath));
 
 app.get("/", (req, res) => {
     const loginPath = path.join(sitePath, "login.html");
@@ -30,7 +33,7 @@ const client = new Client({
     ] 
 });
 
-// Evento quando o Bot liga (O ESTILO QUE QUERES)
+// Mensagem de Inicialização com o teu Estilo
 client.once("ready", () => {
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
     console.log(`✅ Sistema Jordan Shop Online!`);
@@ -41,7 +44,7 @@ client.once("ready", () => {
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
 });
 
-// Carregar interações
+// Importar interações
 try {
     const interactionHandler = require("./src/events/interactionCreate");
     interactionHandler(client);
@@ -49,11 +52,8 @@ try {
     console.error("❌ Erro ao carregar interactionCreate:", err.message);
 }
 
-// Iniciar Servidor Web
 app.listen(port, "0.0.0.0", () => {
-    // O log do express pode ficar aqui ou ser movido para o ready do bot
+    // Servidor pronto
 });
 
-client.login(process.env.DISCORD_TOKEN).catch(err => {
-    console.error("❌ ERRO NO LOGIN:", err.message);
-});
+client.login(process.env.DISCORD_TOKEN);
