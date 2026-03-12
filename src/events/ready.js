@@ -2,81 +2,44 @@ const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ActivityType } 
 const menus = require("../menus");
 
 module.exports = (client) => {
-  // O segredo é envolver tudo no evento 'ready' para o client.user não ser nulo
+  // ISTO É O MAIS IMPORTANTE: O código só roda quando o bot está pronto.
   client.once("ready", async () => {
-    const { LOG_CHANNEL_ID } = process.env;
+    console.log(`✅ Jordan Shop Online: ${client.user.tag}`);
 
-    console.log(`✅ Bot online como ${client.user.tag}`);
-
-    // CONFIGURAÇÃO COMPETING (A competir em...)
     client.user.setPresence({
-      activities: [{
-        name: "Jordan Shop",
-        type: ActivityType.Competing
-      }],
+      activities: [{ name: "Jordan Shop", type: ActivityType.Competing }],
       status: "online"
     });
 
-    // Hora atual
-    const now = new Date();
-    const hora = now.toLocaleTimeString("pt-PT");
-
-    // Envio de Log de Inicialização
-    if (LOG_CHANNEL_ID) {
-      try {
-        const logChannel = await client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
-        if (logChannel) {
-          await logChannel.send({
-            embeds: [
-              new EmbedBuilder()
-                .setTitle("✅ Bot está online!")
-                .setDescription(`O bot foi iniciado com sucesso e está pronto para uso.\n\n🕒 Hora: ${hora}`)
-                .setImage("https://i.postimg.cc/YCmc9zyY/sucesso-no-neg-cio-61850034.webp")
-                .setColor("#00ff00")
-            ]
-          });
-        }
-      } catch (e) {
-        console.error("Erro ao enviar log de boot:", e);
+    // Se tiveres o LOG_CHANNEL_ID no .env, ele envia a mensagem
+    const logId = process.env.LOG_CHANNEL_ID;
+    if (logId) {
+      const canal = await client.channels.fetch(logId).catch(() => null);
+      if (canal) {
+        const embed = new EmbedBuilder()
+          .setTitle("✅ Bot está online!")
+          .setColor("#00ff00")
+          .setImage("https://i.postimg.cc/YCmc9zyY/sucesso-no-neg-cio-61850034.webp");
+        await canal.send({ embeds: [embed] });
       }
     }
 
-    // Envia menus de tickets
+    // Envio dos Menus
     for (const menu of menus) {
-      try {
-        const canal = await client.channels.fetch(menu.id).catch(() => null);
-        if (!canal) continue;
-
-        const lastMessages = await canal.messages.fetch({ limit: 10 }).catch(() => new Map());
-
-        const alreadyPosted = Array.from(lastMessages.values()).some(m =>
-          m.author?.id === client.user.id &&
-          m.embeds?.some(e => e.title === menu.title)
-        );
-
-        if (alreadyPosted) continue;
-
-        const embed = new EmbedBuilder()
+      const canalMenu = await client.channels.fetch(menu.id).catch(() => null);
+      if (canalMenu) {
+        const embedM = new EmbedBuilder()
           .setTitle(menu.title)
           .setDescription(menu.embedDesc)
           .setColor("#ff0000");
-
-        if (menu.embedImage) embed.setImage(menu.embedImage);
-
-        const selectMenu = new StringSelectMenuBuilder()
-          .setCustomId("menu_ticket")
-          .setPlaceholder("Escolhe uma opção")
-          .addOptions(menu.options);
-
-        const row = new ActionRowBuilder().addComponents(selectMenu);
-
-        await canal.send({
-          embeds: [embed],
-          components: [row]
-        });
-
-      } catch (error) {
-        console.error(`Erro ao enviar menu ${menu.title}:`, error);
+        
+        const row = new ActionRowBuilder().addComponents(
+          new StringSelectMenuBuilder()
+            .setCustomId("menu_ticket")
+            .setPlaceholder("Escolhe uma opção")
+            .addOptions(menu.options)
+        );
+        await canalMenu.send({ embeds: [embedM], components: [row] });
       }
     }
   });
