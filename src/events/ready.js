@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
+const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ActivityType } = require("discord.js");
 const menus = require("../menus");
 const { LOG_CHANNEL_ID } = process.env;
 
@@ -6,21 +6,23 @@ module.exports = async (client) => {
 
   console.log(`✅ Bot online como ${client.user.tag}`);
 
+  // CONFIGURAÇÃO COMPETING
   client.user.setPresence({
-    activities: [{ name: "Jordan Shop | discord.gg/6hhZeqb7Qk", type: 0 }],
+    activities: [{ 
+      name: "Jordan Shop | discord.gg/6hhZeqb7Qk", 
+      type: ActivityType.Competing // Tipo 5: A competir em...
+    }],
     status: "online"
   });
 
-  // hora atual
+  // Hora atual
   const now = new Date();
   const hora = now.toLocaleTimeString("pt-PT");
 
+  // Envio de Log de Inicialização
   if (LOG_CHANNEL_ID) {
-
     const logChannel = await client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
-
     if (logChannel) {
-
       await logChannel.send({
         embeds: [
           new EmbedBuilder()
@@ -30,16 +32,12 @@ module.exports = async (client) => {
             .setColor("#00ff00")
         ]
       });
-
     }
-
   }
 
-  // envia menus
+  // Envia menus de tickets
   for (const menu of menus) {
-
     try {
-
       const canal = await client.channels.fetch(menu.id).catch(() => null);
       if (!canal) continue;
 
@@ -60,7 +58,7 @@ module.exports = async (client) => {
       if (menu.embedImage) embed.setImage(menu.embedImage);
 
       const selectMenu = new StringSelectMenuBuilder()
-        .setCustomId("menu_ticket")
+        .setCustomId("menu_ticket") // Este ID tem de ser igual no interactionCreate.js
         .setPlaceholder("Escolhe uma opção")
         .addOptions(menu.options);
 
@@ -72,11 +70,7 @@ module.exports = async (client) => {
       });
 
     } catch (error) {
-
       console.error(`Erro ao enviar menu ${menu.title}:`, error);
-
     }
-
   }
-
 };
