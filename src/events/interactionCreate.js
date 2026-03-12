@@ -10,7 +10,7 @@ const {
 
 const config = require("../config");
 const discordTranscripts = require("discord-html-transcripts");
-const sendCallDM = require("../helpers/sendCallDM"); // Importando o teu helper de DM
+const sendCallDM = require("../helpers/sendCallDM"); 
 const fs = require("fs");
 const path = require("path");
 
@@ -68,7 +68,7 @@ module.exports = async (client) => {
             if (interaction.isButton()) {
                 if (cid === "recusar_termos") return interaction.reply({ content: "❌ Tens de aceitar os termos.", flags: [MessageFlags.Ephemeral] });
 
-                /* 2. ACEITAR -> PAGAMENTO COM EMOJIS */
+                /* 2. ACEITAR -> PAGAMENTO */
                 if (cid.startsWith("aceitar_termos_")) {
                     const tipo = cid.replace("aceitar_termos_", "");
                     const pagEmbed = new EmbedBuilder()
@@ -93,10 +93,10 @@ module.exports = async (client) => {
                     return interaction.update({ embeds: [pagEmbed], components: [rowPag], flags: [MessageFlags.Ephemeral] });
                 }
 
-                /* 3. REIVINDICAR (DINÂMICO) */
+                /* 3. REIVINDICAR */
                 if (cid === "claim_ticket") {
                     const info = channel.topic ? channel.topic.split("|") : ["?", "Não especificado"];
-                    const metodo = info[1];
+                    const metodo = info[1] || "Não especificado";
                     
                     await interaction.update({
                         content: `🛡️ **Ticket** \`${channel.name}\` reivindicado por <@${user.id}>\n💳 **Método escolhido:** \`${metodo}\``,
@@ -108,9 +108,8 @@ module.exports = async (client) => {
                     });
                 }
 
-                /* 4. CHAMAR STAFF (DINÂMICO + DM) */
+                /* 4. CHAMAR STAFF */
                 if (cid === "call_staff") {
-                    // Cooldown Check
                     const isDev = config.DEV_IDS.includes(user.id);
                     if (!isDev) {
                         const last = staffCooldown.get(user.id);
@@ -121,15 +120,12 @@ module.exports = async (client) => {
                         staffCooldown.set(user.id, Date.now());
                     }
 
-                    // Scan de Staff Online com os cargos do config.js
                     const members = await guild.members.fetch();
                     const staffDisponivel = members.filter(m => 
                         m.roles.cache.some(r => config.STAFF_ROLES.includes(r.id)) && !m.user.bot
                     );
 
-                    if (staffDisponivel.size === 0) {
-                        return interaction.reply({ content: "❌ Nenhum Staff configurado encontrado.", flags: [MessageFlags.Ephemeral] });
-                    }
+                    if (staffDisponivel.size === 0) return interaction.reply({ content: "❌ Nenhum Staff online.", flags: [MessageFlags.Ephemeral] });
 
                     const options = staffDisponivel.map(m => ({
                         label: m.displayName,
@@ -143,12 +139,13 @@ module.exports = async (client) => {
                         .addOptions(options);
 
                     return interaction.reply({ 
-                        content: "Selecione o staff que deseja chamar:", 
+                        content: "Selecione o staff:", 
                         components: [new ActionRowBuilder().addComponents(select)], 
                         flags: [MessageFlags.Ephemeral] 
                     });
                 }
 
+                /* 5. FECHAR TICKET */
                 if (cid === "close_ticket") {
                     await interaction.reply({ content: "📂 A gerar transcript e fechar...", flags: [MessageFlags.Ephemeral] });
                     await sendTranscript(channel, user.tag);
@@ -156,23 +153,15 @@ module.exports = async (client) => {
                 }
             }
 
-            /* 5. SELECIONAR STAFF -> DISPARA DM HELPER */
+            /* SELECIONAR STAFF */
             if (interaction.isStringSelectMenu() && cid === "select_staff") {
                 const staffId = interaction.values[0];
-                
-                // Chamada do teu Helper de DM intercalada aqui
-                await sendCallDM({
-                    toUserId: staffId,
-                    fromUser: user,
-                    channel: channel,
-                    isStaffCall: false
-                });
-
+                await sendCallDM({ toUserId: staffId, fromUser: user, channel: channel, isStaffCall: false });
                 await channel.send(`🔔 <@${staffId}> foi chamado via DM por <@${user.id}>`);
-                return interaction.update({ content: "✅ Staff notificado com sucesso!", components: [] });
+                return interaction.update({ content: "✅ Staff notificado!", components: [] });
             }
 
-            /* 6. CRIAÇÃO DO CANAL APÓS PAGAMENTO */
+            /* CRIAÇÃO DO CANAL */
             if (interaction.isStringSelectMenu() && cid.startsWith("pagamento_")) {
                 const tipo = cid.replace("pagamento_", "");
                 const metodo = interaction.values[0];
@@ -193,20 +182,22 @@ module.exports = async (client) => {
                     ]
                 });
 
+                const embedBoasVindas = new EmbedBuilder()
+                    .setTitle(`🎫 Ticket Aberto - ${tipo}`)
+                    .setDescription(`Olá <@${user.id}>, bem-vindo ao teu ticket.\n💳 Método: **${metodo}**\n\nAguarde um momento pela Staff.`)
+                    .setColor("#ff0000");
+
                 const row = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId("claim_ticket").setLabel("Reivindicar").setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId("claim_ticket").setLabel("🛡️ Reivindicar").setStyle(ButtonStyle.Success),
                     new ButtonBuilder().setCustomId("call_staff").setLabel("🔔 Chamar Staff").setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId("close_ticket").setLabel("Fechar").setStyle(ButtonStyle.Danger)
                 );
 
-                await canal.send({
-                    content: `✅ <@${user.id}> aceitou os termos!\n\n**Produto:** \`${tipo.toUpperCase()}\`\n**Pagamento:** \`${metodo}\`\n\nAguarde, um staff já o irá atender.`,
-                    components: [row]
-                });
-
-                return interaction.editReply({ content: `Ticket criado: <#${canal.id}>` });
+                await canal.send({ content: `<@${user.id}> | @here`, embeds: [embedBoasVindas], components: [row] });
             }
 
-        } catch (err) { console.error("Erro na Interação:", err); }
+        } catch (err) {
+            console.error("Erro na interação:", err);
+        }
     });
 };
