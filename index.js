@@ -43,17 +43,17 @@ client.once("clientReady", () => {
     console.log(`✅ Bot online como ${client.user.tag}`);
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
 });
-// --- CARREGAR EVENTOS ---
 
-// Importar o Ready (Status Competing e Envio de Menus)
+// --- CARREGAR EVENTOS ---
+// Ready
 try {
     const readyHandler = require("./src/events/ready");
-    readyHandler(client); // Isto ativa o status e envia os menus para os canais
+    readyHandler(client).catch(err => console.error("❌ Erro no readyHandler:", err.message));
 } catch (err) {
     console.error("❌ Erro ao carregar ready.js:", err.message);
 }
 
-// Importar interações (O teu código de volta como estava)
+// InteractionCreate
 try {
     const interactionHandler = require("./src/events/interactionCreate");
     interactionHandler(client);
