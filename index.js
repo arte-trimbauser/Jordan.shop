@@ -34,7 +34,7 @@ const client = new Client({
 });
 
 // Mensagem de Inicialização com o teu Estilo
-client.once("ready", () => {
+client.once("clientReady", () => {
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
     console.log(`✅ Sistema Jordan Shop Online!`);
     console.log(`🌐 Porta: ${port}`);
@@ -43,7 +43,6 @@ client.once("ready", () => {
     console.log(`✅ Bot online como ${client.user.tag}`);
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
 });
-
 // --- CARREGAR EVENTOS ---
 
 // Importar o Ready (Status Competing e Envio de Menus)
@@ -66,4 +65,6 @@ app.listen(port, "0.0.0.0", () => {
     // Servidor pronto
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.DISCORD_TOKEN).catch(err => {
+    console.error("❌ ERRO NO LOGIN:", err.message);
+});
