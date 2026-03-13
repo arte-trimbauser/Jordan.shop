@@ -1,36 +1,36 @@
 const { EmbedBuilder, ActivityType } = require("discord.js");
 
-module.exports = (client) => {
-  client.once("clientReady", async () => {
-    const { LOG_CHANNEL_ID } = process.env;
+module.exports = async (client) => {
+    client.once("clientReady", async () => {
+        const LOG_CHANNEL_ID = process.env.LOG_CHANNEL_ID;
 
-    console.log(`✅ Jordan Shop Online: ${client.user.tag}`);
+        console.log(`✅ Jordan Shop Online: ${client.user.tag}`);
 
-    client.user.setPresence({ 
-      activities: [{ name: "Jordan Shop | discord.gg/6hhZeqb7Qk", type: ActivityType.Competing }], 
-      status: "online" 
-    });
+        client.user.setPresence({ 
+            activities: [{ name: "Jordan Shop | discord.gg/6hhZeqb7Qk", type: ActivityType.Competing }], 
+            status: "online" 
+        });
 
-    if (LOG_CHANNEL_ID) {
-      try {
-        const logChannel = await client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
-        if (logChannel) {
-          const now = new Date();
-          const hora = now.toLocaleTimeString("pt-PT");
+        if (LOG_CHANNEL_ID) {
+            try {
+                const logChannel = await client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
+                if (logChannel) {
+                    const now = new Date();
+                    const hora = now.toLocaleTimeString("pt-PT");
 
-          await logChannel.send({
-            embeds: [
-              new EmbedBuilder()
-                .setTitle("✅ Bot está online!")
-                .setDescription(`O bot foi iniciado com sucesso e está pronto para uso.\n\n🕒 Hora: ${hora}`)
-                .setImage("https://i.postimg.cc/YCmc9zyY/sucesso-no-neg-cio-61850034.webp")
-                .setColor("#00ff00")
-            ]
-          });
+                    await logChannel.send({
+                        embeds: [
+                            new EmbedBuilder()
+                                .setTitle("✅ Bot está online!")
+                                .setDescription(`O bot foi iniciado com sucesso e está pronto para uso.\n\n🕒 Hora: ${hora}`)
+                                .setImage("https://i.postimg.cc/YCmc9zyY/sucesso-no-neg-cio-61850034.webp")
+                                .setColor("#00ff00")
+                        ]
+                    });
+                }
+            } catch (err) {
+                console.error("Erro ao enviar log de inicialização.");
+            }
         }
-      } catch (err) {
-        console.error("Erro ao enviar log de inicialização.");
-      }
-    }
-  });
+    });
 };
