@@ -25,9 +25,10 @@ client.on("interactionCreate", async (interaction) => {
 
 try{
 
-const {guild, channel, user, member, customId: cid} = interaction;
-if(!guild) return;
+const { guild, channel, user, member } = interaction;
+const cid = interaction.customId;
 
+if(!guild) return;
 /* MENU TICKET */
 
 if(interaction.isStringSelectMenu() && cid === "menu_ticket"){
