@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActivityType } = require("discord.js");
 
 module.exports = (client) => {
-  client.once("ready", async () => {
+  client.once("clientReady", async () => {
     const { LOG_CHANNEL_ID } = process.env;
 
     console.log(`✅ Jordan Shop Online: ${client.user.tag}`);
