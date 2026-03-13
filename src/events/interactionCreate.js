@@ -14,19 +14,21 @@ const fs = require("fs");
 const path = require("path");
 const isStaff = require("../helpers/isStaff");
 
-async function sendLog(guild, text){
-    const logChannel = await guild.channels.fetch(config.LOG_CHANNEL_ID).catch(()=>null);
-    if(logChannel) logChannel.send(text);
+function sendLog(guild, text){
+    guild.channels.fetch(config.LOG_CHANNEL_ID)
+    .then(logChannel => {
+        if(logChannel) logChannel.send(text);
+    })
+    .catch(()=>null);
 }
 
 module.exports = (client) => {
 
-client.on("interactionCreate", async (interaction) => {
+    client.on("interactionCreate", async (interaction) => {
 
-try{
+        if (!interaction) return;
 
-const { guild, channel, user, member } = interaction;
-const cid = interaction.customId;
+        try {
 
 if(!guild) return;
 /* MENU TICKET */
@@ -289,10 +291,10 @@ channel.delete().catch(()=>{});
 
 }
 
-}catch(err){
-console.log(err);
-}
+        } catch (err) {
+            console.error(err);
+        }
 
-});
+    });
 
 };
