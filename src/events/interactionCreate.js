@@ -34,8 +34,6 @@ module.exports = (client) => {
                 const tipo = interaction.values[0];
                 const embedTermos = new EmbedBuilder()
                     .setTitle("⚖️ Termos de Serviço - Jordan Shop")
-                const embedTermos = new EmbedBuilder()
-                    .setTitle("⚖️ Termos de Serviço - Jordan Shop")
                     .setDescription(
                         "**Termos de Serviço de Reembolso**\n" +
                         "Não oferecemos reembolsos após a conclusão de uma compra ou serviço.\n\n" +
