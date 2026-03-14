@@ -27,7 +27,8 @@ const emojisPagamento = {
 
 async function sendLog(guild, text, embed = null) {
     try {
-        const logChannel = await guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID || config.LOG_CHANNEL_ID).catch(() => null);
+        const logChannelId = config.TRANSCRIPT_LOG_CHANNEL_ID || config.LOG_CHANNEL_ID;
+        const logChannel = await guild.channels.fetch(logChannelId).catch(() => null);
         if (logChannel) {
             await logChannel.send({ content: text, embeds: embed ? [embed] : [] });
         }
@@ -46,29 +47,22 @@ module.exports = (client) => {
             /* 1. MENU TICKET -> MOSTRA TERMOS */
             if (interaction.isStringSelectMenu() && cid === "menu_ticket") {
                 const tipo = interaction.values[0];
+                
                 const embedTermos = new EmbedBuilder()
-                const embed = new EmbedBuilder()
-                .setTitle("⚖️ Termos de Serviço - Jordan Shop")
-                .setDescription(
-            "**Termos de Serviço de Reembolso**\n" +
-            "Não oferecemos reembolsos após a conclusão de uma compra ou serviço. Em casos excepcionais, uma substituição pode ser oferecida, se possível.\n\n" +
-            "**Termos de Serviço de Substituição**\n" +
-            "A substituição só é possível com um voucher.\n" +
-            "Sem voucher = sem garantia ou substituição.\n\n" +
-            "**Termos de Serviço da Conta**\n" +
-            "Após receber uma conta, você deverá alterar seu endereço de e-mail e senha imediatamente.\n" +
-            "Não assumimos qualquer responsabilidade ou substituição caso você não o faça.\n\n" +
-            "**Termos de Serviço do PayPal**\n" +
-            "Os pagamentos devem ser enviados via \"Amigos e Familiares\" – sem uma mensagem nos detalhes de pagamento.\n" +
-            "Não nos responsabilizamos se nossa conta do PayPal for bloqueada e os fundos permanecerem lá. Não há reembolsos possíveis!\n\n" +
-            "**Idioma do Ticket**\n" +
-            "O suporte e os tickets são processados exclusivamente em Português.\n\n" +
-            "**Comportamento do Ticket**\n" +
-            "Por favor, não envie spam ou ping várias vezes em DM ou tickets.\n" +
-            "Aguarde pacientemente até receber seu produto ou uma resposta.\n\n" +
-            "*Atenciosamente, Jordan.*"
-          )
-          .setColor("#ff0000");
+                    .setTitle("⚖️ Termos de Serviço - Jordan Shop")
+                    .setDescription(
+                        "**Termos de Serviço de Reembolso**\n" +
+                        "Não oferecemos reembolsos após a conclusão de uma compra ou serviço.\n\n" +
+                        "**Termos de Serviço de Substituição**\n" +
+                        "A substituição só é possível com um voucher.\n\n" +
+                        "**Termos de Serviço da Conta**\n" +
+                        "Deverás alterar o e-mail e palavra-passe imediatamente após receberes a conta.\n\n" +
+                        "**Idioma do Ticket**\n" +
+                        "O suporte é processado exclusivamente em Português.\n\n" +
+                        "Ao clicares em **Aceitar**, concordas com todas as nossas regras.\n\n" +
+                        "*Atenciosamente, Jordan.*"
+                    )
+                    .setColor("#ff0000");
 
                 const row = new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId(`aceitar_termos_${tipo}`).setLabel("Aceitar").setStyle(ButtonStyle.Success),
@@ -78,12 +72,17 @@ module.exports = (client) => {
                 return interaction.reply({ embeds: [embedTermos], components: [row], flags: [MessageFlags.Ephemeral] });
             }
 
-            /* 2. ACEITAR TERMOS -> ESCOLHER PAGAMENTO */
+            /* 2. RECUSAR TERMOS */
+            if (interaction.isButton() && cid === "recusar_termos") {
+                return interaction.reply({ content: "❌ Precisas de aceitar os termos para abrir um ticket.", flags: [MessageFlags.Ephemeral] });
+            }
+
+            /* 3. ACEITAR TERMOS -> ESCOLHER PAGAMENTO */
             if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 const tipo = cid.replace("aceitar_termos_", "");
                 const embedPag = new EmbedBuilder()
                     .setTitle("💳 Método de Pagamento")
-                    .setDescription("Como pretendes efetuar o pagamento para **" + tipo + "**?")
+                    .setDescription(`Como pretendes pagar o teu pedido de **${tipo}**?`)
                     .setColor("#00ff99");
 
                 const menuPag = new StringSelectMenuBuilder()
@@ -99,13 +98,13 @@ module.exports = (client) => {
                 return interaction.update({ embeds: [embedPag], components: [new ActionRowBuilder().addComponents(menuPag)] });
             }
 
-            /* 3. CRIAR O CANAL DO TICKET */
+            /* 4. CRIAR O CANAL DO TICKET */
             if (interaction.isStringSelectMenu() && cid?.startsWith("pagamento_")) {
                 const tipo = cid.replace("pagamento_", "");
                 const metodo = interaction.values[0];
                 const emojiMetodo = emojisPagamento[metodo] || "💰";
 
-                await interaction.update({ content: "⏳ A criar canal...", embeds: [], components: [] });
+                await interaction.update({ content: "⏳ A criar o teu canal de suporte...", embeds: [], components: [] });
 
                 let category = guild.channels.cache.find(c => c.name === config.CATEGORY_NAME && c.type === 4);
                 if (!category) category = await guild.channels.create({ name: config.CATEGORY_NAME, type: 4 });
@@ -113,7 +112,7 @@ module.exports = (client) => {
                 const ticket = await guild.channels.create({
                     name: `ticket-${tipo}-${user.username}`,
                     parent: category.id,
-                    topic: `${user.id}|${metodo}`, // Guardamos o método no tópico
+                    topic: `${user.id}|${metodo}`,
                     permissionOverwrites: [
                         { id: guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
                         { id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
@@ -123,7 +122,7 @@ module.exports = (client) => {
 
                 const embedTicket = new EmbedBuilder()
                     .setTitle("Jordan Shop | Suporte")
-                    .setDescription(`Olá <@${user.id}>, obrigado(a) por criares um ticket, em breve algum staff te ajudará.\n\n🛡️ **Staff:** Aguardando...\n${emojiMetodo} **Método:** ${metodo}`)
+                    .setDescription(`Olá <@${user.id}>, em breve algum staff te ajudará.\n\n🛡️ **Staff:** Aguardando...\n${emojiMetodo} **Método:** ${metodo}`)
                     .setColor("#2f3136");
 
                 const rowBtns = new ActionRowBuilder().addComponents(
@@ -133,12 +132,12 @@ module.exports = (client) => {
                 );
 
                 await ticket.send({ content: `<@${user.id}>`, embeds: [embedTicket], components: [rowBtns] });
-                return interaction.editReply({ content: `✅ Ticket criado: ${ticket}` });
+                return interaction.editReply({ content: `✅ Ticket criado com sucesso: ${ticket}` });
             }
 
-            /* 4. REIVINDICAR TICKET */
+            /* 5. REIVINDICAR TICKET */
             if (interaction.isButton() && cid === "claim_ticket") {
-                if (!isStaff(member)) return interaction.reply({ content: "❌ Apenas staff.", flags: [MessageFlags.Ephemeral] });
+                if (!isStaff(member)) return interaction.reply({ content: "❌ Apenas a equipa de Staff pode fazer isto.", flags: [MessageFlags.Ephemeral] });
 
                 const info = channel.topic?.split("|") || [];
                 const metodo = info[1] || "Não definido";
@@ -161,7 +160,7 @@ module.exports = (client) => {
                 });
             }
 
-            /* 5. CHAMAR STAFF (A-Z E CARGOS) */
+            /* 6. CHAMAR STAFF (ORDEM DE CARGO E ALFABÉTICA) */
             if (interaction.isButton() && cid === "call_staff_list") {
                 const members = await guild.members.fetch();
                 const staffDisponivel = members.filter(m => m.roles.cache.some(r => config.STAFF_ROLES.includes(r.id)) && !m.user.bot);
@@ -179,47 +178,47 @@ module.exports = (client) => {
                     description: `Cargo: ${m.roles.highest.name}`
                 })).slice(0, 25);
 
-                if (options.length === 0) return interaction.reply({ content: "Não há staff disponível.", flags: [MessageFlags.Ephemeral] });
+                if (options.length === 0) return interaction.reply({ content: "Nenhum Staff disponível no momento.", flags: [MessageFlags.Ephemeral] });
 
                 const menu = new StringSelectMenuBuilder()
                     .setCustomId("notify_staff_id")
-                    .setPlaceholder("Escolhe um staff...")
+                    .setPlaceholder("Escolhe o membro da equipa...")
                     .addOptions(options);
 
-                return interaction.reply({ content: "Qual staff queres chamar?", components: [new ActionRowBuilder().addComponents(menu)], flags: [MessageFlags.Ephemeral] });
+                return interaction.reply({ content: "Qual membro da Staff desejas chamar?", components: [new ActionRowBuilder().addComponents(menu)], flags: [MessageFlags.Ephemeral] });
             }
 
             if (interaction.isStringSelectMenu() && cid === "notify_staff_id") {
                 const staffId = interaction.values[0];
-                await channel.send(`🔔 <@${staffId}>, foste solicitado por <@${user.id}>!`);
-                return interaction.update({ content: "✅ Staff notificado.", components: [] });
+                await channel.send(`🔔 <@${staffId}>, foste solicitado por <@${user.id}> neste ticket!`);
+                return interaction.update({ content: "✅ Staff notificado com sucesso.", components: [] });
             }
 
-            /* 6. FECHAR TICKET (LÓGICA 5 MSGS) */
+            /* 7. LÓGICA DE FECHAR TICKET */
             if (interaction.isButton() && cid === "close_ticket") {
-                if (!isStaff(member)) return interaction.reply({ content: "❌ Apenas staff.", flags: [MessageFlags.Ephemeral] });
+                if (!isStaff(member)) return interaction.reply({ content: "❌ Não tens permissão para fechar tickets.", flags: [MessageFlags.Ephemeral] });
 
                 const msgs = await channel.messages.fetch({ limit: 10 });
                 if (msgs.size > 5) {
-                    await interaction.reply({ content: "📂 Gerando log e fechando..." });
+                    await interaction.reply({ content: "📂 O ticket tem atividade. A gerar registos e a fechar..." });
                     return await finalizarCanal(interaction, true);
                 } else {
                     const row = new ActionRowBuilder().addComponents(
                         new ButtonBuilder().setCustomId("save_and_close").setLabel("Guardar e Fechar").setStyle(ButtonStyle.Success),
                         new ButtonBuilder().setCustomId("delete_only").setLabel("Apenas Apagar").setStyle(ButtonStyle.Danger)
                     );
-                    return interaction.reply({ content: "⚠️ Poucas mensagens. Desejas guardar o log?", components: [row], flags: [MessageFlags.Ephemeral] });
+                    return interaction.reply({ content: "⚠️ Este ticket tem poucas mensagens. Queres guardar o log antes de apagar?", components: [row], flags: [MessageFlags.Ephemeral] });
                 }
             }
 
             if (cid === "save_and_close") await finalizarCanal(interaction, true);
             if (cid === "delete_only") await finalizarCanal(interaction, false);
 
-        } catch (err) { console.error("Erro:", err); }
+        } catch (err) { console.error("Erro na Interação:", err); }
     });
 };
 
-/* FUNÇÃO FINALIZAR COM LINK DO SITE */
+/* FUNÇÃO PARA FINALIZAR O CANAL E GERAR O LINK WEB */
 async function finalizarCanal(interaction, salvar) {
     const { channel, guild, user } = interaction;
     if (salvar) {
@@ -234,18 +233,21 @@ async function finalizarCanal(interaction, salvar) {
             const siteUrl = `https://discord-bott-jordan.onrender.com/transcripts/${fileName}`;
             
             const embedLog = new EmbedBuilder()
-                .setTitle("📄 Log de Ticket")
+                .setTitle("📄 Registo de Ticket Encerrado")
                 .setColor("#5865F2")
                 .addFields(
-                    { name: "Canal", value: `#${channel.name}`, inline: true },
-                    { name: "Fechado por", value: user.tag, inline: true },
-                    { name: "Link Web", value: `[Clique aqui para ver](${siteUrl})` }
-                );
+                    { name: "Ticket", value: `#${channel.name}`, inline: true },
+                    { name: "Encerrado por", value: user.tag, inline: true },
+                    { name: "Visualização Web", value: `[Clica aqui para abrir](${siteUrl})` }
+                )
+                .setTimestamp();
 
-            await sendLog(guild, `✅ Transcript guardado para #${channel.name}`, embedLog);
-        } catch (e) { console.error("Erro transcript:", e); }
+            await sendLog(guild, `✅ Registo guardado para o ticket #${channel.name}`, embedLog);
+        } catch (e) { console.error("Erro ao gerar transcript:", e); }
     } else {
-        await sendLog(guild, `🗑️ Ticket #${channel.name} apagado sem log por ${user.tag}.`);
+        await sendLog(guild, `🗑️ Ticket #${channel.name} foi apagado sem registo por ${user.tag}.`);
     }
+    
+    // Pequeno atraso para o Staff ver a confirmação antes do canal desaparecer
     setTimeout(() => channel.delete().catch(() => {}), 3000);
 }
