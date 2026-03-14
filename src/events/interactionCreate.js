@@ -46,16 +46,23 @@ module.exports = (client) => {
                 const embed = new EmbedBuilder()
                 .setTitle("📜 Termos de Serviço")
                 .setDescription(`
-🔁 **Reembolsos:** Não existem.
+🔁 **Termos de Serviço de Reembolso**
+Não oferecemos reembolsos após a conclusão de uma compra ou serviço.
 
-🔄 **Substituição:** Apenas voucher.
+🔄 **Termos de Serviço de Substituição**
+A substituição só é possível com um voucher.
+Sem voucher = sem garantia ou substituição.
 
-👤 **Contas:** Alterar dados após entrega.
+👤 **Termos de Serviço da Conta**
+Altere e-mail e senha imediatamente. Não nos responsabilizamos após a entrega.
 
-💸 **PayPal:** Amigos e Familiares.
+💸 **Termos de Serviço do PayPal**
+Pagamentos via "Amigos e Familiares" – sem mensagem.
 
-🌐 **Suporte:** Português
-`)
+🌐 **Idioma do Ticket**
+Suporte apenas em Português.
+
+**Atenciosamente, Jordan.**`)
                 .setColor("#ff0000");
 
                 const row = new ActionRowBuilder().addComponents(
