@@ -88,7 +88,7 @@ module.exports = (client) => {
             /* RECUSAR TERMOS */
             if(interaction.isButton() && cid === "recusar_termos"){
 
-                await sendLog(guild, `❌ ${user} **não aceitou os termos.**`);
+                await sendLog(guild, `❌ ${user} não aceitou os termos para ${channel}.`);
 
                 return interaction.reply({
                     content:"❌ Tens de aceitar os termos para abrir um ticket.",
@@ -101,7 +101,7 @@ module.exports = (client) => {
 
                 const tipo = cid.replace("aceitar_termos_","");
 
-                await sendLog(guild, `✅ ${user} **aceitou os termos.**`);
+                await sendLog(guild, `✅ ${user} aceitou os termos para ${channel}.`);
 
                 const embed = new EmbedBuilder()
                 .setTitle("💳 Escolha o método de pagamento")
@@ -261,19 +261,31 @@ Quando um staff reivindicar o ticket aparecerá aqui.
                 });
             }
 
-            /* FECHAR */
-            if(interaction.isButton() && cid === "close_ticket"){
+/* FECHAR */
+if(interaction.isButton() && cid === "close_ticket") {
 
-                await interaction.reply({
-                    content:"📁 A fechar ticket...",
-                    flags:[MessageFlags.Ephemeral]
-                });
+    await interaction.reply({ content: "📂 A gerar transcript e fechar...", flags: [MessageFlags.Ephemeral] });
 
-                setTimeout(()=>{
-                    channel.delete().catch(()=>{});
-                },3000);
-            }
+    // Gerar transcript
+    const transcriptFile = await discordTranscripts.createTranscript(channel, {
+        limit: -1,
+        returnBuffer: false,
+        fileName: `ticket-${channel.name}.html`
+    });
 
+    // Guardar log local (pasta transcripts)
+    const savePath = path.join(__dirname, "..", "transcripts", `ticket-${channel.name}.html`);
+    fs.writeFileSync(savePath, transcriptFile);
+
+    // Log staff
+    await sendLog(channel.guild, `📂 ${interaction.user} fechou o ticket #${channel.name} e gerou o transcript.`);
+
+    // Apagar canal após 3s
+    setTimeout(() => {
+        channel.delete().catch(()=>{});
+    }, 3000);
+}
+            
         } catch (err) {
             console.error(err);
         }
