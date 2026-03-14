@@ -262,34 +262,75 @@ Quando um staff reivindicar o ticket aparecerá aqui.
             }
 
 /* FECHAR */
-if(interaction.isButton() && cid === "close_ticket") {
+            if (interaction.isButton() && cid === "close_ticket") {
+                if (!isStaff(member)) {
+                    return interaction.reply({ content: "❌ Apenas staff pode fechar tickets.", flags: [MessageFlags.Ephemeral] });
+                }
 
-    await interaction.reply({ content: "📂 A gerar transcript e fechar...", flags: [MessageFlags.Ephemeral] });
+                const messages = await channel.messages.fetch({ limit: 10 });
+                const count = messages.size;
 
-    // Gerar transcript
-    const transcriptFile = await discordTranscripts.createTranscript(channel, {
-        limit: -1,
-        returnBuffer: false,
-        fileName: `ticket-${channel.name}.html`
-    });
+                if (count > 5) {
+                    await interaction.reply({ content: "📂 O ticket tem movimento (+5 msgs). A gerar transcript e fechar...", flags: [MessageFlags.Ephemeral] });
+                    try {
+                        const attachment = await discordTranscripts.createTranscript(channel, {
+                            limit: -1,
+                            fileName: `ticket-${channel.name}.html`,
+                            saveImages: true,
+                            poweredBy: false
+                        });
 
-    // Guardar log local (pasta transcripts)
-    const savePath = path.join(__dirname, "..", "transcripts", `ticket-${channel.name}.html`);
-    fs.writeFileSync(savePath, transcriptFile);
+                        const transcriptsDir = path.join(__dirname, "../../transcripts");
+                        if (!fs.existsSync(transcriptsDir)) fs.mkdirSync(transcriptsDir, { recursive: true });
 
-    // Log staff
-    await sendLog(channel.guild, `📂 ${interaction.user} fechou o ticket #${channel.name} e gerou o transcript.`);
+                        const fileName = `ticket-${channel.name}.html`.replace(/\s+/g, "_");
+                        fs.writeFileSync(path.join(transcriptsDir, fileName), attachment.attachment);
 
-    // Apagar canal após 3s
-    setTimeout(() => {
-        channel.delete().catch(()=>{});
-    }, 3000);
-}
+                        await sendLog(guild, `📂 ${user} fechou o ticket #${channel.name} (Transcript guardado automaticamente).`);
+                        setTimeout(() => channel.delete().catch(() => {}), 5000);
+                    } catch (err) {
+                        console.error(err);
+                        setTimeout(() => channel.delete().catch(() => {}), 2000);
+                    }
+                } else {
+                    const rowEscolha = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId("confirm_close_save").setLabel("Fechar e Guardar Log").setStyle(ButtonStyle.Success),
+                        new ButtonBuilder().setCustomId("confirm_close_delete").setLabel("Fechar sem Guardar").setStyle(ButtonStyle.Danger)
+                    );
+                    return interaction.reply({
+                        content: `⚠️ Este ticket tem apenas **${count}** mensagens. Desejas guardar o log antes de apagar?`,
+                        components: [rowEscolha],
+                        flags: [MessageFlags.Ephemeral]
+                    });
+                }
+            }
+
+            /* RESPOSTAS À PERGUNTA */
+            if (interaction.isButton() && cid === "confirm_close_save") {
+                await interaction.update({ content: "📂 A gerar transcript e fechar...", components: [] });
+                
+                try {
+                    const attachment = await discordTranscripts.createTranscript(channel, { limit: -1, fileName: `ticket-${channel.name}.html` });
+                    const transcriptsDir = path.join(__dirname, "../../transcripts");
+                    if (!fs.existsSync(transcriptsDir)) fs.mkdirSync(transcriptsDir, { recursive: true });
+                    
+                    const fileName = `ticket-${channel.name}.html`.replace(/\s+/g, "_");
+                    fs.writeFileSync(path.join(transcriptsDir, fileName), attachment.attachment);
+
+                    await sendLog(guild, `📂 ${user} fechou o ticket #${channel.name} (Escolheu guardar log).`);
+                } catch (e) { console.error(e); }
+                
+                setTimeout(() => channel.delete().catch(() => {}), 3000);
+            }
+
+            if (interaction.isButton() && cid === "confirm_close_delete") {
+                await interaction.update({ content: "🗑️ A apagar ticket sem guardar log...", components: [] });
+                await sendLog(guild, `🗑️ ${user} fechou o ticket #${channel.name} (Escolheu NÃO guardar log).`);
+                setTimeout(() => channel.delete().catch(() => {}), 3000);
+            }
             
         } catch (err) {
-            console.error(err);
+            console.error("Erro na Interação:", err);
         }
-
     });
-
 };
