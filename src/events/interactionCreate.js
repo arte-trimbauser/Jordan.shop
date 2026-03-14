@@ -44,26 +44,27 @@ module.exports = (client) => {
                 const tipo = interaction.values[0];
 
                 const embed = new EmbedBuilder()
-                .setTitle("📜 Termos de Serviço")
-                .setDescription(`
-🔁 **Termos de Serviço de Reembolso**
-Não oferecemos reembolsos após a conclusão de uma compra ou serviço.
-
-🔄 **Termos de Serviço de Substituição**
-A substituição só é possível com um voucher.
-Sem voucher = sem garantia ou substituição.
-
-👤 **Termos de Serviço da Conta**
-Altere e-mail e senha imediatamente. Não nos responsabilizamos após a entrega.
-
-💸 **Termos de Serviço do PayPal**
-Pagamentos via "Amigos e Familiares" – sem mensagem.
-
-🌐 **Idioma do Ticket**
-Suporte apenas em Português.
-
-**Atenciosamente, Jordan.**`)
-                .setColor("#ff0000");
+                .setTitle("⚖️ Termos de Serviço - Jordan Shop")
+                .setDescription(
+            "**Termos de Serviço de Reembolso**\n" +
+            "Não oferecemos reembolsos após a conclusão de uma compra ou serviço. Em casos excepcionais, uma substituição pode ser oferecida, se possível.\n\n" +
+            "**Termos de Serviço de Substituição**\n" +
+            "A substituição só é possível com um voucher.\n" +
+            "Sem voucher = sem garantia ou substituição.\n\n" +
+            "**Termos de Serviço da Conta**\n" +
+            "Após receber uma conta, você deverá alterar seu endereço de e-mail e senha imediatamente.\n" +
+            "Não assumimos qualquer responsabilidade ou substituição caso você não o faça.\n\n" +
+            "**Termos de Serviço do PayPal**\n" +
+            "Os pagamentos devem ser enviados via \"Amigos e Familiares\" – sem uma mensagem nos detalhes de pagamento.\n" +
+            "Não nos responsabilizamos se nossa conta do PayPal for bloqueada e os fundos permanecerem lá. Não há reembolsos possíveis!\n\n" +
+            "**Idioma do Ticket**\n" +
+            "O suporte e os tickets são processados exclusivamente em Português.\n\n" +
+            "**Comportamento do Ticket**\n" +
+            "Por favor, não envie spam ou ping várias vezes em DM ou tickets.\n" +
+            "Aguarde pacientemente até receber seu produto ou uma resposta.\n\n" +
+            "*Atenciosamente, Jordan.*"
+          )
+          .setColor("#ff0000");
 
                 const row = new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
