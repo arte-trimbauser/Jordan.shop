@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jordan Shop | Painel Staff</title>
-    <!-- Fonte Profissional Open Sans -->
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -12,160 +11,36 @@
             --overlay-dark: rgba(0, 0, 0, 0.8);
             --transition-speed: 0.4s;
         }
-
         * { box-sizing: border-box; }
-
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            font-family: 'Open Sans', sans-serif;
-            color: white;
-            overflow: hidden; /* Impede scroll desnecessário */
-        }
-
-        /* Imagem de Fundo em Toda a Tela */
-        .bg-full {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: url('menu.png') no-repeat center center;
-            background-size: cover;
-            z-index: -2;
-        }
-
-        /* Camada Escura para Legibilidade */
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--overlay-dark);
-            z-index: -1;
-        }
-
-        /* Tela de Boas-Vindas (Splash Screen) */
-        #welcome-screen {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            transition: opacity 0.8s ease;
-        }
-
-        .welcome-content {
-            text-align: center;
-            animation: pulse 2s infinite;
-        }
-
-        /* Header */
-        header {
-            background: var(--primary-red);
-            height: 60px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 30px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Open Sans', sans-serif; color: white; overflow: hidden; }
+        .bg-full { position: fixed; top:0; left:0; width:100%; height:100%; background: url('menu.png') no-repeat center center; background-size: cover; z-index:-2; }
+        .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--overlay-dark); z-index:-1; }
+        #welcome-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: #000; display:flex; justify-content:center; align-items:center; z-index:9999; transition: opacity 0.8s ease; }
+        .welcome-content { text-align:center; animation: pulse 2s infinite; }
+        header { background: var(--primary-red); height:60px; display:flex; justify-content:space-between; align-items:center; padding:0 30px; box-shadow:0 4px 15px rgba(0,0,0,0.5); }
         .logo-area { font-weight: 800; font-size: 1.3rem; }
-        .refresh-btn { cursor: pointer; text-decoration: underline; font-size: 0.9rem; margin-left: 10px; opacity: 0.8; }
-        .user-tag { background: rgba(0,0,0,0.4); padding: 8px 15px; border-radius: 5px; font-weight: 600; }
-
-        /* Layout */
-        .container {
-            display: flex;
-            height: calc(100vh - 60px);
-        }
-
-        /* Sidebar */
-        aside {
-            width: 260px;
-            background: rgba(40, 40, 40, 0.6);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            border-right: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .search-box {
-            width: 100%;
-            padding: 12px;
-            border-radius: 5px;
-            border: none;
-            background: rgba(255,255,255,0.1);
-            color: white;
-            outline: none;
-            border-bottom: 2px solid transparent;
-            transition: 0.3s;
-        }
-
-        .search-box:focus { border-bottom: 2px solid var(--primary-red); }
-
-        .nav-btn {
-            background: var(--primary-red);
-            color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition-speed);
-            text-align: center;
-            text-decoration: none;
-        }
-
+        .refresh-btn { cursor:pointer; text-decoration:underline; font-size:0.9rem; margin-left:10px; opacity:0.8; }
+        .user-tag { background: rgba(0,0,0,0.4); padding:8px 15px; border-radius:5px; font-weight:600; }
+        .container { display:flex; height: calc(100vh - 60px); }
+        aside { width:260px; background: rgba(40,40,40,0.6); backdrop-filter: blur(10px); padding:20px; display:flex; flex-direction:column; gap:15px; border-right:1px solid rgba(255,255,255,0.1); }
+        .search-box { width:100%; padding:12px; border-radius:5px; border:none; background: rgba(255,255,255,0.1); color:white; outline:none; border-bottom:2px solid transparent; transition:0.3s; }
+        .search-box:focus { border-bottom:2px solid var(--primary-red); }
+        .nav-btn { background: var(--primary-red); color:white; border:none; padding:14px; border-radius:6px; font-weight:600; cursor:pointer; transition: var(--transition-speed); text-align:center; text-decoration:none; }
         .nav-btn:hover { transform: translateX(10px); filter: brightness(1.3); }
-
-        /* Conteúdo Principal */
-        main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 50px;
-            text-align: center;
-        }
-
-        h1 { font-size: 4rem; margin: 0; font-weight: 800; text-shadow: 4px 4px 10px rgba(0,0,0,1); }
-        .subtitle { font-size: 1.4rem; opacity: 0.8; margin-top: 10px; }
-
-        /* Status de Desenvolvimento */
-        #dev-alert {
-            margin-top: 30px;
-            padding: 15px 25px;
-            border: 2px solid #ffcc00;
-            color: #ffcc00;
-            background: rgba(0,0,0,0.5);
-            border-radius: 10px;
-            display: none;
-            font-weight: bold;
-            animation: fadeIn 0.4s;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.05); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.8; }
-        }
-
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        main { flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:50px; text-align:center; overflow-y:auto; }
+        h1 { font-size:4rem; margin:0; font-weight:800; text-shadow:4px 4px 10px rgba(0,0,0,1); }
+        .subtitle { font-size:1.4rem; opacity:0.8; margin-top:10px; }
+        #dev-alert { margin-top:30px; padding:15px 25px; border:2px solid #ffcc00; color:#ffcc00; background: rgba(0,0,0,0.5); border-radius:10px; display:none; font-weight:bold; animation: fadeIn 0.4s; }
+        .log-item { background:#1a1a1a; padding:20px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid #333; transition:0.3s; margin-bottom:10px; }
+        .log-item:hover { border-color: var(--primary-red); transform: translateX(10px); }
+        .log-info span { color:#888; font-size:0.8rem; display:block; }
+        .btn-view { background:#fff; color:#000; padding:8px 15px; border-radius:5px; text-decoration:none; font-weight:bold; }
+        @keyframes pulse { 0%{transform:scale(1);opacity:0.8;} 50%{transform:scale(1.05);opacity:1;} 100%{transform:scale(1);opacity:0.8;} }
+        @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
     </style>
 </head>
 <body>
 
-    <!-- Splash Screen -->
     <div id="welcome-screen">
         <div class="welcome-content">
             <h2 style="font-size: 3rem;">OLÁ, BEM-VINDO AO PAINEL DA<br>
@@ -173,11 +48,9 @@
         </div>
     </div>
 
-    <!-- Fundo e Overlay -->
     <div class="bg-full"></div>
     <div class="overlay"></div>
 
-    <!-- Topo -->
     <header>
         <div class="logo-area">
             Jordan Shop Site | <span class="refresh-btn" onclick="location.reload()">Atualizar</span>
@@ -186,64 +59,100 @@
     </header>
 
     <div class="container">
-        <!-- Lateral -->
         <aside>
             <input type="text" id="search" class="search-box" placeholder="Pesquisar categoria...">
-            
-            <!-- Link para a raiz do site no Render -->
             <a href="/" class="nav-btn">MENU (Início)</a>
-            
-            <button class="nav-btn" onclick="window.location.href='/transcripts'">Transcripts</button>
+            <button class="nav-btn" onclick="showSection('transcripts')">Transcripts</button>
             <button class="nav-btn" onclick="showDev()">Vendas</button>
             <button class="nav-btn" onclick="showDev()">Reivindicações</button>
             <button class="nav-btn" onclick="showDev()">Bot Online</button>
         </aside>
 
-        <!-- Centro -->
         <main>
-            <h1 id="main-welcome">Bem-Vindo @user</h1>
-            <p class="subtitle">Gestão Interna Jordan Shop - Acesso Restrito</p>
+            <!-- Boas-vindas -->
+            <div id="welcome-section">
+                <h1 id="main-welcome">Bem-Vindo @user</h1>
+                <p class="subtitle">Gestão Interna Jordan Shop - Acesso Restrito</p>
+            </div>
 
-            <div id="dev-alert">
-                ⚠️ AVISO: Esta secção está atualmente em desenvolvimento.
+            <!-- Secção de Desenvolvimento -->
+            <div id="dev-section" style="display:none;">
+                <div id="dev-alert">⚠️ AVISO: Esta secção está atualmente em desenvolvimento.</div>
+            </div>
+
+            <!-- Secção de Transcripts -->
+            <div id="transcripts" style="display:none; width:100%;">
+                <h1>Logs de Transcripts</h1>
+                <div id="logs-list">
+                    <p>A carregar logs do servidor...</p>
+                </div>
             </div>
         </main>
     </div>
 
     <script>
-        // 1. Lógica do Nome Dinâmico
         const urlParams = new URLSearchParams(window.location.search);
         const user = urlParams.get('user') || 'Staff';
         document.getElementById('nav-username').innerText = user;
         document.getElementById('main-welcome').innerText = "Bem-Vindo " + user;
 
-        // 2. Temporizador da tela de Boas-Vindas (3 segundos)
         setTimeout(() => {
             const splash = document.getElementById('welcome-screen');
             splash.style.opacity = '0';
             setTimeout(() => splash.style.display = 'none', 800);
         }, 3000);
 
-        // 3. Função Alerta Desenvolvimento
+        function showSection(id) {
+            document.getElementById('welcome-section').style.display = 'none';
+            document.getElementById('dev-section').style.display = 'none';
+            document.getElementById('transcripts').style.display = 'none';
+            const section = document.getElementById(id);
+            if(section) section.style.display = 'block';
+            if(id==='transcripts') fetchLogs();
+        }
+
         function showDev() {
+            showSection('dev-section');
             const alertBox = document.getElementById('dev-alert');
             alertBox.style.display = 'block';
             setTimeout(() => { alertBox.style.display = 'none'; }, 4000);
         }
 
-        // 4. Sistema de Pesquisa no Menu
         document.getElementById('search').addEventListener('input', function(e) {
             const filter = e.target.value.toLowerCase();
             const buttons = document.querySelectorAll('.nav-btn');
-            
             buttons.forEach(btn => {
-                if(btn.innerText.toLowerCase().includes(filter)) {
-                    btn.style.display = "block";
-                } else {
-                    btn.style.display = "none";
-                }
+                btn.style.display = btn.innerText.toLowerCase().includes(filter) ? "block" : "none";
             });
         });
+
+        async function fetchLogs() {
+            const REPO = "arte-trimbauser/Jordan.Shop-Bot-Site";
+            const response = await fetch(`https://api.github.com/repos/${REPO}/contents/transcripts`);
+            const files = await response.json();
+            const list = document.getElementById('logs-list');
+            list.innerHTML = '';
+
+            if (files.message === "Not Found" || files.length === 0) {
+                list.innerHTML = "<p>Nenhum log encontrado.</p>";
+                return;
+            }
+
+            files.forEach(file => {
+                if (file.name.endsWith('.html') && file.name !== ".gitkeep") {
+                    const item = document.createElement('div');
+                    item.className = 'log-item';
+                    item.innerHTML = `
+                        <div class="log-info">
+                            <strong>${file.name}</strong>
+                            <span>Ticket fechado e guardado</span>
+                        </div>
+                        <a href="https://arte-trimbauser.github.io/Jordan.Shop-Bot-Site/transcripts/${file.name}" target="_blank" class="btn-view">Ver Log</a>
+                    `;
+                    list.appendChild(item);
+                }
+            });
+        }
     </script>
 </body>
 </html>
