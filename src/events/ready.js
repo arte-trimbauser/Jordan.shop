@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActivityType } = require("discord.js");
 
 module.exports = async (client) => {
-    // Corrigido de 'clientReady' para 'ready'
+    // IMPORTANTE: Mantemos 'ready' para o status funcionar
     client.once("ready", async () => {
         const LOG_CHANNEL_ID = process.env.LOG_CHANNEL_ID;
 
@@ -16,6 +16,7 @@ module.exports = async (client) => {
             status: "online" 
         });
 
+        // Envio do Log de Inicialização (como tinhas antes)
         if (LOG_CHANNEL_ID) {
             try {
                 const logChannel = await client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
