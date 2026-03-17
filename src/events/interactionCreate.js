@@ -195,40 +195,53 @@ module.exports = (client) => {
                 return await interaction.update({ content: "✅ Staff notificado.", components: [] });
             }
 
-            // 7. FECHAR TICKET & TRANSCRIPT (ESTÁVEL)
+// 7. FECHAR TICKET COM LÓGICA DE MENSAGENS
             if (cid === "close_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas staff pode fechar.", flags: [64] });
-                
-                await interaction.reply("🔒 A gerar transcrição e a arquivar...");
 
-                try {
-                    const attachment = await discordTranscripts.createTranscript(channel, {
-                        limit: -1,
-                        fileName: `transcript-${channel.name}.html`,
-                        saveImages: true,
-                        poweredBy: false
-                    });
+                // Procura as mensagens (limite de 10) e filtra o que não é bot
+                const messages = await channel.messages.fetch({ limit: 10 });
+                const msgCount = messages.filter(m => !m.author.bot).size;
 
-                    const logChan = await guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null);
-                    if (logChan) {
-                        const embedLog = new EmbedBuilder()
-                            .setTitle("📄 Transcrição Arquivada")
-                            .addFields(
-                                { name: "Canal:", value: `\`${channel.name}\``, inline: true },
-                                { name: "Fechado por:", value: `${user.tag}`, inline: true }
-                            )
-                            .setColor("#ff0000")
-                            .setTimestamp();
+                const sendTranscript = require("../helpers/sendTranscript");
 
-                        await logChan.send({ embeds: [embedLog], files: [attachment] });
-                    }
-                } catch (e) {
-                    console.error("Erro no Transcript:", e);
+                // LÓGICA: Se tiver 5 ou mais mensagens, fecha direto
+                if (msgCount >= 5) {
+                    await interaction.reply("🔒 Ticket produtivo! A gerar transcrição e a fechar...");
+                    await sendTranscript(channel, user.tag); 
+                    return setTimeout(() => channel.delete().catch(() => {}), 5000);
+                } 
+                // Se tiver menos de 5, pergunta à Staff
+                else {
+                    const embedAviso = new EmbedBuilder()
+                        .setTitle("⚠️ Poucas Mensagens")
+                        .setDescription(`Este ticket tem apenas **${msgCount}** mensagens.\nQueres guardar a transcrição ou apenas fechar?`)
+                        .setColor("#f1c40f");
+
+                    const rowEscolha = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId("confirm_close_save").setLabel("Guardar e Fechar").setStyle(ButtonStyle.Success),
+                        new ButtonBuilder().setCustomId("confirm_close_silent").setLabel("Fechar sem Guardar").setStyle(ButtonStyle.Danger)
+                    );
+
+                    return await interaction.reply({ embeds: [embedAviso], components: [rowEscolha], flags: [64] });
                 }
-
-                setTimeout(() => channel.delete().catch(() => {}), 5000);
             }
 
-        } catch (err) { console.error("❌ Erro Geral:", err); }
+            // BOTÕES DE CONFIRMAÇÃO (Para tickets curtos)
+            if (cid === "confirm_close_save") {
+                await interaction.update({ content: "🔒 A guardar log e a eliminar...", embeds: [], components: [] });
+                const sendTranscript = require("../helpers/sendTranscript");
+                await sendTranscript(channel, user.tag);
+                return setTimeout(() => channel.delete().catch(() => {}), 3000);
+            }
+
+            if (cid === "confirm_close_silent") {
+                await interaction.update({ content: "❌ Ticket eliminado sem registo.", embeds: [], components: [] });
+                return setTimeout(() => channel.delete().catch(() => {}), 3000);
+            }
+
+        } catch (err) { 
+            console.error("❌ Erro Geral:", err); 
+        }
     });
 };
