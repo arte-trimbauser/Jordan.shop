@@ -195,27 +195,27 @@ module.exports = (client) => {
                 return await interaction.update({ content: "✅ Staff notificado.", components: [] });
             }
 
-// 7. FECHAR TICKET COM LÓGICA DE MENSAGENS
+            // 7. FECHAR TICKET COM LÓGICA DE MENSAGENS (CONTA TUDO)
             if (cid === "close_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas staff pode fechar.", flags: [64] });
 
-                // Procura as mensagens (limite de 10) e filtra o que não é bot
+                // Procura as mensagens (limite de 10) - CONTA TUDO (User + Bot)
                 const messages = await channel.messages.fetch({ limit: 10 });
-                const msgCount = messages.filter(m => !m.author.bot).size;
+                const msgCount = messages.size; 
 
                 const sendTranscript = require("../helpers/sendTranscript");
 
-                // LÓGICA: Se tiver 5 ou mais mensagens, fecha direto
+                // LÓGICA: 5 ou mais mensagens (contando com as do bot), fecha direto
                 if (msgCount >= 5) {
-                    await interaction.reply("🔒 Ticket produtivo! A gerar transcrição e a fechar...");
+                    await interaction.reply("🔒 Ticket com atividade. A gerar transcrição e a fechar...");
                     await sendTranscript(channel, user.tag); 
                     return setTimeout(() => channel.delete().catch(() => {}), 5000);
                 } 
-                // Se tiver menos de 5, pergunta à Staff
+                // Menos de 5 mensagens no total, pergunta à Staff
                 else {
                     const embedAviso = new EmbedBuilder()
                         .setTitle("⚠️ Poucas Mensagens")
-                        .setDescription(`Este ticket tem apenas **${msgCount}** mensagens.\nQueres guardar a transcrição ou apenas fechar?`)
+                        .setDescription(`Este ticket tem apenas **${msgCount}** mensagens no total.\nQueres guardar a transcrição no GitHub ou apenas fechar?`)
                         .setColor("#f1c40f");
 
                     const rowEscolha = new ActionRowBuilder().addComponents(
@@ -227,7 +227,7 @@ module.exports = (client) => {
                 }
             }
 
-            // BOTÕES DE CONFIRMAÇÃO (Para tickets curtos)
+            // BOTÕES DE CONFIRMAÇÃO
             if (cid === "confirm_close_save") {
                 await interaction.update({ content: "🔒 A guardar log e a eliminar...", embeds: [], components: [] });
                 const sendTranscript = require("../helpers/sendTranscript");
