@@ -1,13 +1,18 @@
 const { EmbedBuilder, ActivityType } = require("discord.js");
 
 module.exports = async (client) => {
-    client.once("clientReady", async () => {
+    // O evento correto é 'ready' e não 'clientReady'
+    client.once("ready", async () => {
         const LOG_CHANNEL_ID = process.env.LOG_CHANNEL_ID;
 
         console.log(`✅ Jordan Shop Online: ${client.user.tag}`);
 
+        // Define a presença corretamente
         client.user.setPresence({ 
-            activities: [{ name: "Jordan Shop | discord.gg/6hhZeqb7Qk", type: ActivityType.Competing }], 
+            activities: [{ 
+                name: "Jordan Shop | discord.gg/6hhZeqb7Qk", 
+                type: ActivityType.Competing 
+            }], 
             status: "online" 
         });
 
