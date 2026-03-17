@@ -66,24 +66,32 @@ module.exports = (client) => {
                 });
             }
 
-            // 3. ACEITAR TERMOS -> PAGAMENTO
+// 3. ACEITAR TERMOS -> PAGAMENTO
             if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 const tipo = cid.replace("aceitar_termos_", "");
+                
+                // Procurar o canal de logs de forma segura
                 const logChan = await guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null);
-                if (logChan) {
+
+                // Envia para o log apenas se o canal for válido e de texto
+                if (logChan && logChan.isTextBased()) { 
                     await logChan.send(`✅ <@${user.id}> aceitou os termos para \`${tipo}\`.`).catch(() => {});
                 }
 
+                // Cria o menu de pagamento
                 const menuPag = new StringSelectMenuBuilder()
                     .setCustomId(`pagamento_${tipo}`)
                     .setPlaceholder("Seleciona o método de pagamento...")
                     .addOptions(Object.keys(emojisPagamento).map(m => ({ 
-                        label: m, value: m, emoji: emojisPagamento[m].match(/\d+/)[0] 
+                        label: m, 
+                        value: m, 
+                        emoji: emojisPagamento[m].match(/\d+/)[0] 
                     })));
 
                 return await interaction.update({ 
                     content: "💳 **Termos aceites!** Escolhe o método de pagamento:", 
-                    embeds: [], components: [new ActionRowBuilder().addComponents(menuPag)] 
+                    embeds: [], 
+                    components: [new ActionRowBuilder().addComponents(menuPag)] 
                 });
             }
 
