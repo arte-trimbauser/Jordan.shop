@@ -59,8 +59,8 @@ module.exports = (client) => {
                 const tipo = cid.replace("recusar_termos_", "");
 
                 const logChan = await guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null);
-                if (logChan) {
-                    await logChan.send(`❌ <@${user.id}> não aceitou os termos para a opção **${tipo}**.`);
+                if (logChan && logChan.isTextBased()) {
+                await logChan.send(`❌ <@${user.id}> não aceitou os termos para a opção **${tipo}**.`);
                 }
 
                 return interaction.update({
@@ -75,8 +75,8 @@ module.exports = (client) => {
                 const tipo = cid.replace("aceitar_termos_", "");
 
                 const logChan = await guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null);
-                if (logChan) {
-                    await logChan.send(`✅ <@${user.id}> aceitou os termos para a opção **${tipo}**.`);
+                if (logChan && logChan.isTextBased()) {
+                await logChan.send(`✅ <@${user.id}> aceitou os termos para a opção **${tipo}**.`);
                 }
 
                 const menu = new StringSelectMenuBuilder()
