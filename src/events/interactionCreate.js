@@ -4,7 +4,6 @@ const {
 } = require("discord.js");
 
 const config = require("../config");
-const discordTranscripts = require("discord-html-transcripts");
 const isStaff = require("../helpers/isStaff");
 
 const cooldowns = new Map();
@@ -26,10 +25,12 @@ module.exports = (client) => {
         if (!guild) return;
 
         try {
-            // 1. MENU INICIAL -> TERMOS
+
+            // 1. MENU -> TERMOS
             if (interaction.isStringSelectMenu() && cid === "menu_ticket") {
                 const tipo = interaction.values[0];
-                const embedTermos = new EmbedBuilder()
+
+                const embed = new EmbedBuilder()
                     .setTitle("⚖️ Termos de Serviço - Jordan Shop")
                     .setDescription(
                         "**Termos de Serviço de Reembolso**\n" +
@@ -49,53 +50,52 @@ module.exports = (client) => {
                     new ButtonBuilder().setCustomId(`aceitar_termos_${tipo}`).setLabel("Aceitar").setStyle(ButtonStyle.Success),
                     new ButtonBuilder().setCustomId(`recusar_termos_${tipo}`).setLabel("Recusar").setStyle(ButtonStyle.Danger)
                 );
-                
-                return await interaction.reply({ embeds: [embedTermos], components: [row], flags: [64] });
+
+                return interaction.reply({ embeds: [embed], components: [row], flags: [64] });
             }
 
-            // 2. RECUSAR TERMOS
+            // 2. RECUSAR
             if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
                 const tipo = cid.replace("recusar_termos_", "");
+
                 const logChan = await guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null);
                 if (logChan) {
-                    await logChan.send(`❌ <@${user.id}> não aceitou os termos para \`${tipo}\`.`).catch(() => {});
+                    await logChan.send(`❌ <@${user.id}> não aceitou os termos para a opção **${tipo}**.`);
                 }
-                return await interaction.update({ 
-                    content: "⚠️ **Tens que aceitar os termos para abrir o ticket.**", 
-                    embeds: [], components: [] 
+
+                return interaction.update({
+                    content: "⚠️ **Tens que aceitar os termos para abrir o ticket.**",
+                    embeds: [],
+                    components: []
                 });
             }
 
-// 3. ACEITAR TERMOS -> PAGAMENTO
+            // 3. ACEITAR
             if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 const tipo = cid.replace("aceitar_termos_", "");
-                
-                // Procurar o canal de logs de forma segura
-                const logChan = await guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null);
 
-                // CORREÇÃO AQUI: Verificamos se o .send existe como função em vez de usar .isTextBased()
-                if (logChan && typeof logChan.send === 'function') { 
-                    await logChan.send(`✅ <@${user.id}> aceitou os termos para \`${tipo}\`.`).catch(() => {});
+                const logChan = await guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null);
+                if (logChan) {
+                    await logChan.send(`✅ <@${user.id}> aceitou os termos para a opção **${tipo}**.`);
                 }
 
-                // Cria o menu de pagamento
-                const menuPag = new StringSelectMenuBuilder()
+                const menu = new StringSelectMenuBuilder()
                     .setCustomId(`pagamento_${tipo}`)
                     .setPlaceholder("Seleciona o método de pagamento...")
-                    .addOptions(Object.keys(emojisPagamento).map(m => ({ 
-                        label: m, 
-                        value: m, 
-                        emoji: emojisPagamento[m].match(/\d+/)[0] 
+                    .addOptions(Object.keys(emojisPagamento).map(m => ({
+                        label: m,
+                        value: m,
+                        emoji: emojisPagamento[m].match(/\d+/)[0]
                     })));
 
-                return await interaction.update({ 
-                    content: "💳 **Termos aceites!** Escolhe o método de pagamento:", 
-                    embeds: [], 
-                    components: [new ActionRowBuilder().addComponents(menuPag)] 
+                return interaction.update({
+                    content: "💳 **Termos aceites!** Escolhe o método de pagamento:",
+                    embeds: [],
+                    components: [new ActionRowBuilder().addComponents(menu)]
                 });
             }
 
-            // 4. CRIAR TICKET (COM BOTÃO DE LINK)
+            // 4. CRIAR TICKET
             if (interaction.isStringSelectMenu() && cid?.startsWith("pagamento_")) {
                 await interaction.deferUpdate();
 
@@ -103,21 +103,23 @@ module.exports = (client) => {
                 const metodo = interaction.values[0];
                 const emoji = emojisPagamento[metodo] || "💰";
 
-                const cat = guild.channels.cache.get(config.CATEGORY_ID);
                 const ticket = await guild.channels.create({
                     name: `ticket-${tipo}-${user.username}`,
-                    parent: cat ? cat.id : null,
+                    parent: config.CATEGORY_ID,
                     topic: `${user.id}|${metodo}`,
                     permissionOverwrites: [
                         { id: guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-                        { id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles] },
-                        ...config.STAFF_ROLES.map(r => ({ id: r, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }))
+                        { id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+                        ...config.STAFF_ROLES.map(r => ({
+                            id: r,
+                            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
+                        }))
                     ]
                 });
 
-                const embedMsg = new EmbedBuilder()
+                const embed = new EmbedBuilder()
                     .setTitle("Jordan Shop | Suporte")
-                    .setDescription(`🛡️ **Staff:** Aguardando...\n**Método:** ${emoji} ${metodo}`)
+                    .setDescription(`🛡️ **Staff:** Aguardando...\n💳 Método: ${emoji} ${metodo}`)
                     .setColor("#2f3136");
 
                 const btns = new ActionRowBuilder().addComponents(
@@ -126,58 +128,48 @@ module.exports = (client) => {
                     new ButtonBuilder().setCustomId("close_ticket").setLabel("Fechar").setStyle(ButtonStyle.Danger)
                 );
 
-                await ticket.send({ 
-                    content: `<@${user.id}>, bem-vindo ao teu suporte.`, 
-                    embeds: [embedMsg], components: [btns] 
+                await ticket.send({
+                    content: `<@${user.id}>\n\nObrigado(a) por criar um ticket, em breve algum staff te ajudará.\n\n🛡️ Ticket Reivindicado\n👤 Staff: Aguardando...\n💳 Método: ${emoji} ${metodo}`,
+                    embeds: [embed],
+                    components: [btns]
                 });
 
-                // ESTE É O BOTÃO QUE PERGUNTASTE:
-                const rowGo = new ActionRowBuilder().addComponents(
+                const row = new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
                         .setLabel("Ir para o Ticket")
                         .setStyle(ButtonStyle.Link)
                         .setURL(`https://discord.com/channels/${guild.id}/${ticket.id}`)
                 );
 
-                return await interaction.editReply({ 
-                    content: `✅ Ticket criado com sucesso: ${ticket}`, 
-                    components: [rowGo], embeds: [] 
+                return interaction.editReply({
+                    content: `✅ Ticket criado: ${ticket}`,
+                    components: [row]
                 });
             }
 
-            // 5. REIVINDICAR TICKET
+            // 5. CLAIM
             if (cid === "claim_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas Staff.", flags: [64] });
-                const [uid, met] = channel.topic?.split("|") || ["?", "Não definido"];
-                const emj = emojisPagamento[met] || "💰";
 
-                const embedClaim = new EmbedBuilder()
+                const [uid, met] = channel.topic?.split("|") || ["?", "?"];
+                const emoji = emojisPagamento[met] || "💰";
+
+                const embed = new EmbedBuilder()
                     .setTitle("🛡️ Ticket Reivindicado")
-                    .setDescription(`👤 **Staff:** <@${user.id}>\n**Método:** ${emj} ${met}`)
+                    .setDescription(`👤 Staff: <@${user.id}>\n💳 Método: ${emoji} ${met}`)
                     .setColor("#57f287");
 
-                return await interaction.update({
-                    embeds: [embedClaim],
-                    components: [new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId("claimed").setLabel("Reivindicado").setStyle(ButtonStyle.Success).setDisabled(true),
-                        new ButtonBuilder().setCustomId("call_staff_list").setLabel("🔔 Chamar Staff").setStyle(ButtonStyle.Primary),
-                        new ButtonBuilder().setCustomId("close_ticket").setLabel("Fechar").setStyle(ButtonStyle.Danger)
-                    )]
+                return interaction.update({
+                    embeds: [embed],
+                    components: []
                 });
             }
 
-            // 6. CHAMAR STAFF (ORGANIZADA POR CARGO E A-Z)
+            // 6. CHAMAR STAFF
             if (cid === "call_staff_list") {
-                const tempoEspera = 300000;
-                const agora = Date.now();
-                if (cooldowns.has(user.id) && (agora < cooldowns.get(user.id) + tempoEspera)) {
-                    return await interaction.reply({ content: `⚠️ Aguarda para chamar novamente!`, flags: [64] });
-                }
-                
                 const members = await guild.members.fetch();
-                
-                // Filtra staff online e ordena por posição do cargo (mais alto primeiro) e depois A-Z
-                const staffOnline = members
+
+                const staff = members
                     .filter(m => m.roles.cache.some(r => config.STAFF_ROLES.includes(r.id)) && !m.user.bot)
                     .sort((a, b) => {
                         const posA = a.roles.highest.position;
@@ -186,70 +178,74 @@ module.exports = (client) => {
                         return a.displayName.localeCompare(b.displayName);
                     });
 
-                if (staffOnline.size === 0) return await interaction.reply({ content: "Sem Staff online.", flags: [64] });
-                
-                const opts = staffOnline.map(m => ({ label: m.displayName, value: m.id })).slice(0, 25);
-                const menuS = new StringSelectMenuBuilder().setCustomId("notify_staff_id").setPlaceholder("Escolhe um Staff").addOptions(opts);
-                return await interaction.reply({ content: "Quem queres chamar?", components: [new ActionRowBuilder().addComponents(menuS)], flags: [64] });
+                const opts = staff.map(m => ({
+                    label: m.displayName,
+                    value: m.id
+                })).slice(0, 25);
+
+                const menu = new StringSelectMenuBuilder()
+                    .setCustomId("notify_staff_id")
+                    .setPlaceholder("Escolhe o staff...")
+                    .addOptions(opts);
+
+                return interaction.reply({
+                    content: "Seleciona o staff:",
+                    components: [new ActionRowBuilder().addComponents(menu)],
+                    flags: [64]
+                });
             }
 
             if (cid === "notify_staff_id") {
                 const target = await guild.members.fetch(interaction.values[0]);
-                cooldowns.set(user.id, Date.now());
-                const embedDM = new EmbedBuilder().setTitle("📞 Chamada de Staff").setDescription(`O cliente **${user.username}** chamou-te em ${channel}`).setColor("#f1c40f");
-                const rowL = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel("Ir para o Ticket").setStyle(ButtonStyle.Link).setURL(`https://discord.com/channels/${guild.id}/${channel.id}`));
-                await target.send({ embeds: [embedDM], components: [rowL] }).catch(() => {});
-                await channel.send({ content: `📢 <@${target.id}>, foste solicitado aqui!` });
-                return await interaction.update({ content: "✅ Staff notificado.", components: [] });
+
+                await target.send(`📞 Foste chamado por ${user} no ticket ${channel}`).catch(() => {});
+                await channel.send(`📢 <@${target.id}> foi chamado!`);
+
+                return interaction.update({ content: "✅ Staff chamado.", components: [] });
             }
 
-            // 7. FECHAR TICKET COM LÓGICA DE MENSAGENS (CONTA TUDO)
+            // 7. FECHAR
             if (cid === "close_ticket") {
-                if (!isStaff(member)) return interaction.reply({ content: "Apenas staff pode fechar.", flags: [64] });
+                if (!isStaff(member)) return interaction.reply({ content: "Apenas staff.", flags: [64] });
 
-                // Procura as mensagens (limite de 10) - CONTA TUDO (User + Bot)
                 const messages = await channel.messages.fetch({ limit: 10 });
-                const msgCount = messages.size; 
+                const count = messages.size;
 
                 const sendTranscript = require("../helpers/sendTranscript");
 
-                // LÓGICA: 5 ou mais mensagens (contando com as do bot), fecha direto
-                if (msgCount >= 5) {
-                    await interaction.reply("🔒 Ticket com atividade. A gerar transcrição e a fechar...");
-                    await sendTranscript(channel, user.tag); 
-                    return setTimeout(() => channel.delete().catch(() => {}), 5000);
-                } 
-                // Menos de 5 mensagens no total, pergunta à Staff
-                else {
-                    const embedAviso = new EmbedBuilder()
-                        .setTitle("⚠️ Poucas Mensagens")
-                        .setDescription(`Este ticket tem apenas **${msgCount}** mensagens no total.\nQueres guardar a transcrição no GitHub ou apenas fechar?`)
+                if (count >= 5) {
+                    await interaction.reply("📂 A gerar transcript e fechar...");
+                    await sendTranscript(channel, user.tag);
+                    return setTimeout(() => channel.delete().catch(() => {}), 4000);
+                } else {
+                    const embed = new EmbedBuilder()
+                        .setTitle("⚠️ Poucas mensagens")
+                        .setDescription(`Este ticket tem apenas **${count}** mensagens.\nQueres guardar?`)
                         .setColor("#f1c40f");
 
-                    const rowEscolha = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId("confirm_close_save").setLabel("Guardar e Fechar").setStyle(ButtonStyle.Success),
-                        new ButtonBuilder().setCustomId("confirm_close_silent").setLabel("Fechar sem Guardar").setStyle(ButtonStyle.Danger)
+                    const row = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId("confirm_close_save").setLabel("Guardar").setStyle(ButtonStyle.Success),
+                        new ButtonBuilder().setCustomId("confirm_close_silent").setLabel("Fechar").setStyle(ButtonStyle.Danger)
                     );
 
-                    return await interaction.reply({ embeds: [embedAviso], components: [rowEscolha], flags: [64] });
+                    return interaction.reply({ embeds: [embed], components: [row], flags: [64] });
                 }
             }
 
-            // BOTÕES DE CONFIRMAÇÃO
             if (cid === "confirm_close_save") {
-                await interaction.update({ content: "🔒 A guardar log e a eliminar...", embeds: [], components: [] });
                 const sendTranscript = require("../helpers/sendTranscript");
+                await interaction.update({ content: "📂 A guardar...", components: [] });
                 await sendTranscript(channel, user.tag);
                 return setTimeout(() => channel.delete().catch(() => {}), 3000);
             }
 
             if (cid === "confirm_close_silent") {
-                await interaction.update({ content: "❌ Ticket eliminado sem registo.", embeds: [], components: [] });
+                await interaction.update({ content: "❌ Fechado sem guardar.", components: [] });
                 return setTimeout(() => channel.delete().catch(() => {}), 3000);
             }
 
-        } catch (err) { 
-            console.error("❌ Erro Geral:", err); 
+        } catch (err) {
+            console.error(err);
         }
     });
 };
