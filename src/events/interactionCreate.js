@@ -28,9 +28,12 @@ module.exports = (client) => {
         const cid = interaction.customId;
         if (!guild) return;
 
+        // Canal de Logs Geral (para aceitar/recusar termos)
+        const logChanGeral = await guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null);
+
         try {
             // 1. MENU INICIAL -> TERMOS
-if (interaction.isStringSelectMenu() && cid === "menu_ticket") {
+            if (interaction.isStringSelectMenu() && cid === "menu_ticket") {
                 const tipo = interaction.values[0];
                 const embedTermos = new EmbedBuilder()
                     .setTitle("⚖️ Termos de Serviço - Jordan Shop")
@@ -50,14 +53,35 @@ if (interaction.isStringSelectMenu() && cid === "menu_ticket") {
 
                 const row = new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId(`aceitar_termos_${tipo}`).setLabel("Aceitar").setStyle(ButtonStyle.Success),
-                    new ButtonBuilder().setCustomId("recusar_termos").setLabel("Recusar").setStyle(ButtonStyle.Danger)
+                    new ButtonBuilder().setCustomId(`recusar_termos_${tipo}`).setLabel("Recusar").setStyle(ButtonStyle.Danger)
                 );
-                return interaction.reply({ embeds: [embedT], components: [row], flags: [MessageFlags.Ephemeral] });
+                
+                return interaction.reply({ embeds: [embedTermos], components: [row], flags: [MessageFlags.Ephemeral] });
             }
 
-            // 2. ESCOLHER PAGAMENTO
+            // 2. LÓGICA DE RECUSAR TERMOS
+            if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
+                const tipo = cid.replace("recusar_termos_", "");
+                
+                if (logChanGeral) {
+                    await logChanGeral.send(`❌ <@${user.id}> não aceitou os termos para o canal \`${tipo}\`.`);
+                }
+
+                return interaction.update({ 
+                    content: "⚠️ **Tens que aceitar os termos para abrir o ticket.**", 
+                    embeds: [], 
+                    components: [] 
+                });
+            }
+
+            // 3. LÓGICA DE ACEITAR TERMOS -> PERGUNTAR PAGAMENTO
             if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 const tipo = cid.replace("aceitar_termos_", "");
+
+                if (logChanGeral) {
+                    await logChanGeral.send(`✅ <@${user.id}> aceitou os termos para o canal \`${tipo}\`.`);
+                }
+
                 const menuPag = new StringSelectMenuBuilder()
                     .setCustomId(`pagamento_${tipo}`)
                     .setPlaceholder("Seleciona o método de pagamento...")
@@ -65,19 +89,28 @@ if (interaction.isStringSelectMenu() && cid === "menu_ticket") {
                         { label: "MBWay", value: "MBWay", emoji: "1464608251516813446" },
                         { label: "PayPal", value: "PayPal", emoji: "1464608396383883314" },
                         { label: "Revolut", value: "Revolut", emoji: "1464608485617565726" },
+                        { label: "Cartão de Crédito", value: "CartaoCredito", emoji: "1464608966826004676" },
+                        { label: "Google Pay", value: "GooglePay", emoji: "1464609044315508797" },
+                        { label: "Apple Pay", value: "ApplePay", emoji: "1464609102906003588" },
                         { label: "Multibanco", value: "ReferenciaMultibanco", emoji: "1464609317926735902" }
                     ]);
-                return interaction.update({ content: "💳 Escolhe o método:", embeds: [], components: [new ActionRowBuilder().addComponents(menuPag)] });
+
+                return interaction.update({ 
+                    content: "💳 **Termos aceites!** Escolhe o método de pagamento para abrir o ticket:", 
+                    embeds: [], 
+                    components: [new ActionRowBuilder().addComponents(menuPag)] 
+                });
             }
 
-            // 3. CRIAR TICKET (LAYOUT ANEXO 2)
+            // 4. CRIAR TICKET (APÓS ESCOLHER PAGAMENTO)
             if (interaction.isStringSelectMenu() && cid?.startsWith("pagamento_")) {
                 await interaction.deferUpdate();
                 const tipo = cid.replace("pagamento_", "");
                 const metodo = interaction.values[0];
                 const emoji = emojisPagamento[metodo] || "💰";
 
-                let cat = guild.channels.cache.find(c => c.name === config.CATEGORY_NAME && c.type === 4);
+                let cat = guild.channels.cache.find(c => (c.name === config.CATEGORY_NAME || c.id === config.CATEGORY_ID) && c.type === 4);
+                
                 const ticket = await guild.channels.create({
                     name: `ticket-${tipo}-${user.username}`,
                     parent: cat ? cat.id : null,
@@ -88,6 +121,13 @@ if (interaction.isStringSelectMenu() && cid === "menu_ticket") {
                         ...config.STAFF_ROLES.map(r => ({ id: r, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }))
                     ]
                 });
+
+                const rowIrTicket = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setLabel("Ir para o Ticket")
+                        .setURL(`https://discord.com/channels/${guild.id}/${ticket.id}`)
+                        .setStyle(ButtonStyle.Link)
+                );
 
                 const embedMsg = new EmbedBuilder()
                     .setTitle("Jordan Shop | Suporte")
@@ -100,16 +140,16 @@ if (interaction.isStringSelectMenu() && cid === "menu_ticket") {
                     new ButtonBuilder().setCustomId("close_ticket").setLabel("Fechar").setStyle(ButtonStyle.Danger)
                 );
 
-                // TEXTO FORA DO EMBED (COMO PEDISTE NO ANEXO 2)
                 await ticket.send({ 
                     content: `<@${user.id}> obrigado(a) por criar um ticket, em breve algum staff te ajudará.`, 
                     embeds: [embedMsg], 
                     components: [btns] 
                 });
-                return interaction.editReply({ content: `✅ Ticket: ${ticket}`, components: [] });
+
+                return interaction.editReply({ content: `✅ Ticket criado: ${ticket}`, components: [rowIrTicket] });
             }
 
-            // 4. REIVINDICAR (LAYOUT ANEXO 2)
+            // 5. REIVINDICAR TICKET
             if (cid === "claim_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Staff apenas.", flags: [MessageFlags.Ephemeral] });
                 const [uid, met] = channel.topic?.split("|") || ["?", "Não definido"];
@@ -130,7 +170,7 @@ if (interaction.isStringSelectMenu() && cid === "menu_ticket") {
                 });
             }
 
-            // 5. CHAMAR STAFF (ORGANIZADO POR CARGO + NOME)
+            // 6. CHAMAR STAFF
             if (cid === "call_staff_list") {
                 const now = Date.now();
                 if (cooldowns.has(user.id) && now < cooldowns.get(user.id) + 300000) {
@@ -140,7 +180,6 @@ if (interaction.isStringSelectMenu() && cid === "menu_ticket") {
                 const members = await guild.members.fetch();
                 const staffOnline = members.filter(m => m.roles.cache.some(r => config.STAFF_ROLES.includes(r.id)) && !m.user.bot);
                 
-                // ORDENAÇÃO POR CARGO (USA A ORDEM DO CONFIG.JS)
                 const sorted = staffOnline.sort((a, b) => {
                     const aPos = config.STAFF_ROLES.indexOf(a.roles.highest.id);
                     const bPos = config.STAFF_ROLES.indexOf(b.roles.highest.id);
@@ -163,40 +202,50 @@ if (interaction.isStringSelectMenu() && cid === "menu_ticket") {
                 return interaction.update({ content: "✅ Staff notificado.", components: [] });
             }
 
-            // 6. FECHAR TICKET (FIX LINK 404 + ANEXO)
+            // 7. FECHAR TICKET & TRANSCRIPT
             if (cid === "close_ticket") {
                 if (!isStaff(member)) return;
                 await interaction.reply("🔒 A fechar...");
 
-                const transcript = await discordTranscripts.createTranscript(channel, { limit: -1, poweredBy: false });
+                const transcript = await discordTranscripts.createTranscript(channel, { limit: -1, poweredBy: false, returnType: 'attachment' });
                 
-                // NOME DO FICHEIRO LIMPO PARA O LINK FUNCIONAR
                 const rawName = channel.name.replace("ticket-", "");
                 const fileName = `ticket-${rawName}.html`.replace(/\s+/g, "_");
                 
-                // CAMINHO CORRIGIDO PARA O TEU INDEX.JS
                 const transcriptsDir = path.join(__dirname, "../../transcripts");
                 if (!fs.existsSync(transcriptsDir)) fs.mkdirSync(transcriptsDir, { recursive: true });
                 fs.writeFileSync(path.join(transcriptsDir, fileName), transcript.attachment);
 
+                if (client.enviarParaGithub) {
+                    await client.enviarParaGithub(fileName, transcript.attachment.toString('utf-8'));
+                }
+
                 const siteUrl = `https://discord-bott-jordan.onrender.com/transcripts/${fileName}`;
-                const logChan = await guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID || config.LOG_CHANNEL_ID);
+                const logChanTranscript = await guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID || config.LOG_CHANNEL_ID);
 
-                if (logChan) {
-                    const eLog = new EmbedBuilder()
-                        .setTitle("📄 Transcript Gerado")
+                if (logChanTranscript) {
+                    const embedLog = new EmbedBuilder()
+                        .setTitle("📄 Transcrição Arquivada")
                         .addFields(
-                            { name: "Ticket", value: `#${channel.name}`, inline: true },
-                            { name: "Link Web", value: `[Abrir no Navegador](${siteUrl})` }
+                            { name: "Canal:", value: `\`${channel.name}\``, inline: false },
+                            { name: "Fechado por:", value: `\`${user.username}\``, inline: false }
                         )
-                        .setColor("#8b0000");
+                        .setColor("#ff0000")
+                        .setTimestamp();
 
-                    // ENVIA FICHEIRO + LINK (IGUAL AO ANEXO 1)
-                    await logChan.send({ embeds: [eLog], files: [{ attachment: transcript.attachment, name: fileName }] });
+                    const rowWeb = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setLabel("Ver no Painel Web").setURL(siteUrl).setStyle(ButtonStyle.Link)
+                    );
+
+                    await logChanTranscript.send({ 
+                        embeds: [embedLog], 
+                        components: [rowWeb],
+                        files: [{ attachment: transcript.attachment, name: fileName }] 
+                    });
                 }
                 setTimeout(() => channel.delete().catch(() => {}), 3000);
             }
 
-        } catch (err) { console.error(err); }
+        } catch (err) { console.error("❌ Erro no InteractionCreate:", err); }
     });
 };
