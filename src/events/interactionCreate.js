@@ -73,8 +73,8 @@ module.exports = (client) => {
                 // Procurar o canal de logs de forma segura
                 const logChan = await guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null);
 
-                // Envia para o log apenas se o canal for válido e de texto
-                if (logChan && logChan.isTextBased()) { 
+                // CORREÇÃO AQUI: Verificamos se o .send existe como função em vez de usar .isTextBased()
+                if (logChan && typeof logChan.send === 'function') { 
                     await logChan.send(`✅ <@${user.id}> aceitou os termos para \`${tipo}\`.`).catch(() => {});
                 }
 
