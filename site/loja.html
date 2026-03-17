@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jordan Shop | Painel Staff</title>
+    <link rel="icon" type="image/png" href="logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    
     <style>
         :root {
             --primary-red: #8b0000;
@@ -13,37 +15,54 @@
         }
         * { box-sizing: border-box; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Open Sans', sans-serif; color: white; overflow: hidden; }
+        
         .bg-full { position: fixed; top:0; left:0; width:100%; height:100%; background: url('menu.png') no-repeat center center; background-size: cover; z-index:-2; }
         .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--overlay-dark); z-index:-1; }
+        
+        /* Ecrã de Boas-vindas (Splash) */
         #welcome-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: #000; display:flex; justify-content:center; align-items:center; z-index:9999; transition: opacity 0.8s ease; }
         .welcome-content { text-align:center; animation: pulse 2s infinite; }
+
         header { background: var(--primary-red); height:60px; display:flex; justify-content:space-between; align-items:center; padding:0 30px; box-shadow:0 4px 15px rgba(0,0,0,0.5); }
         .logo-area { font-weight: 800; font-size: 1.3rem; }
-        .refresh-btn { cursor:pointer; text-decoration:underline; font-size:0.9rem; margin-left:10px; opacity:0.8; }
-        .user-tag { background: rgba(0,0,0,0.4); padding:8px 15px; border-radius:5px; font-weight:600; }
+        .user-tag { background: rgba(0,0,0,0.4); padding:8px 15px; border-radius:5px; font-weight:600; display: flex; align-items: center; gap: 10px; }
+        .user-avatar { width: 25px; height: 25px; border-radius: 50%; border: 1px solid white; }
+
         .container { display:flex; height: calc(100vh - 60px); }
+        
+        /* Menu Lateral */
         aside { width:260px; background: rgba(40,40,40,0.6); backdrop-filter: blur(10px); padding:20px; display:flex; flex-direction:column; gap:15px; border-right:1px solid rgba(255,255,255,0.1); }
         .search-box { width:100%; padding:12px; border-radius:5px; border:none; background: rgba(255,255,255,0.1); color:white; outline:none; border-bottom:2px solid transparent; transition:0.3s; }
         .search-box:focus { border-bottom:2px solid var(--primary-red); }
+        
         .nav-btn { background: var(--primary-red); color:white; border:none; padding:14px; border-radius:6px; font-weight:600; cursor:pointer; transition: var(--transition-speed); text-align:center; text-decoration:none; }
         .nav-btn:hover { transform: translateX(10px); filter: brightness(1.3); }
-        main { flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:50px; text-align:center; overflow-y:auto; }
-        h1 { font-size:4rem; margin:0; font-weight:800; text-shadow:4px 4px 10px rgba(0,0,0,1); }
-        .subtitle { font-size:1.4rem; opacity:0.8; margin-top:10px; }
-        #dev-alert { margin-top:30px; padding:15px 25px; border:2px solid #ffcc00; color:#ffcc00; background: rgba(0,0,0,0.5); border-radius:10px; display:none; font-weight:bold; animation: fadeIn 0.4s; }
-        .log-item { background:#1a1a1a; padding:20px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid #333; transition:0.3s; margin-bottom:10px; }
+
+        /* Conteúdo Principal */
+        main { flex:1; display:flex; flex-direction:column; align-items:center; padding:50px; text-align:center; overflow-y:auto; }
+        h1 { font-size:3rem; margin-bottom: 20px; font-weight:800; text-shadow:4px 4px 10px rgba(0,0,0,1); }
+        .subtitle { font-size:1.4rem; opacity:0.8; }
+
+        /* Estilo dos Cards de Log e Vendas */
+        .log-item { background:#1a1a1a; padding:20px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid #333; transition:0.3s; margin-bottom:10px; width: 100%; max-width: 800px; text-align: left; }
         .log-item:hover { border-color: var(--primary-red); transform: translateX(10px); }
-        .log-info span { color:#888; font-size:0.8rem; display:block; }
-        .btn-view { background:#fff; color:#000; padding:8px 15px; border-radius:5px; text-decoration:none; font-weight:bold; }
+        .log-info strong { display: block; font-size: 1.1rem; color: #fff; }
+        .log-info span { color:#888; font-size:0.85rem; }
+        
+        .status-badge { padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
+
+        /* Card do Bot Online */
+        .status-card { background: rgba(20, 20, 20, 0.9); padding: 40px; border-radius: 15px; border-left: 8px solid #00ff00; text-align: left; width: 100%; max-width: 600px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .clock-box { display: flex; align-items: center; gap: 15px; font-size: 2.5rem; font-weight: 800; margin-top: 20px; color: #fff; }
+
         @keyframes pulse { 0%{transform:scale(1);opacity:0.8;} 50%{transform:scale(1.05);opacity:1;} 100%{transform:scale(1);opacity:0.8;} }
-        @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
     </style>
 </head>
 <body>
 
     <div id="welcome-screen">
         <div class="welcome-content">
-            <h2 style="font-size: 3rem;">OLÁ, BEM-VINDO AO PAINEL DA<br>
+            <h2 style="font-size: 3rem;">BEM-VINDO AO PAINEL<br>
             <span style="color: var(--primary-red);">JORDAN SHOP STAFF</span></h2>
         </div>
     </div>
@@ -52,72 +71,109 @@
     <div class="overlay"></div>
 
     <header>
-        <div class="logo-area">
-            Jordan Shop Site | <span class="refresh-btn" onclick="location.reload()">Atualizar</span>
+        <div class="logo-area">Jordan Shop Site</div>
+        <div class="user-tag">
+            <img src="logo.png" class="user-avatar" alt="User">
+            Olá, <span id="nav-username">Staff</span>
         </div>
-        <div class="user-tag">Olá, <span id="nav-username">Staff</span></div>
     </header>
 
     <div class="container">
         <aside>
             <input type="text" id="search" class="search-box" placeholder="Pesquisar categoria...">
-            <a href="/" class="nav-btn">MENU (Início)</a>
-            <button class="nav-btn" onclick="showSection('transcripts')">Transcripts</button>
-            <button class="nav-btn" onclick="showDev()">Vendas</button>
-            <button class="nav-btn" onclick="showDev()">Reivindicações</button>
-            <button class="nav-btn" onclick="showDev()">Bot Online</button>
+            <button class="nav-btn" onclick="showSection('welcome-section')">INÍCIO</button>
+            <button class="nav-btn" onclick="showSection('transcripts-section')">TRANSCRIPTS</button>
+            <button class="nav-btn" onclick="showSection('vendas-section')">VENDAS</button>
+            <button class="nav-btn" onclick="showSection('bot-status-section')">BOT ONLINE</button>
         </aside>
 
         <main>
-            <!-- Boas-vindas -->
-            <div id="welcome-section">
+            <div id="welcome-section" class="content-div">
                 <h1 id="main-welcome">Bem-Vindo @user</h1>
                 <p class="subtitle">Gestão Interna Jordan Shop - Acesso Restrito</p>
             </div>
 
-            <!-- Secção de Desenvolvimento -->
-            <div id="dev-section" style="display:none;">
-                <div id="dev-alert">⚠️ AVISO: Esta secção está atualmente em desenvolvimento.</div>
+            <div id="transcripts-section" class="content-div" style="display:none; width:100%;">
+                <h1>Logs de Transcripts</h1>
+                <div id="logs-list">A carregar logs do servidor...</div>
             </div>
 
-            <!-- Secção de Transcripts -->
-            <div id="transcripts" style="display:none; width:100%;">
-                <h1>Logs de Transcripts</h1>
-                <div id="logs-list">
-                    <p>A carregar logs do servidor...</p>
+            <div id="vendas-section" class="content-div" style="display:none; width:100%;">
+                <h1>Histórico de Vendas</h1>
+                <div id="vendas-list" style="display: flex; flex-direction: column; align-items: center;">
+                    <div class="log-item">
+                        <div class="log-info">
+                            <strong>Comprador: @silvexxx</strong>
+                            <span>Produto: 🔥・sp00fer-1click | Data: 27/09/2025</span>
+                        </div>
+                        <span class="status-badge" style="background: #00ff00; color: #000;">LIFETIME</span>
+                    </div>
+                    <div class="log-item">
+                        <div class="log-info">
+                            <strong>Comprador: @Tonethegoat</strong>
+                            <span>Produto: 🦈・shark-menu | Data: 27/09/2025</span>
+                        </div>
+                        <span class="status-badge" style="background: #ffcc00; color: #000;">SEMANAL</span>
+                    </div>
+                    <div class="log-item">
+                        <div class="log-info">
+                            <strong>Comprador: @silvexxx</strong>
+                            <span>Produto: ⭐・rockstar-unban | Data: 28/09/2025</span>
+                        </div>
+                        <span class="status-badge" style="background: #00ff00; color: #000;">INFINITO</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="bot-status-section" class="content-div" style="display:none; width:100%;">
+                <div class="status-card">
+                    <h2 style="margin: 0; color: #00ff00;">✅ Bot está online!</h2>
+                    <p>O bot foi iniciado com sucesso e está pronto para uso.</p>
+                    <div class="clock-box">
+                        <span style="font-size: 2rem;">🕒</span>
+                        <span id="relogio-realtime">00:00:00</span>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
 
     <script>
+        // Carregar Nome do Utilizador do URL
         const urlParams = new URLSearchParams(window.location.search);
         const user = urlParams.get('user') || 'Staff';
         document.getElementById('nav-username').innerText = user;
         document.getElementById('main-welcome').innerText = "Bem-Vindo " + user;
 
+        // Esconder Splash Screen após 2 segundos
         setTimeout(() => {
             const splash = document.getElementById('welcome-screen');
             splash.style.opacity = '0';
             setTimeout(() => splash.style.display = 'none', 800);
-        }, 3000);
+        }, 2000);
 
+        // Função para trocar de secção sem mudar de página
         function showSection(id) {
-            document.getElementById('welcome-section').style.display = 'none';
-            document.getElementById('dev-section').style.display = 'none';
-            document.getElementById('transcripts').style.display = 'none';
-            const section = document.getElementById(id);
-            if(section) section.style.display = 'block';
-            if(id==='transcripts') fetchLogs();
+            const sections = document.querySelectorAll('.content-div');
+            sections.forEach(s => s.style.display = 'none');
+            
+            document.getElementById(id).style.display = 'block';
+            
+            if(id === 'transcripts-section') fetchLogs();
         }
 
-        function showDev() {
-            showSection('dev-section');
-            const alertBox = document.getElementById('dev-alert');
-            alertBox.style.display = 'block';
-            setTimeout(() => { alertBox.style.display = 'none'; }, 4000);
+        // Relógio Sincronizado (Hora do Navegador)
+        function atualizarRelogio() {
+            const agora = new Date();
+            const horas = String(agora.getHours()).padStart(2, '0');
+            const minutos = String(agora.getMinutes()).padStart(2, '0');
+            const segundos = String(agora.getSeconds()).padStart(2, '0');
+            document.getElementById('relogio-realtime').innerText = `${horas}:${minutos}:${segundos}`;
         }
+        setInterval(atualizarRelogio, 1000);
+        atualizarRelogio(); // Iniciar logo ao carregar
 
+        // Filtro de pesquisa no Menu Lateral
         document.getElementById('search').addEventListener('input', function(e) {
             const filter = e.target.value.toLowerCase();
             const buttons = document.querySelectorAll('.nav-btn');
@@ -126,32 +182,37 @@
             });
         });
 
+        // Função para carregar os Transcripts do teu repositório GitHub
         async function fetchLogs() {
             const REPO = "arte-trimbauser/Jordan.Shop-Bot-Site";
-            const response = await fetch(`https://api.github.com/repos/${REPO}/contents/transcripts`);
-            const files = await response.json();
             const list = document.getElementById('logs-list');
-            list.innerHTML = '';
+            try {
+                const response = await fetch(`https://api.github.com/repos/${REPO}/contents/transcripts`);
+                const files = await response.json();
+                list.innerHTML = '';
 
-            if (files.message === "Not Found" || files.length === 0) {
-                list.innerHTML = "<p>Nenhum log encontrado.</p>";
-                return;
-            }
-
-            files.forEach(file => {
-                if (file.name.endsWith('.html') && file.name !== ".gitkeep") {
-                    const item = document.createElement('div');
-                    item.className = 'log-item';
-                    item.innerHTML = `
-                        <div class="log-info">
-                            <strong>${file.name}</strong>
-                            <span>Ticket fechado e guardado</span>
-                        </div>
-                        <a href="https://arte-trimbauser.github.io/Jordan.Shop-Bot-Site/transcripts/${file.name}" target="_blank" class="btn-view">Ver Log</a>
-                    `;
-                    list.appendChild(item);
+                if (!Array.isArray(files) || files.length === 0) {
+                    list.innerHTML = "<p>Nenhum log encontrado na pasta /transcripts.</p>";
+                    return;
                 }
-            });
+
+                files.forEach(file => {
+                    if (file.name.endsWith('.html') && file.name !== ".gitkeep") {
+                        const item = document.createElement('div');
+                        item.className = 'log-item';
+                        item.innerHTML = `
+                            <div class="log-info">
+                                <strong>${file.name}</strong>
+                                <span>Ticket Arquivado no Servidor</span>
+                            </div>
+                            <a href="https://arte-trimbauser.github.io/Jordan.Shop-Bot-Site/transcripts/${file.name}" target="_blank" style="color: white; font-weight: bold; background: #8b0000; padding: 8px 15px; border-radius: 5px; text-decoration: none;">VER LOG</a>
+                        `;
+                        list.appendChild(item);
+                    }
+                });
+            } catch (err) {
+                list.innerHTML = "<p>Erro ao carregar os ficheiros do GitHub.</p>";
+            }
         }
     </script>
 </body>
