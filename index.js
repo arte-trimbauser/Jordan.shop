@@ -3,7 +3,7 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const axios = require("axios"); 
-const { Client, GatewayIntentBits } = require("discord.js");
+const { Client, GatewayIntentBits, ActivityType } = require("discord.js");
 
 const app = express();
 const port = process.env.PORT || 10000;
@@ -11,6 +11,9 @@ const port = process.env.PORT || 10000;
 // Configuração de Pastas
 const sitePath = path.join(__dirname, "site");
 const transcriptsPath = path.join(__dirname, "transcripts");
+
+// Criar pasta transcripts se não existir (evita erro de rota)
+if (!fs.existsSync(transcriptsPath)) fs.mkdirSync(transcriptsPath);
 
 app.use(express.static(sitePath));
 app.use("/transcripts", express.static(transcriptsPath));
@@ -20,7 +23,6 @@ const CLIENT_ID = '1424479855466123284';
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = 'https://discord-bott-jordan.onrender.com/callback';
 
-// Rota de Callback para o Login do Discord
 app.get('/callback', async (req, res) => {
     const code = req.query.code;
     if (!code) return res.redirect('/login.html?error=no_code');
@@ -61,47 +63,35 @@ const client = new Client({
     ] 
 });
 
-// Mensagem de Inicialização Única e Estilizada
-client.once("clientReady", (c) => {
+// Corrigido: O evento correto é "ready" e não "clientReady"
+client.once("ready", (c) => {
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
     console.log(`✅ Sistema Jordan Shop Online!`);
     console.log(`🌐 Porta: ${port}`);
-    console.log(`🔗 Link: https://discord-bott-jordan.onrender.com`);
     console.log(`✅ Bot online como: ${c.user.tag}`);
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
+
+    // Define o Status "A Competir" imediatamente ao ligar
+    c.user.setPresence({
+        activities: [{ name: 'Jordan Shop #100', type: ActivityType.Competing }],
+        status: 'online',
+    });
 });
-
-// Função para enviar Transcript para o GitHub
-client.enviarParaGithub = async (nomeArquivo, conteudoHtml) => {
-    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-    const url = `https://api.github.com/repos/arte-trimbauser/Jordan.Shop-Bot-Site/contents/transcripts/${nomeArquivo}`;
-
-    try {
-        await axios.put(url, {
-            message: `💾 Log: ${nomeArquivo}`,
-            content: Buffer.from(conteudoHtml).toString('base64'),
-        }, {
-            headers: { Authorization: `token ${GITHUB_TOKEN}` }
-        });
-        console.log(`✅ Transcript ${nomeArquivo} enviado para o GitHub!`);
-    } catch (err) {
-        console.error("❌ Erro ao enviar para GitHub:", err.response?.data?.message || err.message);
-    }
-};
 
 // --- CARREGAR EVENTOS ---
 try {
-    // Comentei o readyHandler para evitar a duplicação, já que o log principal está acima
-    // require("./src/events/ready")(client); 
+    // Importante: Passar o client para os eventos
     require("./src/events/interactionCreate")(client);
 } catch (err) {
     console.error("❌ Erro ao carregar eventos:", err.message);
 }
 
+// Iniciar Servidor ANTES do Login do Bot (Evita timeout no Render)
 app.listen(port, "0.0.0.0", () => {
     console.log(`🚀 Servidor Web a correr na porta ${port}`);
 });
 
-client.login(process.env.DISCORD_TOKEN).catch(err => {
+// O TOKEN deve ser DISCORD_TOKEN ou TOKEN conforme está no teu .env
+client.login(process.env.DISCORD_TOKEN || process.env.TOKEN).catch(err => {
     console.error("❌ ERRO NO LOGIN DO BOT:", err.message);
 });
