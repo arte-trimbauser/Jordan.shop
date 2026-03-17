@@ -8,12 +8,14 @@ const { Client, GatewayIntentBits, ActivityType } = require("discord.js");
 const app = express();
 const port = process.env.PORT || 10000;
 
-// Configuração de Pastas
+// --- CONFIGURAÇÃO DE PASTAS ---
 const sitePath = path.join(__dirname, "site");
 const transcriptsPath = path.join(__dirname, "transcripts");
 
-// Criar pasta transcripts se não existir (evita erro de rota)
-if (!fs.existsSync(transcriptsPath)) fs.mkdirSync(transcriptsPath);
+// Criar pasta transcripts se não existir para evitar erros de leitura
+if (!fs.existsSync(transcriptsPath)) {
+    fs.mkdirSync(transcriptsPath, { recursive: true });
+}
 
 app.use(express.static(sitePath));
 app.use("/transcripts", express.static(transcriptsPath));
@@ -43,7 +45,7 @@ app.get('/callback', async (req, res) => {
 
         res.redirect(`/loja.html?user=${encodeURIComponent(userRes.data.username)}`);
     } catch (error) {
-        console.error("❌ Erro no Callback:", error.message);
+        console.error("❌ Erro no Callback:", error.response?.data || error.message);
         res.redirect('/login.html?error=auth_failed');
     }
 });
@@ -63,35 +65,36 @@ const client = new Client({
     ] 
 });
 
-// Corrigido: O evento correto é "ready" e não "clientReady"
+// Evento Ready
 client.once("ready", (c) => {
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
     console.log(`✅ Sistema Jordan Shop Online!`);
-    console.log(`🌐 Porta: ${port}`);
-    console.log(`✅ Bot online como: ${c.user.tag}`);
+    console.log(`🌐 Servidor Web: http://localhost:${port}`);
+    console.log(`🤖 Bot: ${c.user.tag}`);
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
 
-    // Define o Status "A Competir" imediatamente ao ligar
     c.user.setPresence({
         activities: [{ name: 'Jordan Shop | discord.gg/6hhZeqb7Qk', type: ActivityType.Competing }],
         status: 'online',
     });
-});
 
-// --- CARREGAR EVENTOS ---
-try {
-    // Importante: Passar o client para os eventos
+    // Carregar o evento de mensagens e interações
     require("./src/events/interactionCreate")(client);
-} catch (err) {
-    console.error("❌ Erro ao carregar eventos:", err.message);
-}
+    
+    // Opcional: Carregar o ready.js se tiveres lógica extra lá
+    const readyEvent = require("./src/events/ready");
+    if (typeof readyEvent === "function") readyEvent(client);
+});
 
-// Iniciar Servidor ANTES do Login do Bot (Evita timeout no Render)
+// --- INICIAR SERVIDOR ---
 app.listen(port, "0.0.0.0", () => {
-    console.log(`🚀 Servidor Web a correr na porta ${port}`);
+    console.log(`🚀 Site a rodar na porta ${port}`);
 });
 
-// O TOKEN deve ser DISCORD_TOKEN ou TOKEN conforme está no teu .env
-client.login(process.env.DISCORD_TOKEN || process.env.TOKEN).catch(err => {
-    console.error("❌ ERRO NO LOGIN DO BOT:", err.message);
-});
+// --- LOGIN DO BOT ---
+const TOKEN = process.env.DISCORD_TOKEN || process.env.TOKEN;
+if (!TOKEN) {
+    console.error("❌ ERRO: Token do bot não encontrado no .env!");
+} else {
+    client.login(TOKEN).catch(err => console.error("❌ ERRO NO LOGIN:", err.message));
+}
