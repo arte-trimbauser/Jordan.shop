@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
-const axios = require("axios"); // Precisas de instalar: npm install axios
+const axios = require("axios"); 
 const { Client, GatewayIntentBits } = require("discord.js");
 
 const app = express();
@@ -17,7 +17,7 @@ app.use("/transcripts", express.static(transcriptsPath));
 
 // --- CONFIGURAÇÃO DISCORD OAUTH2 ---
 const CLIENT_ID = '1424479855466123284';
-const CLIENT_SECRET = process.env.CLIENT_SECRET; // Mete isto no Render!
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = 'https://discord-bott-jordan.onrender.com/callback';
 
 // Rota de Callback para o Login do Discord
@@ -26,7 +26,6 @@ app.get('/callback', async (req, res) => {
     if (!code) return res.redirect('/login.html?error=no_code');
 
     try {
-        // Troca o código pelo token
         const params = new URLSearchParams({
             client_id: CLIENT_ID,
             client_secret: CLIENT_SECRET,
@@ -40,7 +39,6 @@ app.get('/callback', async (req, res) => {
             headers: { Authorization: `Bearer ${tokenRes.data.access_token}` }
         });
 
-        // Se o login for sucesso, manda para a loja com o nome do user
         res.redirect(`/loja.html?user=${encodeURIComponent(userRes.data.username)}`);
     } catch (error) {
         console.error("❌ Erro no Callback:", error.message);
@@ -63,21 +61,19 @@ const client = new Client({
     ] 
 });
 
-// Mensagem de Inicialização Estilizada
-client.once("ready", () => {
+// Mensagem de Inicialização Única e Estilizada
+client.once("clientReady", (c) => {
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
     console.log(`✅ Sistema Jordan Shop Online!`);
     console.log(`🌐 Porta: ${port}`);
     console.log(`🔗 Link: https://discord-bott-jordan.onrender.com`);
-    console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
-    console.log(`✅ Bot online como ${client.user.tag}`);
+    console.log(`✅ Bot online como: ${c.user.tag}`);
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
 });
 
-// Função para enviar Transcript para o GitHub automaticamente
-// Podes chamar esta função no teu evento de fechar ticket
+// Função para enviar Transcript para o GitHub
 client.enviarParaGithub = async (nomeArquivo, conteudoHtml) => {
-    const GITHUB_TOKEN = process.env.GITHUB_TOKEN; // Mete isto no Render!
+    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
     const url = `https://api.github.com/repos/arte-trimbauser/Jordan.Shop-Bot-Site/contents/transcripts/${nomeArquivo}`;
 
     try {
@@ -95,7 +91,8 @@ client.enviarParaGithub = async (nomeArquivo, conteudoHtml) => {
 
 // --- CARREGAR EVENTOS ---
 try {
-    require("./src/events/ready")(client);
+    // Comentei o readyHandler para evitar a duplicação, já que o log principal está acima
+    // require("./src/events/ready")(client); 
     require("./src/events/interactionCreate")(client);
 } catch (err) {
     console.error("❌ Erro ao carregar eventos:", err.message);
