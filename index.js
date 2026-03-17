@@ -73,7 +73,7 @@ client.once("ready", (c) => {
 
     // Define o Status "A Competir" imediatamente ao ligar
     c.user.setPresence({
-        activities: [{ name: 'Jordan Shop #100', type: ActivityType.Competing }],
+        activities: [{ name: 'Jordan Shop | discord.gg/6hhZeqb7Qk', type: ActivityType.Competing }],
         status: 'online',
     });
 });
