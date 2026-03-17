@@ -28,9 +28,6 @@ module.exports = (client) => {
         const cid = interaction.customId;
         if (!guild) return;
 
-        // Canal de Logs Geral (para aceitar/recusar termos)
-        const logChanGeral = await guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null);
-
         try {
             // 1. MENU INICIAL -> TERMOS
             if (interaction.isStringSelectMenu() && cid === "menu_ticket") {
@@ -63,8 +60,10 @@ module.exports = (client) => {
             if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
                 const tipo = cid.replace("recusar_termos_", "");
                 
-                if (logChanGeral) {
-                    await logChanGeral.send(`❌ <@${user.id}> não aceitou os termos para o canal \`${tipo}\`.`);
+                // Tenta enviar log de forma segura
+                const logChan = await guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null);
+                if (logChan && logChan.isTextBased()) {
+                    await logChan.send(`❌ <@${user.id}> não aceitou os termos para o canal \`${tipo}\`.`).catch(() => {});
                 }
 
                 return interaction.update({ 
@@ -78,8 +77,9 @@ module.exports = (client) => {
             if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 const tipo = cid.replace("aceitar_termos_", "");
 
-                if (logChanGeral) {
-                    await logChanGeral.send(`✅ <@${user.id}> aceitou os termos para o canal \`${tipo}\`.`);
+                const logChan = await guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null);
+                if (logChan && logChan.isTextBased()) {
+                    await logChan.send(`✅ <@${user.id}> aceitou os termos para o canal \`${tipo}\`.`).catch(() => {});
                 }
 
                 const menuPag = new StringSelectMenuBuilder()
@@ -102,7 +102,7 @@ module.exports = (client) => {
                 });
             }
 
-            // 4. CRIAR TICKET (APÓS ESCOLHER PAGAMENTO)
+            // 4. CRIAR TICKET
             if (interaction.isStringSelectMenu() && cid?.startsWith("pagamento_")) {
                 await interaction.deferUpdate();
                 const tipo = cid.replace("pagamento_", "");
@@ -208,7 +208,6 @@ module.exports = (client) => {
                 await interaction.reply("🔒 A fechar...");
 
                 const transcript = await discordTranscripts.createTranscript(channel, { limit: -1, poweredBy: false, returnType: 'attachment' });
-                
                 const rawName = channel.name.replace("ticket-", "");
                 const fileName = `ticket-${rawName}.html`.replace(/\s+/g, "_");
                 
@@ -221,9 +220,9 @@ module.exports = (client) => {
                 }
 
                 const siteUrl = `https://discord-bott-jordan.onrender.com/transcripts/${fileName}`;
-                const logChanTranscript = await guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID || config.LOG_CHANNEL_ID);
+                const logChanTranscript = await guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID || config.LOG_CHANNEL_ID).catch(() => null);
 
-                if (logChanTranscript) {
+                if (logChanTranscript && logChanTranscript.isTextBased()) {
                     const embedLog = new EmbedBuilder()
                         .setTitle("📄 Transcrição Arquivada")
                         .addFields(
@@ -241,7 +240,7 @@ module.exports = (client) => {
                         embeds: [embedLog], 
                         components: [rowWeb],
                         files: [{ attachment: transcript.attachment, name: fileName }] 
-                    });
+                    }).catch(() => {});
                 }
                 setTimeout(() => channel.delete().catch(() => {}), 3000);
             }
