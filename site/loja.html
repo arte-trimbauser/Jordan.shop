@@ -46,16 +46,19 @@
         main { flex:1; display:flex; flex-direction:column; align-items:center; padding:40px; text-align:center; overflow-y:auto; }
         h1 { font-size:2.5rem; margin-bottom: 20px; font-weight:800; text-shadow:2px 2px 8px rgba(0,0,0,0.8); }
 
-        /* Vendas Item */
+        /* Estilos dos Itens e Cards */
         .log-item { background: rgba(20, 20, 20, 0.9); padding:15px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid #333; transition:0.3s; margin-bottom:10px; width: 100%; max-width: 850px; text-align: left; }
         .log-item:hover { border-color: var(--primary-red); }
         .log-info strong { display: block; font-size: 1rem; color: #fff; }
         .log-info span { color:#bbb; font-size:0.85rem; line-height: 1.6; }
         .status-badge { padding: 5px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
 
-        /* Card Status Bot */
         .status-card { background: rgba(20, 20, 20, 0.95); padding: 30px; border-radius: 15px; border-left: 8px solid #00ff00; text-align: left; width: 100%; max-width: 600px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .success-img { width: 100%; border-radius: 10px; margin-top: 20px; border: 1px solid #444; }
+
+        /* Estilos Criador de Embed */
+        .embed-creator-card { background: rgba(20, 20, 20, 0.95); padding: 30px; border-radius: 15px; border-top: 5px solid var(--primary-red); text-align: left; width: 100%; max-width: 800px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .form-label { display: block; color: #bbb; margin-bottom: 5px; font-size: 0.9rem; font-weight: bold; }
 
         @keyframes pulse { 0%{transform:scale(1);opacity:0.8;} 50%{transform:scale(1.05);opacity:1;} 100%{transform:scale(1);opacity:0.8;} }
     </style>
@@ -75,7 +78,7 @@
         <a href="javascript:location.reload()" class="logo-link">Jordan Shop Site</a>
         <div class="user-tag">
             <img src="logo.png" class="user-avatar">
-            Olá, <span id="nav-username">Staff</span>
+            Olás, <span id="nav-username">Staff</span>
         </div>
     </header>
 
@@ -84,6 +87,7 @@
             <input type="text" id="search" class="search-box" placeholder="Procurar...">
             <div class="nav-links">
                 <button class="nav-btn" onclick="showSection('welcome-section')">INÍCIO</button>
+                <button class="nav-btn" onclick="showSection('embed-section')">CRIAR EMBED</button>
                 <button class="nav-btn" onclick="showSection('transcripts-section')">TRANSCRIPTS</button>
                 <button class="nav-btn" onclick="showSection('vendas-section')">VENDAS</button>
                 <button class="nav-btn" onclick="showSection('bot-status-section')">BOT ONLINE</button>
@@ -100,6 +104,34 @@
                 <p style="font-size: 1.2rem; opacity: 0.8;">Painel de Administração e Gestão</p>
             </div>
 
+            <div id="embed-section" class="content-div" style="display:none; width:100%;">
+                <h1>🎨 Criador de Embed</h1>
+                <div class="embed-creator-card" style="margin: 0 auto;">
+                    <div style="margin-bottom: 15px;">
+                        <label class="form-label">🆔 ID do Canal (Discord)</label>
+                        <input type="text" id="emb-canal" class="search-box" style="width:100%; margin-bottom:0;" placeholder="Ex: 123456789...">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label class="form-label">🖊️ Título do Embed</label>
+                        <input type="text" id="emb-titulo" class="search-box" style="width:100%; margin-bottom:0;" placeholder="Título apelativo">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label class="form-label">📝 Conteúdo / Descrição</label>
+                        <textarea id="emb-desc" class="search-box" style="width:100%; height:120px; resize:vertical; margin-bottom:0;" placeholder="Escreve aqui a mensagem..."></textarea>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label class="form-label">🌈 Cor Lateral (Hex)</label>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <input type="text" id="emb-cor" class="search-box" style="width:150px; margin-bottom:0;" value="#8b0000">
+                            <div title="Vermelho Jordan" style="width:30px; height:30px; border-radius:50%; background:#8b0000; cursor:pointer; border:1px solid white;" onclick="document.getElementById('emb-cor').value='#8b0000'"></div>
+                            <div title="Verde Sucesso" style="width:30px; height:30px; border-radius:50%; background:#00ff00; cursor:pointer; border:1px solid white;" onclick="document.getElementById('emb-cor').value='#00ff00'"></div>
+                            <div title="Azul Info" style="width:30px; height:30px; border-radius:50%; background:#0000ff; cursor:pointer; border:1px solid white;" onclick="document.getElementById('emb-cor').value='#0000ff'"></div>
+                        </div>
+                    </div>
+                    <button id="btn-env-emb" onclick="enviarEmbed()" class="nav-btn" style="width:100%; padding:18px; font-size:1.1rem;">🚀 ENVIAR EMBED PARA O DISCORD</button>
+                </div>
+            </div>
+
             <div id="transcripts-section" class="content-div" style="display:none; width:100%;">
                 <h1>Logs de Transcripts</h1>
                 <div id="logs-list">A carregar logs...</div>
@@ -108,7 +140,6 @@
             <div id="vendas-section" class="content-div" style="display:none; width:100%;">
                 <h1>Histórico de Vendas</h1>
                 <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
-                    
                     <div class="log-item">
                         <div class="log-info">
                             <strong>Comprador: @silvexxx | 27/09/2025</strong>
@@ -116,47 +147,14 @@
                         </div>
                         <span class="status-badge" style="background: #00ff00; color: #000;">LIFETIME</span>
                     </div>
-
-                    <div class="log-item">
-                        <div class="log-info">
-                            <strong>Comprador: @Tonethegoat | 27/09/2025</strong>
-                            <span>Produto: 🦈・shark-menu<br>Staff: @! Jordan @migueldodrip</span>
-                        </div>
-                        <span class="status-badge" style="background: #ffcc00; color: #000;">SEMANAL</span>
                     </div>
-
-                    <div class="log-item">
-                        <div class="log-info">
-                            <strong>Comprador: @silvexxx | 28/09/2025</strong>
-                            <span>Produto: ⭐・rockstar-unban<br>Staff: @! Jordan</span>
-                        </div>
-                        <span class="status-badge" style="background: #00ff00; color: #000;">INFINITO</span>
-                    </div>
-
-                    <div class="log-item">
-                        <div class="log-info">
-                            <strong>Comprador: @silvexxx | 28/09/2025</strong>
-                            <span>Produto: 🌎・vpn-service<br>Staff: @! Jordan</span>
-                        </div>
-                        <span class="status-badge" style="background: #00ff00; color: #000;">INFINITO</span>
-                    </div>
-
-                    <div class="log-item">
-                        <div class="log-info">
-                            <strong>Comprador: @silvexxx | 19/10/2025</strong>
-                            <span>Produto: 🦈・shark-menu<br>Staff: @! Jordan</span>
-                        </div>
-                        <span class="status-badge" style="background: #00ff00; color: #000;">LIFETIME</span>
-                    </div>
-
-                </div>
             </div>
 
             <div id="bot-status-section" class="content-div" style="display:none; width:100%;">
-                <div class="status-card">
+                <div class="status-card" style="margin: 0 auto;">
                     <h2 style="margin: 0; color: #00ff00;">✅ Bot está online!</h2>
-                    <p>O bot foi iniciado com sucesso e está pronto para uso.</p>
-                    <p>🕒 <strong>Hora:</strong> <span id="relogio-realtime">00:00:00</span></p>
+                    <p>O sistema do bot e a API do site estão operacionais.</p>
+                    <p>🕒 <strong>Hora Local:</strong> <span id="relogio-realtime">00:00:00</span></p>
                     <img src="success.png" class="success-img" alt="Sucesso">
                 </div>
             </div>
@@ -164,6 +162,7 @@
     </div>
 
     <script>
+        // Lógica de Usuário e Splash Screen
         const urlParams = new URLSearchParams(window.location.search);
         const user = urlParams.get('user') || 'Staff';
         document.getElementById('nav-username').innerText = user;
@@ -175,18 +174,22 @@
             setTimeout(() => splash.style.display = 'none', 800);
         }, 1500);
 
+        // Navegação entre seções
         function showSection(id) {
             document.querySelectorAll('.content-div').forEach(s => s.style.display = 'none');
             document.getElementById(id).style.display = 'block';
             if(id === 'transcripts-section') fetchLogs();
         }
 
+        // Relógio em Tempo Real
         function atualizarRelogio() {
-            document.getElementById('relogio-realtime').innerText = new Date().toLocaleTimeString('pt-PT');
+            const relogio = document.getElementById('relogio-realtime');
+            if(relogio) relogio.innerText = new Date().toLocaleTimeString('pt-PT');
         }
         setInterval(atualizarRelogio, 1000);
         atualizarRelogio();
 
+        // Buscar Logs do GitHub
         async function fetchLogs() {
             const REPO = "arte-trimbauser/Jordan.Shop-Bot-Site";
             const list = document.getElementById('logs-list');
@@ -206,7 +209,46 @@
                         list.appendChild(item);
                     }
                 });
-            } catch (e) { list.innerHTML = "Erro ao carregar logs."; }
+            } catch (e) { list.innerHTML = "Erro ao carregar logs do GitHub."; }
+        }
+
+        // Função para Enviar o Embed para o Bot (API)
+        async function enviarEmbed() {
+            const canalId = document.getElementById('emb-canal').value;
+            const titulo = document.getElementById('emb-titulo').value;
+            const desc = document.getElementById('emb-desc').value;
+            const cor = document.getElementById('emb-cor').value;
+            const btn = document.getElementById('btn-env-emb');
+
+            if (!canalId || !titulo || !desc) {
+                alert("⚠️ Por favor, preenche todos os campos obrigatórios!");
+                return;
+            }
+
+            btn.innerText = "⏳ A ENVIAR...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/enviar-embed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ titulo, desc, cor, canalId })
+                });
+
+                if (res.ok) {
+                    alert("✅ Sucesso! O embed foi enviado para o Discord.");
+                    document.getElementById('emb-titulo').value = '';
+                    document.getElementById('emb-desc').value = '';
+                } else {
+                    const errorMsg = await res.text();
+                    alert("❌ Erro ao enviar: " + errorMsg);
+                }
+            } catch (e) {
+                alert("❌ Erro de ligação! Certifica-te que o bot está online no Render.");
+            } finally {
+                btn.innerText = "🚀 ENVIAR EMBED PARA O DISCORD";
+                btn.disabled = false;
+            }
         }
     </script>
 </body>
