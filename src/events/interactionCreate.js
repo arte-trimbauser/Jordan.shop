@@ -59,9 +59,9 @@ module.exports = (client) => {
                 const tipo = cid.replace("recusar_termos_", "");
 
                 const logChan = await guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null);
-                if (logChan && logChan.isTextBased()) {
-                await logChan.send(`❌ <@${user.id}> não aceitou os termos para a opção **${tipo}**.`);
-                }
+if (logChan && typeof logChan.send === "function") {
+    await logChan.send(`❌ <@${user.id}> não aceitou os termos para a opção **${tipo}**.`);
+}
 
                 return interaction.update({
                     content: "⚠️ **Tens que aceitar os termos para abrir o ticket.**",
@@ -75,9 +75,9 @@ module.exports = (client) => {
                 const tipo = cid.replace("aceitar_termos_", "");
 
                 const logChan = await guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null);
-                if (logChan && logChan.isTextBased()) {
-                await logChan.send(`✅ <@${user.id}> aceitou os termos para a opção **${tipo}**.`);
-                }
+if (logChan && typeof logChan.send === "function") {
+    await logChan.send(`✅ <@${user.id}> aceitou os termos para a opção **${tipo}**.`);
+}
 
                 const menu = new StringSelectMenuBuilder()
                     .setCustomId(`pagamento_${tipo}`)
