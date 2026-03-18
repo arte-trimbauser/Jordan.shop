@@ -67,7 +67,7 @@
 
     <div id="welcome-screen">
         <div class="welcome-content">
-            <h2 style="font-size: 2.5rem;">Jordan Shop | Painel de Administração</h2>
+            <h2 style="font-size: 2.5rem;">Jordan Shop | Painel de Administração Acesso Restrito</h2>
         </div>
     </div>
 
@@ -75,7 +75,7 @@
     <div class="overlay"></div>
 
     <header>
-        <a href="javascript:location.reload()" class="logo-link">Jordan Shop Site</a>
+        <a href="javascript:location.reload()" class="logo-link">Jordan Shop Site |🔃 Atualizar </a>
         <div class="user-tag">
             <img src="logo.png" class="user-avatar">
             Olá, <span id="nav-username">Staff</span>
@@ -87,10 +87,10 @@
             <input type="text" id="search" class="search-box" placeholder="Procurar...">
             <div class="nav-links">
                 <button class="nav-btn" onclick="showSection('welcome-section')">INÍCIO</button>
-                <button class="nav-btn" onclick="showSection('embed-section')">CRIAR EMBED</button>
                 <button class="nav-btn" onclick="showSection('transcripts-section')">TRANSCRIPTS</button>
                 <button class="nav-btn" onclick="showSection('vendas-section')">VENDAS</button>
-                <button class="nav-btn" onclick="showSection('bot-status-section')">BOT ONLINE</button>
+                <button class="nav-btn" onclick="showSection('embed-section')">CRIAR EMBED</button>
+                <button class="nav-btn" onclick="showSection('bot-status-section')">SITE ONLINE</button>
             </div>
             
             <a href="login.html" class="logout-btn">
@@ -98,46 +98,40 @@
             </a>
         </aside>
 
-        <main>
+       <main>
             <div id="welcome-section" class="content-div">
                 <h1 id="main-welcome">Bem-Vindo</h1>
-                <p style="font-size: 1.2rem; opacity: 0.8;">Painel de Administração e Gestão</p>
+                <p style="font-size: 1.2rem; opacity: 0.8;">Bem-Vindo ao painel de Administração e Gestão da Jordan Shop</p>
             </div>
 
-<div id="embed-section" class="content-div" style="display:none; width:100%;">
-    <h1>🎫 Criar Painel de Tickets</h1>
-    <div class="embed-creator-card" style="margin: 0 auto; border-top: 5px solid #FF0000;">
-        
-        <div style="margin-bottom: 15px;">
-            <label class="form-label">🆔 ID do Canal de Destino</label>
-            <input type="text" id="emb-canal" class="search-box" style="width:100%;" placeholder="Copia o ID do canal aqui">
-        </div>
-
-        <div style="margin-bottom: 15px;">
-            <label class="form-label">🖊️ Título (Opcional)</label>
-            <input type="text" id="emb-titulo" class="search-box" style="width:100%;" placeholder="Ex: Atendimento Jordan Shop">
-        </div>
-
-        <div style="margin-bottom: 15px;">
-            <label class="form-label">📝 Mensagem e Preços (O que vai aparecer no Ticket)</label>
-            <textarea id="emb-desc" class="search-box" style="width:100%; height:180px; resize:vertical;" 
-            placeholder="Ex: Cyber Ghost - €3.00&#10;Clica no botão abaixo para comprar!"></textarea>
-        </div>
-
-        <div style="margin-bottom: 20px;">
-            <label class="form-label">🌈 Cor do Embed (Padrão: #FF0000)</label>
-            <input type="text" id="emb-cor" class="search-box" style="width:150px;" value="#FF0000">
-        </div>
-
-        <p style="color: #ff9999; font-size: 0.8rem; margin-bottom: 15px;">
-            ℹ️ O botão "Escolhe uma opção" será adicionado automaticamente.
-        </p>
-
-        <button id="btn-env-emb" onclick="enviarEmbed()" class="nav-btn" style="width:100%; padding:18px; background: #FF0000;">
-            🚀 ENVIAR PAINEL DE TICKETS
-        </button>
-    </div>
-</div>
+            <div id="embed-section" class="content-div" style="display:none; width:100%;">
+                <h1>🎫 Criar Painel de Tickets</h1>
+                <div class="embed-creator-card" style="margin: 0 auto; border-top: 5px solid #FF0000;">
+                    <div style="margin-bottom: 15px;">
+                        <label class="form-label">🆔 ID do Canal de Destino</label>
+                        <input type="text" id="emb-canal" class="search-box" style="width:100%;" placeholder="Copia o ID do canal aqui">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label class="form-label">🖊️ Título (Opcional)</label>
+                        <input type="text" id="emb-titulo" class="search-box" style="width:100%;" placeholder="Ex: Atendimento Jordan Shop">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label class="form-label">📝 Mensagem e Preços (O que vai aparecer no Ticket)</label>
+                        <textarea id="emb-desc" class="search-box" style="width:100%; height:180px; resize:vertical;" 
+                        placeholder="Ex: Cyber Ghost - €3.00&#10;Clica no botão abaixo para comprar!"></textarea>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label class="form-label">🌈 Cor do Embed (Padrão: #FF0000)</label>
+                        <input type="text" id="emb-cor" class="search-box" style="width:150px;" value="#FF0000">
+                    </div>
+                    <p style="color: #ff9999; font-size: 0.8rem; margin-bottom: 15px;">
+                        ℹ️ O botão "Escolhe uma opção" será adicionado automaticamente.
+                    </p>
+                    <button id="btn-env-emb" onclick="enviarEmbed()" class="nav-btn" style="width:100%; padding:18px; background: #FF0000;">
+                        🚀 ENVIAR PAINEL DE TICKETS
+                    </button>
+                </div>
+            </div>
 
             <div id="transcripts-section" class="content-div" style="display:none; width:100%;">
                 <h1>Logs de Transcripts</h1>
@@ -174,24 +168,17 @@
 
                     <div class="log-item">
                         <div class="log-info">
-                            <strong>Comprador: @silvexxx | 28/09/2025</strong>
-                            <span>Produto: 🌎・vpn-service<br>Staff: @! Jordan</span>
-                        </div>
-                        <span class="status-badge" style="background: #00ff00; color: #000;">INFINITO</span>
-                    </div>
-
-                    <div class="log-item">
-                        <div class="log-info">
                             <strong>Comprador: @silvexxx | 19/10/2025</strong>
                             <span>Produto: 🦈・shark-menu<br>Staff: @! Jordan</span>
                         </div>
                         <span class="status-badge" style="background: #00ff00; color: #000;">LIFETIME</span>
                     </div>
+                </div>
+            </div>
 
-                    
             <div id="bot-status-section" class="content-div" style="display:none; width:100%;">
                 <div class="status-card" style="margin: 0 auto;">
-                    <h2 style="margin: 0; color: #00ff00;">✅ Bot está online!</h2>
+                    <h2 style="margin: 0; color: #00ff00;">✅ Site está online!</h2>
                     <p>O sistema do bot e a API do site estão operacionais.</p>
                     <p>🕒 <strong>Hora Local:</strong> <span id="relogio-realtime">00:00:00</span></p>
                     <img src="success.png" class="success-img" alt="Sucesso">
@@ -218,6 +205,20 @@
             document.querySelectorAll('.content-div').forEach(s => s.style.display = 'none');
             document.getElementById(id).style.display = 'block';
             if(id === 'transcripts-section') fetchLogs();
+        }
+
+        // NOVA FUNÇÃO: Filtro de pesquisa lateral
+        function filtrarMenu() {
+            let input = document.getElementById('search').value.toLowerCase();
+            let buttons = document.querySelectorAll('.nav-btn');
+            
+            buttons.forEach(btn => {
+                if (btn.innerText.toLowerCase().includes(input)) {
+                    btn.style.display = "block";
+                } else {
+                    btn.style.display = "none";
+                }
+            });
         }
 
         // Relógio em Tempo Real
@@ -258,9 +259,9 @@
             const desc = document.getElementById('emb-desc').value;
             const cor = document.getElementById('emb-cor').value;
             const btn = document.getElementById('btn-env-emb');
-
+            
             if (!canalId || !titulo || !desc) {
-                alert("⚠️ Por favor, preenche todos os campos obrigatórios!");
+                alert("⚠️ Por favor, preenche todos os campos obrigatórios e verifica se não falta algo!");
                 return;
             }
 
@@ -275,7 +276,7 @@
                 });
 
                 if (res.ok) {
-                    alert("✅ Sucesso! O embed foi enviado para o Discord.");
+                    alert("✅ Sucesso! O embed foi enviado para o Discord verifica no canal do id que copiaste.");
                     document.getElementById('emb-titulo').value = '';
                     document.getElementById('emb-desc').value = '';
                 } else {
