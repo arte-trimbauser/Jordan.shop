@@ -67,7 +67,7 @@
 
     <div id="welcome-screen">
         <div class="welcome-content">
-            <h2 style="font-size: 2.5rem;">JORDAN SHOP STAFF</h2>
+            <h2 style="font-size: 2.5rem;">Jordan Shop | Painel de Administração</h2>
         </div>
     </div>
 
@@ -78,7 +78,7 @@
         <a href="javascript:location.reload()" class="logo-link">Jordan Shop Site</a>
         <div class="user-tag">
             <img src="logo.png" class="user-avatar">
-            Olás, <span id="nav-username">Staff</span>
+            Olá, <span id="nav-username">Staff</span>
         </div>
     </header>
 
@@ -104,33 +104,40 @@
                 <p style="font-size: 1.2rem; opacity: 0.8;">Painel de Administração e Gestão</p>
             </div>
 
-            <div id="embed-section" class="content-div" style="display:none; width:100%;">
-                <h1>🎨 Criador de Embed</h1>
-                <div class="embed-creator-card" style="margin: 0 auto;">
-                    <div style="margin-bottom: 15px;">
-                        <label class="form-label">🆔 ID do Canal (Discord)</label>
-                        <input type="text" id="emb-canal" class="search-box" style="width:100%; margin-bottom:0;" placeholder="Ex: 123456789...">
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label class="form-label">🖊️ Título do Embed</label>
-                        <input type="text" id="emb-titulo" class="search-box" style="width:100%; margin-bottom:0;" placeholder="Título apelativo">
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label class="form-label">📝 Conteúdo / Descrição</label>
-                        <textarea id="emb-desc" class="search-box" style="width:100%; height:120px; resize:vertical; margin-bottom:0;" placeholder="Escreve aqui a mensagem..."></textarea>
-                    </div>
-                    <div style="margin-bottom: 20px;">
-                        <label class="form-label">🌈 Cor Lateral (Hex)</label>
-                        <div style="display:flex; gap:10px; align-items:center;">
-                            <input type="text" id="emb-cor" class="search-box" style="width:150px; margin-bottom:0;" value="#8b0000">
-                            <div title="Vermelho Jordan" style="width:30px; height:30px; border-radius:50%; background:#8b0000; cursor:pointer; border:1px solid white;" onclick="document.getElementById('emb-cor').value='#8b0000'"></div>
-                            <div title="Verde Sucesso" style="width:30px; height:30px; border-radius:50%; background:#00ff00; cursor:pointer; border:1px solid white;" onclick="document.getElementById('emb-cor').value='#00ff00'"></div>
-                            <div title="Azul Info" style="width:30px; height:30px; border-radius:50%; background:#0000ff; cursor:pointer; border:1px solid white;" onclick="document.getElementById('emb-cor').value='#0000ff'"></div>
-                        </div>
-                    </div>
-                    <button id="btn-env-emb" onclick="enviarEmbed()" class="nav-btn" style="width:100%; padding:18px; font-size:1.1rem;">🚀 ENVIAR EMBED PARA O DISCORD</button>
-                </div>
-            </div>
+<div id="embed-section" class="content-div" style="display:none; width:100%;">
+    <h1>🎫 Criar Painel de Tickets</h1>
+    <div class="embed-creator-card" style="margin: 0 auto; border-top: 5px solid #FF0000;">
+        
+        <div style="margin-bottom: 15px;">
+            <label class="form-label">🆔 ID do Canal de Destino</label>
+            <input type="text" id="emb-canal" class="search-box" style="width:100%;" placeholder="Copia o ID do canal aqui">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label class="form-label">🖊️ Título (Opcional)</label>
+            <input type="text" id="emb-titulo" class="search-box" style="width:100%;" placeholder="Ex: Atendimento Jordan Shop">
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <label class="form-label">📝 Mensagem e Preços (O que vai aparecer no Ticket)</label>
+            <textarea id="emb-desc" class="search-box" style="width:100%; height:180px; resize:vertical;" 
+            placeholder="Ex: Cyber Ghost - €3.00&#10;Clica no botão abaixo para comprar!"></textarea>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label class="form-label">🌈 Cor do Embed (Padrão: #FF0000)</label>
+            <input type="text" id="emb-cor" class="search-box" style="width:150px;" value="#FF0000">
+        </div>
+
+        <p style="color: #ff9999; font-size: 0.8rem; margin-bottom: 15px;">
+            ℹ️ O botão "Escolhe uma opção" será adicionado automaticamente.
+        </p>
+
+        <button id="btn-env-emb" onclick="enviarEmbed()" class="nav-btn" style="width:100%; padding:18px; background: #FF0000;">
+            🚀 ENVIAR PAINEL DE TICKETS
+        </button>
+    </div>
+</div>
 
             <div id="transcripts-section" class="content-div" style="display:none; width:100%;">
                 <h1>Logs de Transcripts</h1>
@@ -140,6 +147,7 @@
             <div id="vendas-section" class="content-div" style="display:none; width:100%;">
                 <h1>Histórico de Vendas</h1>
                 <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+                    
                     <div class="log-item">
                         <div class="log-info">
                             <strong>Comprador: @silvexxx | 27/09/2025</strong>
@@ -147,9 +155,40 @@
                         </div>
                         <span class="status-badge" style="background: #00ff00; color: #000;">LIFETIME</span>
                     </div>
-                    </div>
-            </div>
 
+                    <div class="log-item">
+                        <div class="log-info">
+                            <strong>Comprador: @Tonethegoat | 27/09/2025</strong>
+                            <span>Produto: 🦈・shark-menu<br>Staff: @! Jordan @migueldodrip</span>
+                        </div>
+                        <span class="status-badge" style="background: #ffcc00; color: #000;">SEMANAL</span>
+                    </div>
+
+                    <div class="log-item">
+                        <div class="log-info">
+                            <strong>Comprador: @silvexxx | 28/09/2025</strong>
+                            <span>Produto: ⭐・rockstar-unban<br>Staff: @! Jordan</span>
+                        </div>
+                        <span class="status-badge" style="background: #00ff00; color: #000;">INFINITO</span>
+                    </div>
+
+                    <div class="log-item">
+                        <div class="log-info">
+                            <strong>Comprador: @silvexxx | 28/09/2025</strong>
+                            <span>Produto: 🌎・vpn-service<br>Staff: @! Jordan</span>
+                        </div>
+                        <span class="status-badge" style="background: #00ff00; color: #000;">INFINITO</span>
+                    </div>
+
+                    <div class="log-item">
+                        <div class="log-info">
+                            <strong>Comprador: @silvexxx | 19/10/2025</strong>
+                            <span>Produto: 🦈・shark-menu<br>Staff: @! Jordan</span>
+                        </div>
+                        <span class="status-badge" style="background: #00ff00; color: #000;">LIFETIME</span>
+                    </div>
+
+                    
             <div id="bot-status-section" class="content-div" style="display:none; width:100%;">
                 <div class="status-card" style="margin: 0 auto;">
                     <h2 style="margin: 0; color: #00ff00;">✅ Bot está online!</h2>
