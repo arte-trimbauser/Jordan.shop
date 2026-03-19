@@ -104,34 +104,45 @@
                 <p style="font-size: 1.2rem; opacity: 0.8;">Bem-Vindo ao painel de Administração e Gestão da Jordan Shop</p>
             </div>
 
-            <div id="embed-section" class="content-div" style="display:none; width:100%;">
-                <h1>🎫 Criar Painel de Tickets</h1>
-                <div class="embed-creator-card" style="margin: 0 auto; border-top: 5px solid #FF0000;">
-                    <div style="margin-bottom: 15px;">
-                        <label class="form-label">🆔 ID do Canal de Destino</label>
-                        <input type="text" id="emb-canal" class="search-box" style="width:100%;" placeholder="Copia o ID do canal aqui">
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label class="form-label">🖊️ Título (Opcional)</label>
-                        <input type="text" id="emb-titulo" class="search-box" style="width:100%;" placeholder="Ex: Atendimento Jordan Shop">
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label class="form-label">📝 Mensagem e Preços (O que vai aparecer no Ticket)</label>
-                        <textarea id="emb-desc" class="search-box" style="width:100%; height:180px; resize:vertical;" 
-                        placeholder="Ex: Cyber Ghost - €3.00&#10;Clica no botão abaixo para comprar!"></textarea>
-                    </div>
-                    <div style="margin-bottom: 20px;">
-                        <label class="form-label">🌈 Cor do Embed (Padrão: #FF0000)</label>
-                        <input type="text" id="emb-cor" class="search-box" style="width:150px;" value="#FF0000">
-                    </div>
-                    <p style="color: #ff9999; font-size: 0.8rem; margin-bottom: 15px;">
-                        ℹ️ O botão "Escolhe uma opção" será adicionado automaticamente.
-                    </p>
-                    <button id="btn-env-emb" onclick="enviarEmbed()" class="nav-btn" style="width:100%; padding:18px; background: #FF0000;">
-                        🚀 ENVIAR PAINEL DE TICKETS
-                    </button>
-                </div>
-            </div>
+<div id="embed-section" class="content-div" style="display:none; width:100%;">
+    <h1>🎫 Criar Painel de Tickets</h1>
+    <div class="embed-creator-card" style="margin: 0 auto; border-top: 5px solid #FF0000;">
+        <div style="margin-bottom: 15px;">
+            <label class="form-label">🆔 ID do Canal de Destino</label>
+            <input type="text" id="emb-canal" class="search-box" style="width:100%;" placeholder="Copia o ID do canal aqui">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label class="form-label">🖊️ Título (Opcional)</label>
+            <input type="text" id="emb-titulo" class="search-box" style="width:100%;" placeholder="Ex: Atendimento Jordan Shop">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label class="form-label">📝 Mensagem e Preços (O que vai aparecer no Ticket)</label>
+            <textarea id="emb-desc" class="search-box" style="width:100%; height:180px; resize:vertical;" 
+            placeholder="Ex: Cyber Ghost - €3.00&#10;Clica no botão abaixo para comprar!"></textarea>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label class="form-label">📦 Produtos do Menu de Seleção</label>
+            <div id="container-produtos"></div>
+            <button onclick="addInputProduto()" class="nav-btn" style="background: #333; margin-top: 10px; font-size: 0.8rem; width: auto; padding: 10px 20px;">
+                + Adicionar Opção ao Menu
+            </button>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label class="form-label">🌈 Cor do Embed (Padrão: #FF0000)</label>
+            <input type="text" id="emb-cor" class="search-box" style="width:150px;" value="#FF0000">
+        </div>
+        
+        <p style="color: #ff9999; font-size: 0.8rem; margin-bottom: 15px;">
+            ℹ️ O menu de seleção aparecerá logo abaixo do seu texto.
+        </p>
+        
+        <button id="btn-env-emb" onclick="enviarEmbed()" class="nav-btn" style="width:100%; padding:18px; background: #FF0000;">
+            🚀 ENVIAR PAINEL DE TICKETS
+        </button>
+    </div>
+</div>
 
             <div id="transcripts-section" class="content-div" style="display:none; width:100%;">
                 <h1>Logs de Transcripts</h1>
@@ -252,44 +263,72 @@
             } catch (e) { list.innerHTML = "Erro ao carregar logs do GitHub."; }
         }
 
-        // Função para Enviar o Embed para o Bot (API)
-        async function enviarEmbed() {
-            const canalId = document.getElementById('emb-canal').value;
-            const titulo = document.getElementById('emb-titulo').value;
-            const desc = document.getElementById('emb-desc').value;
-            const cor = document.getElementById('emb-cor').value;
-            const btn = document.getElementById('btn-env-emb');
-            
-            if (!canalId || !titulo || !desc) {
-                alert("⚠️ Por favor, preenche todos os campos obrigatórios e verifica se não falta algo!");
-                return;
-            }
+// Função para criar novos campos de produto dinamicamente
+function addInputProduto() {
+    const container = document.getElementById('container-produtos');
+    const div = document.createElement('div');
+    div.style = "display: flex; gap: 10px; margin-top: 10px; align-items: center;";
+    div.innerHTML = `
+        <input type="text" class="search-box p-nome" style="margin-bottom:0;" placeholder="Nome do Produto">
+        <input type="text" class="search-box p-preco" style="margin-bottom:0; width: 120px;" placeholder="Preço (Ex: 3€)">
+        <button onclick="this.parentElement.remove()" style="background:none; border:none; color:#ff4444; cursor:pointer; font-weight:bold; font-size: 1.2rem;">×</button>
+    `;
+    container.appendChild(div);
+}
 
-            btn.innerText = "⏳ A ENVIAR...";
-            btn.disabled = true;
-
-            try {
-                const res = await fetch('/api/enviar-embed', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ titulo, desc, cor, canalId })
-                });
-
-                if (res.ok) {
-                    alert("✅ Sucesso! O embed foi enviado para o Discord verifica no canal do id que copiaste.");
-                    document.getElementById('emb-titulo').value = '';
-                    document.getElementById('emb-desc').value = '';
-                } else {
-                    const errorMsg = await res.text();
-                    alert("❌ Erro ao enviar: " + errorMsg);
-                }
-            } catch (e) {
-                alert("❌ Erro de ligação! Certifica-te que o bot está online no Render.");
-            } finally {
-                btn.innerText = "🚀 ENVIAR EMBED PARA O DISCORD";
-                btn.disabled = false;
-            }
+// Função para Enviar o Embed para o Bot (API) - ATUALIZADA
+async function enviarEmbed() {
+    const canalId = document.getElementById('emb-canal').value;
+    const titulo = document.getElementById('emb-titulo').value;
+    const desc = document.getElementById('emb-desc').value;
+    const cor = document.getElementById('emb-cor').value;
+    const btn = document.getElementById('btn-env-emb');
+    
+    // Captura os produtos inseridos nos inputs
+    const nomes = document.querySelectorAll('.p-nome');
+    const precos = document.querySelectorAll('.p-preco');
+    let produtos = [];
+    
+    nomes.forEach((n, i) => {
+        if(n.value) {
+            produtos.push({ 
+                nome: n.value, 
+                preco: precos[i].value || "N/A" 
+            });
         }
+    });
+    
+    if (!canalId || !titulo || !desc) {
+                alert("⚠️ Por favor, preenche todos os campos obrigatórios e verifica se não falta algo!");
+        return;
+    }
+
+    btn.innerText = "⏳ A ENVIAR...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/api/enviar-embed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ titulo, desc, cor, canalId, produtos }) // Enviamos a lista de produtos aqui
+        });
+
+        if (res.ok) {
+            alert("✅ Sucesso! O embed foi enviado para o Discord verifica no canal do id que copiaste.");
+            document.getElementById('emb-titulo').value = '';
+            document.getElementById('emb-desc').value = '';
+            document.getElementById('container-produtos').innerHTML = ''; // Limpa os produtos
+        } else {
+            const errorMsg = await res.text();
+            alert("❌ Erro ao enviar: " + errorMsg);
+        }
+    } catch (e) {
+        alert("❌ Erro de ligação! Certifica-te que o bot está online.");
+    } finally {
+        btn.innerText = "🚀 ENVIAR PAINEL DE TICKETS";
+        btn.disabled = false;
+    }
+}
     </script>
 </body>
 </html>
