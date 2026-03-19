@@ -11,87 +11,38 @@ const port = process.env.PORT || 10000;
 // --- CONFIGURAÇÃO DE SEGURANÇA ---
 const WEBHOOK_ALERTA = "https://discord.com/api/webhooks/1484243048425586718/rm3FNPNRC1qQ23sQVLwsdRWoV4qvdJNAE7GCHffUgDj88fBv7Ky_LelagWwke76o4v5Z";
 
-const contasAutorizadas = {
-    "Jordan Costa": "Jordan26Costa",
-    "Arteex26": "Arteex_26",
-    "lucasvieira": "lucasvieira0453",
-    "migueldodrip": "migueldodrip_09110",
-    "pincher11": "pincher_11"
+// Lista VIP por ID (Segurança Máxima)
+const staffAutorizado = {
+    "924344854232834068": "Jordan Costa",
+    "996454465555136675": "Arteex26",
+    "1476260824669618307": "lucasvieira",
+    "1138795786507919410": "migueldodrip",
+    "886007990942052362": "pincher11"
 };
 
-// --- CONFIGURAÇÃO DE MIDDLEWARE ---
+// Memória para guardar os tokens de uso único
+let tokensAtivos = new Set();
+
 app.use(express.json());
 
-// --- CONFIGURAÇÃO DE PASTAS ---
-const sitePath = path.join(__dirname, "site");
-const transcriptsPath = path.join(__dirname, "transcripts");
+// --- ROTAS ---
 
-if (!fs.existsSync(transcriptsPath)) {
-    fs.mkdirSync(transcriptsPath, { recursive: true });
-}
-
-// Rota para o login
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'site', 'login.html'));
 });
 
-// --- ROTA PROTEGIDA DA LOJA ---
-app.get('/loja.html', async (req, res) => {
-    const user = req.query.user;
-    const dataHora = new Date().toLocaleString('pt-PT');
-
-    // 🛡️ VERIFICAÇÃO DE SEGURANÇA
-    if (!user || !contasAutorizadas.hasOwnProperty(user)) {
-        
-        console.log(`[⚠️ ALERTA] Acesso negado para: ${user || "URL Direto"}`);
-
-        // Envia alerta para o Discord via Webhook usando AXIOS
-        try {
-            await axios.post(WEBHOOK_ALERTA, {
-                embeds: [{
-                    title: "🚨 TENTATIVA DE INVASÃO DETETADA",
-                    color: 15548997,
-                    description: "Alguém tentou aceder ao Painel Staff ilegalmente!",
-                    fields: [
-                        { name: "👤 Nome Usado", value: `\`${user || "Nenhum"}\``, inline: true },
-                        { name: "🕒 Data/Hora", value: dataHora, inline: true },
-                        { name: "🚫 Resultado", value: "Acesso bloqueado pelo Servidor." }
-                    ],
-                    footer: { text: "Segurança Jordan Shop" }
-                }]
-            });
-        } catch (err) {
-            console.error("Erro ao enviar Webhook:", err.message);
-        }
-
-        return res.redirect('/login.html?error=acesso_negado');
-    }
-
-    // Se estiver na lista, deixa entrar
-    console.log(`[OK] ${user} entrou no painel.`);
-    res.sendFile(path.join(__dirname, 'site', 'loja.html'));
-});
-
-// Ficheiros estáticos (CSS, JS, Imagens)
-app.use(express.static(path.join(__dirname, 'site'), { index: false }));
-app.use("/transcripts", express.static(transcriptsPath));
-
-// --- CONFIGURAÇÃO DISCORD OAUTH2 ---
-const CLIENT_ID = '1424479855466123284';
-const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const REDIRECT_URI = 'https://discord-bott-jordan.onrender.com/callback';
-
+// Callback do Discord (Login)
 app.get('/callback', async (req, res) => {
     const code = req.query.code;
     if (!code) return res.redirect('/login.html?error=no_code');
 
     try {
         const params = new URLSearchParams({
-            client_id: CLIENT_ID,
-            client_secret: CLIENT_SECRET,
+            client_id: '1424479855466123284',
+            client_secret: process.env.CLIENT_SECRET,
             grant_type: 'authorization_code',
             code: code,
-            redirect_uri: REDIRECT_URI,
+            redirect_uri: 'https://discord-bott-jordan.onrender.com/callback',
         });
 
         const tokenRes = await axios.post('https://discord.com/api/oauth2/token', params);
@@ -99,20 +50,40 @@ app.get('/callback', async (req, res) => {
             headers: { Authorization: `Bearer ${tokenRes.data.access_token}` }
         });
 
+        const discordID = userRes.data.id;
         const discordUser = userRes.data.username;
 
-        // Verifica se o utilizador que acabou de logar está na lista
-        if (!contasAutorizadas.hasOwnProperty(discordUser)) {
+        // Verifica se o ID está na Staff
+        if (!staffAutorizado[discordID]) {
             return res.redirect('/login.html?error=nao_autorizado');
         }
 
-        res.redirect(`/loja.html?user=${encodeURIComponent(discordUser)}`);
+        // Gera Token Único para este acesso
+        const tokenSessao = Math.random().toString(36).substring(2, 15);
+        tokensAtivos.add(tokenSessao);
+
+        // Redireciona com ID e Token
+        res.redirect(`/loja.html?user=${encodeURIComponent(discordUser)}&id=${discordID}&token=${tokenSessao}`);
     } catch (error) {
-        console.error("❌ Erro no Callback:", error.response?.data || error.message);
         res.redirect('/login.html?error=auth_failed');
     }
 });
 
+// Rota Protegida da Loja
+app.get('/loja.html', async (req, res) => {
+    const { user, id, token } = req.query;
+
+    // Se o token existe, é a primeira entrada (Link direto do Login)
+    if (token && tokensAtivos.has(token)) {
+        tokensAtivos.delete(token); // Queima o token para não ser usado de novo
+        return res.sendFile(path.join(__dirname, 'site', 'loja.html'));
+    }
+
+    // Se não tem token, a segurança do HTML (sessionStorage) vai tratar do resto
+    res.sendFile(path.join(__dirname, 'site', 'loja.html'));
+});
+
+app.use(express.static(path.join(__dirname, 'site'), { index: false }));
 // --- ROTA DA API PARA O CRIADOR DE EMBEDS ---
 app.post('/api/enviar-embed', async (req, res) => {
     const { titulo, desc, cor, canalId, produtos } = req.body; // Recebe tudo do site
