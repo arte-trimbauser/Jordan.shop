@@ -3,7 +3,7 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const axios = require("axios"); 
-const { Client, GatewayIntentBits, ActivityType, EmbedBuilder } = require("discord.js");
+const { Client, GatewayIntentBits, ActivityType, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
 
 const app = express();
 const port = process.env.PORT || 10000;
@@ -54,34 +54,48 @@ app.get('/callback', async (req, res) => {
 
 // --- ROTA DA API PARA O CRIADOR DE EMBEDS ---
 app.post('/api/enviar-embed', async (req, res) => {
-    const { titulo, desc, cor, canalId } = req.body;
+    const { titulo, desc, cor, canalId, produtos } = req.body; // Recebe tudo do site
 
     if (!titulo || !desc || !canalId) {
         return res.status(400).send("Faltam campos obrigatórios no formulário.");
     }
 
     try {
+        // 1. Primeiro procuramos o canal
         const canal = await client.channels.fetch(canalId);
         if (!canal) return res.status(404).send("Canal não encontrado.");
 
+        // 2. Criamos o Embed (Sem o rodapé como pediste)
         const embed = new EmbedBuilder()
             .setTitle(titulo)
             .setDescription(desc)
             .setColor(cor || "#8b0000")
-            .setTimestamp()
-            .setFooter({ text: 'Painel Staff | Jordan Shop', iconURL: client.user.displayAvatarURL() });
+            .setTimestamp();
 
-        await canal.send({ embeds: [embed] });
+        const components = [];
+
+        // 3. Se houver produtos, criamos o Menu de Seleção
+        if (produtos && produtos.length > 0) {
+            const selectMenu = new StringSelectMenuBuilder()
+                .setCustomId('menu_produtos')
+                .setPlaceholder('Escolhe uma opção')
+                .addOptions(produtos.map(p => ({
+                    label: p.nome,
+                    description: `Preço: ${p.preco}`,
+                    value: `prod_${p.nome.replace(/\s+/g, '_').toLowerCase()}`
+                })));
+
+            components.push(new ActionRowBuilder().addComponents(selectMenu));
+        }
+
+        // 4. Enviamos UMA ÚNICA VEZ com tudo incluído
+        await canal.send({ embeds: [embed], components: components });
+        
         res.status(200).send("✅ Enviado com sucesso!");
     } catch (error) {
         console.error("❌ Erro ao enviar embed:", error);
         res.status(500).send("Erro ao comunicar com o Discord.");
     }
-});
-
-app.get("/", (req, res) => {
-    const loginPath = path.join(sitePath, "login.html");
-    res.sendFile(fs.existsSync(loginPath) ? loginPath : res.status(404).send("Erro: login.html não encontrado!"));
 });
 
 // --- BOT DISCORD ---
