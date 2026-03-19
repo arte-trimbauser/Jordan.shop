@@ -19,7 +19,25 @@ if (!fs.existsSync(transcriptsPath)) {
     fs.mkdirSync(transcriptsPath, { recursive: true });
 }
 
-app.use(express.static(sitePath));
+// Rota para servir o login (aberto a todos)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'site', 'login.html'));
+});
+
+// Rota protegida para a loja
+app.get('/loja.html', (req, res) => {
+    const user = req.query.user;
+
+    // Se não houver o parâmetro ?user= no link, manda de volta para o login
+    if (!user) {
+        return res.redirect('/login.html?error=acesso_negado');
+    }
+
+    res.sendFile(path.join(__dirname, 'site', 'loja.html'));
+});
+
+// Mantém apenas os outros ficheiros (css, imagens) como estáticos
+app.use(express.static(path.join(__dirname, 'site'), { index: false }));
 app.use("/transcripts", express.static(transcriptsPath));
 
 // --- CONFIGURAÇÃO DISCORD OAUTH2 ---
