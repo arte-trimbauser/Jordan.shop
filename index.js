@@ -8,8 +8,19 @@ const { Client, GatewayIntentBits, ActivityType, EmbedBuilder, ActionRowBuilder,
 const app = express();
 const port = process.env.PORT || 10000;
 
+// --- CONFIGURAÇÃO DE SEGURANÇA ---
+const WEBHOOK_ALERTA = "https://discord.com/api/webhooks/1484243048425586718/rm3FNPNRC1qQ23sQVLwsdRWoV4qvdJNAE7GCHffUgDj88fBv7Ky_LelagWwke76o4v5Z";
+
+const contasAutorizadas = {
+    "Jordan Costa": "Jordan26Costa",
+    "Arteex26": "Arteex_26",
+    "lucasvieira": "lucasvieira0453",
+    "migueldodrip": "migueldodrip_09110",
+    "pincher11": "pincher_11"
+};
+
 // --- CONFIGURAÇÃO DE MIDDLEWARE ---
-app.use(express.json()); // Essencial para receber os dados do formulário de Embed
+app.use(express.json());
 
 // --- CONFIGURAÇÃO DE PASTAS ---
 const sitePath = path.join(__dirname, "site");
@@ -19,22 +30,47 @@ if (!fs.existsSync(transcriptsPath)) {
     fs.mkdirSync(transcriptsPath, { recursive: true });
 }
 
-// Rota para servir o login (aberto a todos)
+// Rota para o login
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'site', 'login.html'));
 });
 
-// Rota protegida para a loja
-app.get('/loja.html', (req, res) => {
+// --- ROTA PROTEGIDA DA LOJA ---
+app.get('/loja.html', async (req, res) => {
     const user = req.query.user;
+    const dataHora = new Date().toLocaleString('pt-PT');
 
-    // Se não houver o parâmetro ?user= no link, manda de volta para o login
-    if (!user) {
+    // 🛡️ VERIFICAÇÃO DE SEGURANÇA
+    if (!user || !contasAutorizadas.hasOwnProperty(user)) {
+        
+        console.log(`[⚠️ ALERTA] Acesso negado para: ${user || "URL Direto"}`);
+
+        // Envia alerta para o Discord via Webhook usando AXIOS
+        try {
+            await axios.post(WEBHOOK_ALERTA, {
+                embeds: [{
+                    title: "🚨 TENTATIVA DE INVASÃO DETETADA",
+                    color: 15548997,
+                    description: "Alguém tentou aceder ao Painel Staff ilegalmente!",
+                    fields: [
+                        { name: "👤 Nome Usado", value: `\`${user || "Nenhum"}\``, inline: true },
+                        { name: "🕒 Data/Hora", value: dataHora, inline: true },
+                        { name: "🚫 Resultado", value: "Acesso bloqueado pelo Servidor." }
+                    ],
+                    footer: { text: "Segurança Jordan Shop" }
+                }]
+            });
+        } catch (err) {
+            console.error("Erro ao enviar Webhook:", err.message);
+        }
+
         return res.redirect('/login.html?error=acesso_negado');
     }
 
+    // Se estiver na lista, deixa entrar
+    console.log(`[OK] ${user} entrou no painel.`);
     res.sendFile(path.join(__dirname, 'site', 'loja.html'));
-});
+    });
 
 // Mantém apenas os outros ficheiros (css, imagens) como estáticos
 app.use(express.static(path.join(__dirname, 'site'), { index: false }));
