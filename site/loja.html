@@ -7,17 +7,26 @@
     <link rel="icon" type="image/png" href="logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     
-<script>
-        // Verificação de Segurança: Expulsa se não houver utilizador no link
-        const urlParamsCheck = new URLSearchParams(window.location.search);
-        const userCheck = urlParamsCheck.get('user');
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const userNoLink = params.get('user');
+        const tokenNoLink = params.get('token');
 
-        if (!userCheck || userCheck === 'Staff') {
-            alert("⚠️ Acesso Proibido! Faz login primeiro.");
-            window.location.href = "login.html"; 
+        // Se viemos do login agora (temos token no link)
+        if (userNoLink && tokenNoLink) {
+            sessionStorage.setItem('staff_sessao', userNoLink);
+            // Limpa o link para ninguém copiar o token
+            window.history.replaceState({}, document.title, "loja.html");
+        } 
+        // Se não temos nada no bolso (sessionStorage), expulsa
+        else if (!sessionStorage.getItem('staff_sessao')) {
+            alert("⚠️ Sessão Inválida! Faz login novamente.");
+            window.location.href = "login.html";
         }
+
+        const utilizadorLogado = sessionStorage.getItem('staff_sessao');
     </script>
-    
+
     <style>
         :root {
             --primary-red: #8b0000;
