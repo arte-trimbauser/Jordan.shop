@@ -7,6 +7,17 @@
     <link rel="icon" type="image/png" href="logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     
+<script>
+        // Verificação de Segurança: Expulsa se não houver utilizador no link
+        const urlParamsCheck = new URLSearchParams(window.location.search);
+        const userCheck = urlParamsCheck.get('user');
+
+        if (!userCheck || userCheck === 'Staff') {
+            alert("⚠️ Acesso Proibido! Faz login primeiro.");
+            window.location.href = "login.html"; 
+        }
+    </script>
+    
     <style>
         :root {
             --primary-red: #8b0000;
