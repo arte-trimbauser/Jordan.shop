@@ -70,9 +70,9 @@ app.get('/loja.html', async (req, res) => {
     // Se estiver na lista, deixa entrar
     console.log(`[OK] ${user} entrou no painel.`);
     res.sendFile(path.join(__dirname, 'site', 'loja.html'));
-    });
+});
 
-// Mantém apenas os outros ficheiros (css, imagens) como estáticos
+// Ficheiros estáticos (CSS, JS, Imagens)
 app.use(express.static(path.join(__dirname, 'site'), { index: false }));
 app.use("/transcripts", express.static(transcriptsPath));
 
@@ -99,7 +99,14 @@ app.get('/callback', async (req, res) => {
             headers: { Authorization: `Bearer ${tokenRes.data.access_token}` }
         });
 
-        res.redirect(`/loja.html?user=${encodeURIComponent(userRes.data.username)}`);
+        const discordUser = userRes.data.username;
+
+        // Verifica se o utilizador que acabou de logar está na lista
+        if (!contasAutorizadas.hasOwnProperty(discordUser)) {
+            return res.redirect('/login.html?error=nao_autorizado');
+        }
+
+        res.redirect(`/loja.html?user=${encodeURIComponent(discordUser)}`);
     } catch (error) {
         console.error("❌ Erro no Callback:", error.response?.data || error.message);
         res.redirect('/login.html?error=auth_failed');
