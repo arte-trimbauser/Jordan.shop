@@ -3,7 +3,7 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const axios = require("axios"); 
-const { Client, GatewayIntentBits, ActivityType, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, PermissionsBitField } = require("discord.js");
+const { Client, GatewayIntentBits, ActivityType, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, PermissionsBitField, Events } = require("discord.js");
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
@@ -15,7 +15,7 @@ const supabase = createClient(
     process.env.SUPABASE_KEY
 );
 
-// --- CONFIGURAÇÃO DE SEGURANÇA (Teu Original) ---
+// --- CONFIGURAÇÃO DE SEGURANÇA ---
 const staffAutorizado = {
     "924344854232834068": "Jordan Costa",
     "996454465555136675": "Arteex26",
@@ -26,11 +26,25 @@ const staffAutorizado = {
 
 let tokensAtivos = new Set();
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'site'), { index: false }));
 
-// --- ROTAS DO SITE ---
+// --- ROTAS DE LOGIN ---
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'site', 'login.html'));
+});
+
+// NOVO: Rota para o teu login manual (Arteex26 / Arteex_26)
+app.post('/api/login-manual', (req, res) => {
+    const { username, password } = req.body;
+
+    if (username === "Arteex26" && password === "Arteex_26") {
+        const tokenSessao = Math.random().toString(36).substring(2, 15);
+        tokensAtivos.add(tokenSessao);
+        return res.json({ success: true, user: username, token: tokenSessao });
+    } else {
+        return res.status(401).json({ success: false, message: "Utilizador ou Password incorretos!" });
+    }
 });
 
 // Login Discord (OAuth2)
@@ -44,7 +58,7 @@ app.get('/callback', async (req, res) => {
             client_secret: process.env.CLIENT_SECRET,
             grant_type: 'authorization_code',
             code: code,
-            redirect_uri: 'https://jordan-shop.onrender.com/callback', // Ajustado para o teu link
+            redirect_uri: 'https://jordan-shop.onrender.com/callback',
         });
 
         const tokenRes = await axios.post('https://discord.com/api/oauth2/token', params);
@@ -68,15 +82,7 @@ app.get('/callback', async (req, res) => {
     }
 });
 
-// Rota de Transcripts (Redireciona para o Supabase)
-app.get('/transcripts/:name', (req, res) => {
-    const { data } = supabase.storage.from('transcripts').getPublicUrl(req.params.name);
-    res.redirect(data.publicUrl);
-});
-
-app.use(express.static(path.join(__dirname, 'site'), { index: false }));
-
-// --- API: ENVIAR EMBED COM INTERACTION (SITE -> DISCORD) ---
+// --- API: ENVIAR EMBED (SITE -> DISCORD) ---
 app.post('/api/enviar-embed', async (req, res) => {
     const { titulo, desc, cor, canalId, produtos } = req.body;
 
@@ -91,13 +97,13 @@ app.post('/api/enviar-embed', async (req, res) => {
         const embed = new EmbedBuilder()
             .setTitle(titulo)
             .setDescription(desc)
-            .setColor(cor || "#8b0000"); // Sem timestamp para ficar limpo
+            .setColor(cor || "#8b0000");
 
         const components = [];
 
         if (produtos && produtos.length > 0) {
             const selectMenu = new StringSelectMenuBuilder()
-                .setCustomId('menu_produtos') // ID que a tua pasta interactionCreate vai ouvir
+                .setCustomId('menu_produtos')
                 .setPlaceholder('Escolhe uma opção')
                 .addOptions(produtos.map(p => ({
                     label: p.nome,
@@ -126,7 +132,7 @@ const client = new Client({
     ] 
 });
 
-client.on('ready', (c) => {
+client.on(Events.ClientReady, (c) => {
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
     console.log(`✅ Sistema Jordan Shop Online!`);
     console.log(`🌐 Site: https://jordan-shop.onrender.com/`);
@@ -138,15 +144,21 @@ client.on('ready', (c) => {
         status: 'online',
     });
 
-    // CARREGAR EVENTOS DA PASTA SRC
+    // CARREGAR EVENTOS DA PASTA SRC (Corrigido)
     try {
-        // Importante: Passamos o client para o ficheiro de interações
-        require("./src/events/interactionCreate")(client);
+        const interactionPath = path.join(__dirname, "src", "events", "interactionCreate.js");
+        if (fs.existsSync(interactionPath)) {
+            require(interactionPath)(client);
+            console.log("✅ Interaction System carregado com sucesso.");
+        }
         
-        const readyEvent = require("./src/events/ready");
-        if (typeof readyEvent === "function") readyEvent(client);
+        const readyPath = path.join(__dirname, "src", "events", "ready.js");
+        if (fs.existsSync(readyPath)) {
+            const readyEvent = require(readyPath);
+            if (typeof readyEvent === "function") readyEvent(client);
+        }
     } catch (e) {
-        console.warn("⚠️ Nota: Alguns eventos da pasta src não foram carregados ou o ficheiro interactionCreate não exporta uma função.");
+        console.warn("⚠️ Nota: Houve um erro ao carregar os ficheiros da pasta src/events:", e.message);
     }
 });
 
