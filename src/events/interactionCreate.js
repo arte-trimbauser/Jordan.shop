@@ -7,6 +7,9 @@ const config = require("../config");
 const isStaff = require("../helpers/isStaff");
 const sendTranscript = require("../helpers/sendTranscript");
 
+// IMPORTANTE: Definir os cooldowns aqui para não dar erro
+const cooldowns = new Map();;
+
 const emojisPagamento = {
     "MBWay": "<:mbway:1464608251516813446>",
     "PayPal": "<:paypal:1464608396383883314>",
@@ -53,8 +56,8 @@ module.exports = (client) => {
           .setColor("#ff0000");
 
                 const row = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId(`aceitar_termos_${tipo}`).setLabel("Aceitar").setStyle(ButtonStyle.Success),
-                    new ButtonBuilder().setCustomId(`recusar_termos_${tipo}`).setLabel("Recusar").setStyle(ButtonStyle.Danger)
+                    new ButtonBuilder().setCustomId(`aceitar_termos_${tipo}`).setLabel("Aceitar os Termos").setStyle(ButtonStyle.Success),
+                    new ButtonBuilder().setCustomId(`recusar_termos_${tipo}`).setLabel("Recusar os Termos").setStyle(ButtonStyle.Danger)
                 );
 
                 return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
@@ -72,7 +75,7 @@ if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
     }
 
     return interaction.update({
-        content: "⚠️ Tens de aceitar para abrir ticket.",
+        content: "⚠️ Tens de aceitar os termos para abrir seu ticket/pedido.",
         embeds: [],
         components: []
     });
@@ -161,56 +164,116 @@ if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                     components: [btns]
                 });
 
-                return interaction.editReply({
-                    content: `✅ Ticket criado: <#${ticket.id}>`
+// ESTE É O BOTÃO QUE PERGUNTASTE:
+                const rowGo = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setLabel("Ir para o Ticket/Pedido")
+                        .setStyle(ButtonStyle.Link)
+                        .setURL(`https://discord.com/channels/${guild.id}/${ticket.id}`)
+                );
+
+                return await interaction.editReply({ 
+                    content: `✅ Ticket/Pedido criado com sucesso: <#${ticket.id}>`, 
+                    components: [rowGo], embeds: [] 
                 });
             }
-
-            /* ================= CLAIM ================= */
+// 5. REIVINDICAR TICKET
             if (cid === "claim_ticket") {
-                if (!isStaff(member))
-                    return interaction.reply({ content: "Apenas staff.", ephemeral: true });
-
-                const [uid, met, pdr] = channel.topic?.split("|") || ["?", "?", "?"];
+                if (!isStaff(member)) return interaction.reply({ content: "Apenas Staff.", flags: [64] });
+                
+                const [uid, met, pdr] = channel.topic?.split("|") || ["?", "Não definido", "Geral"];
+                const emj = emojisPagamento[met] || "💰";
 
                 const embedClaim = new EmbedBuilder()
                     .setTitle("🛡️ Ticket Reivindicado")
-                    .setDescription(
-                        `👤 **Staff:** <@${user.id}>\n` +
-                        `📦 **Produto:** ${pdr}\n` +
-                        `💳 **Pagamento:** ${met}`
-                    )
+                    .setDescription(`👤 **Staff:** <@${user.id}>\n**Produto:** ${pdr}\n**Método:** ${emj} ${met}`)
                     .setColor("#57f287");
 
-                return interaction.update({
+                return await interaction.update({
                     embeds: [embedClaim],
-                    components: [
-                        new ActionRowBuilder().addComponents(
-                            new ButtonBuilder()
-                                .setCustomId("close_ticket")
-                                .setLabel("Fechar")
-                                .setStyle(ButtonStyle.Danger)
-                        )
-                    ]
+                    components: [new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId("claimed").setLabel("Reivindicado").setStyle(ButtonStyle.Success).setDisabled(true),
+                        new ButtonBuilder().setCustomId("call_staff_list").setLabel("🔔 Chamar Staff").setStyle(ButtonStyle.Primary),
+                        new ButtonBuilder().setCustomId("close_ticket").setLabel("Fechar").setStyle(ButtonStyle.Danger)
+                    )]
                 });
             }
 
-            /* ================= FECHAR ================= */
-            if (cid === "close_ticket") {
-                if (!isStaff(member))
-                    return interaction.reply({ content: "Apenas staff.", ephemeral: true });
+            // 6. CHAMAR STAFF
+            if (cid === "call_staff_list") {
+                const tempoEspera = 300000; // 5 minutos
+                const agora = Date.now();
+                if (cooldowns.has(user.id) && (agora < cooldowns.get(user.id) + tempoEspera)) {
+                    return await interaction.reply({ content: `⚠️ Aguarda para chamar novamente!`, flags: [64] });
+                }
 
-                await interaction.reply("📂 A guardar transcript...");
+                const members = await guild.members.fetch();
+                const staffOnline = members
+                    .filter(m => m.roles.cache.some(r => config.STAFF_ROLES.includes(r.id)) && !m.user.bot)
+                    .sort((a, b) => b.roles.highest.position - a.roles.highest.position || a.displayName.localeCompare(b.displayName));
 
-                await sendTranscript(channel, user.tag).catch(()=>{});
+                if (staffOnline.size === 0) return await interaction.reply({ content: "Sem Staff online.", flags: [64] });
 
-                setTimeout(() => {
-                    channel.delete().catch(()=>{});
-                }, 4000);
+                const opts = staffOnline.map(m => ({ label: m.displayName, value: m.id })).slice(0, 25);
+                const menuS = new StringSelectMenuBuilder().setCustomId("notify_staff_id").setPlaceholder("Escolhe um Staff").addOptions(opts);
+                
+                return await interaction.reply({ content: "Quem queres chamar?", components: [new ActionRowBuilder().addComponents(menuS)], flags: [64] });
             }
 
-        } catch (err) {
-            console.error("Erro na Interaction:", err);
+            if (cid === "notify_staff_id") {
+                const target = await guild.members.fetch(interaction.values[0]);
+                cooldowns.set(user.id, Date.now());
+                
+                const embedDM = new EmbedBuilder().setTitle("📞 Chamada de Staff").setDescription(`O cliente **${user.username}** chamou-te em ${channel}`).setColor("#f1c40f");
+                const rowL = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel("Ir para o Ticket").setStyle(ButtonStyle.Link).setURL(`https://discord.com/channels/${guild.id}/${channel.id}`));
+                
+                await target.send({ embeds: [embedDM], components: [rowL] }).catch(() => {});
+                await channel.send({ content: `📢 <@${target.id}>, foste solicitado aqui!` });
+                return await interaction.update({ content: "✅ Staff notificado.", components: [] });
+            }
+
+            // 7. FECHAR TICKET (Lógica de Transcripts + Anexo 8KB)
+            if (cid === "close_ticket") {
+                if (!isStaff(member)) return interaction.reply({ content: "Apenas staff pode fechar.", flags: [64] });
+
+                const messages = await channel.messages.fetch({ limit: 50 });
+                const msgCount = messages.size; 
+
+                const sendTranscript = require("../helpers/sendTranscript");
+
+                if (msgCount >= 5) {
+                    await interaction.reply("🔒 Ticket com atividade. A gerar transcrição...");
+                    await sendTranscript(channel, user.tag); 
+                    return setTimeout(() => channel.delete().catch(() => {}), 5000);
+                } else {
+                    const embedAviso = new EmbedBuilder()
+                        .setTitle("⚠️ Poucas Mensagens")
+                        .setDescription(`Este ticket tem apenas **${msgCount}** mensagens.\nQueres guardar a transcrição ou apenas fechar?`)
+                        .setColor("#f1c40f");
+
+                    const rowEscolha = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId("confirm_close_save").setLabel("Guardar e Fechar").setStyle(ButtonStyle.Success),
+                        new ButtonBuilder().setCustomId("confirm_close_silent").setLabel("Fechar sem Guardar").setStyle(ButtonStyle.Danger)
+                    );
+
+                    return await interaction.reply({ embeds: [embedAviso], components: [rowEscolha], flags: [64] });
+                }
+            }
+
+            if (cid === "confirm_close_save") {
+                await interaction.update({ content: "🔒 A guardar log e a eliminar...", embeds: [], components: [] });
+                const sendTranscript = require("../helpers/sendTranscript");
+                await sendTranscript(channel, user.tag);
+                return setTimeout(() => channel.delete().catch(() => {}), 3000);
+            }
+
+            if (cid === "confirm_close_silent") {
+                await interaction.update({ content: "❌ Ticket eliminado sem registo.", embeds: [], components: [] });
+                return setTimeout(() => channel.delete().catch(() => {}), 3000);
+            }
+
+        } catch (err) { 
+            console.error("❌ Erro Geral:", err); 
         }
     });
 };
