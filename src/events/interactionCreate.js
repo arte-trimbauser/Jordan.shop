@@ -1,7 +1,7 @@
 const { 
     EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, 
     PermissionsBitField, StringSelectMenuBuilder, ModalBuilder, 
-    TextInputBuilder, TextInputStyle 
+    TextInputBuilder, TextInputStyle, ChannelType
 } = require("discord.js");
 const config = require("../config");
 const menus = require("../menus");
@@ -147,11 +147,20 @@ Suporte apenas em Português.
                 const tipo = cid.replace("aceitar_termos_", "");
                 await interaction.update({ content: "⏳ A criar seu ticket/pedido...", embeds: [], components: [] });
                 
-                let category = interaction.guild.channels.cache.find(c => c.name === config.CATEGORY_NAME && c.type === 4);
-                if (!category) category = await interaction.guild.channels.create({ name: config.CATEGORY_NAME, type: 4 });
+            let category = interaction.guild.channels.cache.find(
+            c => c.name === config.CATEGORY_NAME && c.type === ChannelType.GuildCategory
+            );
 
-                const canal = await interaction.guild.channels.create({
+            if (!category) {
+            category = await interaction.guild.channels.create({
+            name: config.CATEGORY_NAME,
+            type: ChannelType.GuildCategory
+            });
+            }
+
+                    const canal = await interaction.guild.channels.create({
                     name: `ticket-${tipo.split('_')[0]}-${user.username}`.toLowerCase(),
+                    type: ChannelType.GuildText,
                     parent: category.id,
                     topic: user.id,
                     permissionOverwrites: [
