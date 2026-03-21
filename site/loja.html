@@ -25,7 +25,32 @@
         }
 
         const utilizadorLogado = sessionStorage.getItem('staff_sessao');
-    </script>
+    </script><script>
+    const params = new URLSearchParams(window.location.search);
+    const userNoLink = params.get('user');
+    const tokenNoLink = params.get('token');
+
+    // 1. Se veio do Discord ou Login Manual agora
+    if (userNoLink) {
+        sessionStorage.setItem('staff_sessao', userNoLink);
+        // Limpa o URL para ficar bonito
+        window.history.replaceState({}, document.title, "loja.html");
+    } 
+    
+    // 2. Se não tem sessão guardada, expulsa
+    if (!sessionStorage.getItem('staff_sessao')) {
+        alert("⚠️ Sessão Inválida! Faz login novamente.");
+        window.location.href = "login.html";
+    }
+
+    const utilizadorLogado = sessionStorage.getItem('staff_sessao');
+
+    // Quando a página carregar, muda o nome no ecrã
+    window.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('nav-username').innerText = utilizadorLogado;
+        document.getElementById('main-welcome').innerText = "Bem-Vindo, " + utilizadorLogado;
+    });
+</script>
 
     <style>
         :root {
@@ -73,8 +98,26 @@
         .log-info span { color:#bbb; font-size:0.85rem; line-height: 1.6; }
         .status-badge { padding: 5px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
 
-        .status-card { background: rgba(20, 20, 20, 0.95); padding: 30px; border-radius: 15px; border-left: 8px solid #00ff00; text-align: left; width: 100%; max-width: 600px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .success-img { width: 100%; border-radius: 10px; margin-top: 20px; border: 1px solid #444; }
+main { 
+    flex:1; 
+    display:flex; 
+    flex-direction:column; 
+    align-items: flex-start; /* Altera de center para flex-start */
+    padding:40px; 
+    overflow-y:auto; 
+}
+
+.status-card { 
+    background: rgba(20, 20, 20, 0.95); 
+    padding: 30px; 
+    border-radius: 15px; 
+    border-left: 8px solid #00ff00; 
+    text-align: left; 
+    width: 100%; 
+    max-width: 500px; /* Reduzi um pouco o tamanho */
+    margin-left: 0;   /* Garante que fica à esquerda */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+}        .success-img { width: 100%; border-radius: 10px; margin-top: 20px; border: 1px solid #444; }
 
         /* Estilos Criador de Embed */
         .embed-creator-card { background: rgba(20, 20, 20, 0.95); padding: 30px; border-radius: 15px; border-top: 5px solid var(--primary-red); text-align: left; width: 100%; max-width: 800px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -103,8 +146,8 @@
     </header>
 
     <div class="container">
-        <aside>
-            <input type="text" id="search" class="search-box" placeholder="Procurar...">
+<aside>
+    <input type="text" id="search" class="search-box" placeholder="Procurar função..." onkeyup="filtrarMenu()">
             <div class="nav-links">
                 <button class="nav-btn" onclick="showSection('welcome-section')">INÍCIO</button>
                 <button class="nav-btn" onclick="showSection('transcripts-section')">TRANSCRIPTS</button>
