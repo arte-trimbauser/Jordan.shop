@@ -1,52 +1,55 @@
+
 const { EmbedBuilder, ActivityType } = require("discord.js");
 
 module.exports = async (client) => {
-    client.once("ready", async () => {
-        const LOG_CHANNEL_ID = process.env.LOG_CHANNEL_ID;
+    // Mensagens no Terminal do Render
+    console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
+    console.log(`✅ Sistema Jordan Shop Online!`);
+    console.log(`🌐 Site: https://jordan-shop.onrender.com/`);
+    console.log(`✅ Bot online como: ${client.user.tag}`);
+    console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
 
-        console.log(`✅ Jordan Shop Online: ${client.user.tag}`);
-
-        // --- SISTEMA DE STATUS ROTATIVO ---
-        const statusList = [
+    // --- CONFIGURAÇÃO DO STATUS ROTATIVO ---
+    const statusList = [
             { name: "Jordan Shop | discord.gg/6hhZeqb7Qk", type: ActivityType.Competing },
             { name: "Os melhores preços!", type: ActivityType.Watching },
             { name: "Jordan Shop #100", type: ActivityType.Listening },
             { name: "MELHOR LOJA DE CHE4TS DE PORTUGAL!!!", type: ActivityType.Playing }
         ];
 
-        let i = 0;
-        setInterval(() => {
-            client.user.setPresence({
-                activities: [statusList[i]],
-                status: "online"
-            });
-            
-            // Muda para o próximo status, se chegar ao fim volta ao início
-            i = (i + 1) % statusList.length;
-        }, 15000); // 15000ms = 15 segundos (tempo ideal para o Discord não te dar block)
-        // ----------------------------------
+    let i = 0;
+    const updateStatus = () => {
+        client.user.setPresence({
+            activities: [statusList[i]],
+            status: "online"
+        });
+        i = (i + 1) % statusList.length;
+    };
 
-        // Envio do Log de Inicialização
-        if (LOG_CHANNEL_ID) {
-            try {
-                const logChannel = await client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
-                if (logChannel) {
-                    const now = new Date();
-                    const hora = now.toLocaleTimeString("pt-PT");
+    // Inicia o ciclo de status (muda a cada 15 segundos)
+    updateStatus();
+    setInterval(updateStatus, 15000);
 
-                    await logChannel.send({
-                        embeds: [
-                            new EmbedBuilder()
-                                .setTitle("✅ Bot está online!")
-                                .setDescription(`O bot foi iniciado com sucesso e está pronto para uso.\n\n🕒 Hora: ${hora}`)
-                                .setImage("https://i.postimg.cc/YCmc9zyY/sucesso-no-neg-cio-61850034.webp")
-                                .setColor("#00ff00")
-                        ]
-                    });
-                }
-            } catch (err) {
-                console.error("Erro ao enviar log de inicialização.");
-            }
+    // --- ENVIO DO LOG DE INICIALIZAÇÃO NO DISCORD ---
+    const LOG_ID = process.env.LOG_CHANNEL_ID || "1437076921627181228";
+    
+    try {
+        const logChannel = await client.channels.fetch(LOG_ID).catch(() => null);
+        if (logChannel) {
+            const now = new Date();
+            const hora = now.toLocaleTimeString("pt-PT");
+
+            const embedLog = new EmbedBuilder()
+                .setTitle("✅ Bot está online!")
+                .setDescription(`O bot foi iniciado com sucesso e está pronto para uso.\n\n🕒 **Hora:** ${hora}`)
+                .setImage("https://i.postimg.cc/YCmc9zyY/sucesso-no-neg-cio-61850034.webp")
+                .setThumbnail(client.user.displayAvatarURL())
+                .setColor("#00ff00")
+                .setFooter({ text: "Jordan Shop System", iconURL: client.user.displayAvatarURL() });
+
+            await logChannel.send({ embeds: [embedLog] });
         }
-    });
+    } catch (err) {
+        console.error("Erro ao enviar log de inicialização no Discord.");
+    }
 };
