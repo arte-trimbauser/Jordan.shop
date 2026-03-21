@@ -1,27 +1,21 @@
-const { createClient } = require('@supabase/supabase-js');
+const supabase = require('../database/supabase'); // Importa a tua config
 const discordTranscripts = require('discord-html-transcripts');
-
-// Configuração do Supabase (usa as tuas variáveis do .env)
-const supabase = createClient(
-    'https://fdbmhgcfhdnnpwuodxzh.supabase.co',
-    process.env.SUPABASE_KEY
-);
 
 async function sendTranscript(channel, userName) {
     try {
-        // 1. Gera o transcript em formato de anexo (buffer)
+        // 1. Gera o ficheiro HTML das mensagens
         const attachment = await discordTranscripts.createTranscript(channel, {
-            limit: -1, // Puxa todas as mensagens
+            limit: -1, 
             fileName: `transcript-${channel.name}.html`,
             saveImages: true,
             poweredBy: false
         });
 
-        const fileName = `transcript-${channel.id}-${Date.now()}.html`;
+        const fileName = `transcripts/transcript-${channel.id}-${Date.now()}.html`;
 
-        // 2. Faz o Upload para o Bucket 'transcripts' no Supabase
+        // 2. Envia para o balde (bucket) 'transcripts'
         const { data, error } = await supabase.storage
-            .from('transcripts')
+            .from('transcripts') // NOME DO TEU BUCKET NO SUPABASE
             .upload(fileName, attachment.attachment, {
                 contentType: 'text/html',
                 upsert: true
@@ -29,11 +23,11 @@ async function sendTranscript(channel, userName) {
 
         if (error) throw error;
 
-        console.log(`✅ Transcript guardado no Supabase: ${fileName}`);
+        console.log(`✅ Log guardado com sucesso: ${fileName}`);
         return fileName;
 
     } catch (err) {
-        console.error("❌ Erro ao gerar/enviar transcript:", err);
+        console.error("❌ Erro ao processar transcript:", err.message);
     }
 }
 
