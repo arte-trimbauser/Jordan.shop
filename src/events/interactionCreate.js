@@ -157,25 +157,10 @@ Suporte apenas em Português.
                     });
                 }
 
-                const canal = await interaction.guild.channels.create({
-                    name: `ticket-${tipo}-${interaction.user.username}`.toLowerCase(),
-                    type: ChannelType.GuildText,
-                    parent: category.id,
-                    topic: interaction.user.id,
-                    permissionOverwrites: [
-                        {
-                            id: interaction.guild.id,
-                            deny: [PermissionsBitField.Flags.ViewChannel]
-                        },
-                        {
-                            id: interaction.user.id,
-                            allow: [
-                                PermissionsBitField.Flags.ViewChannel,
-                                PermissionsBitField.Flags.SendMessages
-                            ]
-                        }
-                    ]
-                });
+             const canal = await interaction.guild.channels.create({
+    name: `teste-${interaction.user.username}`,
+    type: ChannelType.GuildText
+});
 
                 const row = new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
