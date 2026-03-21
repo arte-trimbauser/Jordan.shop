@@ -61,29 +61,32 @@ module.exports = (client) => {
             }
 
             /* ================= RECUSAR ================= */
-            if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
-                const tipo = cid.replace("recusar_termos_", "");
-                const logChan = await guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null);
+if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
+    const tipo = cid.replace("recusar_termos_", "");
+    
+    // CORREÇÃO AQUI: Usar o nome correto da variável do config.js
+    const logChan = await guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID).catch(() => null);
 
-                if (logChan) {
-                    await logChan.send(`❌ <@${user.id}> não aceitou os termos para **${tipo}**.`);
-                }
+    if (logChan && typeof logChan.send === 'function') {
+        await logChan.send(`❌ <@${user.id}> não aceitou os termos para **${tipo}**.`);
+    }
 
-                return interaction.update({
-                    content: "⚠️ Tens de aceitar para abrir ticket.",
-                    embeds: [],
-                    components: []
-                });
-            }
-
+    return interaction.update({
+        content: "⚠️ Tens de aceitar para abrir ticket.",
+        embeds: [],
+        components: []
+    });
+}
             /* ================= ACEITAR ================= */
-            if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
-                const tipo = cid.replace("aceitar_termos_", "");
-                const logChan = await guild.channels.fetch(config.LOG_CHANNEL_ID).catch(() => null);
+if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
+    const tipo = cid.replace("aceitar_termos_", "");
+    
+    // CORREÇÃO AQUI: Usar o nome correto da variável do config.js
+    const logChan = await guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID).catch(() => null);
 
-                if (logChan) {
-                    await logChan.send(`✅ <@${user.id}> aceitou os termos para **${tipo}**.`);
-                }
+    if (logChan && typeof logChan.send === 'function') {
+        await logChan.send(`✅ <@${user.id}> aceitou os termos para **${tipo}**.`);
+    }
 
                 const menu = new StringSelectMenuBuilder()
                     .setCustomId(`pagamento_${tipo}`)
