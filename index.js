@@ -3,15 +3,19 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const axios = require("axios"); 
-const { Client, GatewayIntentBits, ActivityType, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
+const { Client, GatewayIntentBits, ActivityType, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, PermissionsBitField } = require("discord.js");
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const port = process.env.PORT || 10000;
 
-// --- CONFIGURAÇÃO DE SEGURANÇA ---
-const WEBHOOK_ALERTA = "https://discord.com/api/webhooks/1484243048425586718/rm3FNPNRC1qQ23sQVLwsdRWoV4qvdJNAE7GCHffUgDj88fBv7Ky_LelagWwke76o4v5Z";
+// --- CONFIGURAÇÃO SUPABASE ---
+const supabase = createClient(
+    'https://fdbmhgcfhdnnpwuodxzh.supabase.co',
+    process.env.SUPABASE_KEY
+);
 
-// Lista VIP por ID (Segurança Máxima)
+// --- CONFIGURAÇÃO DE SEGURANÇA (Teu Original) ---
 const staffAutorizado = {
     "924344854232834068": "Jordan Costa",
     "996454465555136675": "Arteex26",
@@ -20,18 +24,16 @@ const staffAutorizado = {
     "886007990942052362": "pincher11"
 };
 
-// Memória para guardar os tokens de uso único
 let tokensAtivos = new Set();
-
 app.use(express.json());
 
-// --- ROTAS ---
+// --- ROTAS DO SITE ---
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'site', 'login.html'));
 });
 
-// Callback do Discord (Login)
+// Login Discord (OAuth2)
 app.get('/callback', async (req, res) => {
     const code = req.query.code;
     if (!code) return res.redirect('/login.html?error=no_code');
@@ -42,7 +44,7 @@ app.get('/callback', async (req, res) => {
             client_secret: process.env.CLIENT_SECRET,
             grant_type: 'authorization_code',
             code: code,
-            redirect_uri: 'https://discord-bott-jordan.onrender.com/callback',
+            redirect_uri: 'https://jordan-shop.onrender.com/callback', // Ajustado para o teu link
         });
 
         const tokenRes = await axios.post('https://discord.com/api/oauth2/token', params);
@@ -53,63 +55,49 @@ app.get('/callback', async (req, res) => {
         const discordID = userRes.data.id;
         const discordUser = userRes.data.username;
 
-        // Verifica se o ID está na Staff
         if (!staffAutorizado[discordID]) {
             return res.redirect('/login.html?error=nao_autorizado');
         }
 
-        // Gera Token Único para este acesso
         const tokenSessao = Math.random().toString(36).substring(2, 15);
         tokensAtivos.add(tokenSessao);
 
-        // Redireciona com ID e Token
         res.redirect(`/loja.html?user=${encodeURIComponent(discordUser)}&id=${discordID}&token=${tokenSessao}`);
     } catch (error) {
         res.redirect('/login.html?error=auth_failed');
     }
 });
 
-// Rota Protegida da Loja
-app.get('/loja.html', async (req, res) => {
-    const { user, id, token } = req.query;
-
-    // Se o token existe, é a primeira entrada (Link direto do Login)
-    if (token && tokensAtivos.has(token)) {
-        tokensAtivos.delete(token); // Queima o token para não ser usado de novo
-        return res.sendFile(path.join(__dirname, 'site', 'loja.html'));
-    }
-
-    // Se não tem token, a segurança do HTML (sessionStorage) vai tratar do resto
-    res.sendFile(path.join(__dirname, 'site', 'loja.html'));
+// Rota de Transcripts (Redireciona para o Supabase)
+app.get('/transcripts/:name', (req, res) => {
+    const { data } = supabase.storage.from('transcripts').getPublicUrl(req.params.name);
+    res.redirect(data.publicUrl);
 });
 
 app.use(express.static(path.join(__dirname, 'site'), { index: false }));
-// --- ROTA DA API PARA O CRIADOR DE EMBEDS ---
+
+// --- API: ENVIAR EMBED COM INTERACTION (SITE -> DISCORD) ---
 app.post('/api/enviar-embed', async (req, res) => {
-    const { titulo, desc, cor, canalId, produtos } = req.body; // Recebe tudo do site
+    const { titulo, desc, cor, canalId, produtos } = req.body;
 
     if (!titulo || !desc || !canalId) {
-        return res.status(400).send("Faltam campos obrigatórios no formulário.");
+        return res.status(400).send("Faltam campos no formulário.");
     }
 
     try {
-        // 1. Primeiro procuramos o canal
         const canal = await client.channels.fetch(canalId);
         if (!canal) return res.status(404).send("Canal não encontrado.");
 
-        // 2. Criamos o Embed (Sem o rodapé como pediste)
         const embed = new EmbedBuilder()
             .setTitle(titulo)
             .setDescription(desc)
-            .setColor(cor || "#8b0000")
-            .setTimestamp();
+            .setColor(cor || "#8b0000"); // Sem timestamp para ficar limpo
 
         const components = [];
 
-        // 3. Se houver produtos, criamos o Menu de Seleção
         if (produtos && produtos.length > 0) {
             const selectMenu = new StringSelectMenuBuilder()
-                .setCustomId('menu_produtos')
+                .setCustomId('menu_produtos') // ID que a tua pasta interactionCreate vai ouvir
                 .setPlaceholder('Escolhe uma opção')
                 .addOptions(produtos.map(p => ({
                     label: p.nome,
@@ -120,9 +108,7 @@ app.post('/api/enviar-embed', async (req, res) => {
             components.push(new ActionRowBuilder().addComponents(selectMenu));
         }
 
-        // 4. Enviamos UMA ÚNICA VEZ com tudo incluído
         await canal.send({ embeds: [embed], components: components });
-        
         res.status(200).send("✅ Enviado com sucesso!");
     } catch (error) {
         console.error("❌ Erro ao enviar embed:", error);
@@ -140,12 +126,10 @@ const client = new Client({
     ] 
 });
 
-// Evento Ready corrigido
 client.on('ready', (c) => {
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
     console.log(`✅ Sistema Jordan Shop Online!`);
-    console.log(`🌐 Porta: ${port}`);
-        console.log(`Site Online no link: https://discord-bott-jordan.onrender.com`);
+    console.log(`🌐 Site: https://jordan-shop.onrender.com/`);
     console.log(`✅ Bot online como: ${c.user.tag}`);
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
 
@@ -154,25 +138,27 @@ client.on('ready', (c) => {
         status: 'online',
     });
 
-    // Carregar eventos externos
+    // CARREGAR EVENTOS DA PASTA SRC
     try {
+        // Importante: Passamos o client para o ficheiro de interações
         require("./src/events/interactionCreate")(client);
+        
         const readyEvent = require("./src/events/ready");
         if (typeof readyEvent === "function") readyEvent(client);
     } catch (e) {
-        console.warn("⚠️ Alguns eventos externos não foram carregados.");
+        console.warn("⚠️ Nota: Alguns eventos da pasta src não foram carregados ou o ficheiro interactionCreate não exporta uma função.");
     }
 });
 
 // --- INICIAR SERVIDOR ---
 app.listen(port, "0.0.0.0", () => {
-    console.log(`🚀 Site ativo na porta ${port}`);
+    console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
 });
 
 // --- LOGIN DO BOT ---
-const TOKEN = process.env.DISCORD_TOKEN || process.env.TOKEN;
+const TOKEN = process.env.TOKEN || process.env.DISCORD_TOKEN;
 if (!TOKEN) {
-    console.error("❌ ERRO: Token do bot não encontrado no .env!");
+    console.error("❌ ERRO: Token não encontrado!");
 } else {
     client.login(TOKEN).catch(err => console.error("❌ ERRO NO LOGIN:", err.message));
 }
