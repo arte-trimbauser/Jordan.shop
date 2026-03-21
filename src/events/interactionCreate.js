@@ -89,7 +89,8 @@ async function sendTranscript(channel, userTag) {
 module.exports = async (client) => {
     client.on("interactionCreate", async (interaction) => {
         try {
-            const { channel, user, member, customId: cid } = interaction;
+            const { channel, user, member } = interaction;
+const cid = interaction.customId;
 
             /* ================== 1. SLASH COMMANDS (/chat) ================== */
             if (interaction.isChatInputCommand() && interaction.commandName === 'chat') {
@@ -146,6 +147,10 @@ Suporte apenas em Português.
             if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 const tipo = cid.replace("aceitar_termos_", "");
                 await interaction.update({ content: "⏳ A criar seu ticket/pedido...", embeds: [], components: [] });
+
+if (!interaction.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageChannels)) {
+    return interaction.editReply("❌ Não tenho permissão para criar canais.");
+}
                 
             let category = interaction.guild.channels.cache.find(
             c => c.name === config.CATEGORY_NAME && c.type === ChannelType.GuildCategory
@@ -164,11 +169,27 @@ Suporte apenas em Português.
                     parent: category.id,
                     topic: user.id,
                     permissionOverwrites: [
-                        { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-                        { id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-                        ...config.STAFF_ROLES.map(id => ({ id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }))
-                    ]
-                });
+    {
+        id: interaction.guild.id,
+        deny: [PermissionsBitField.Flags.ViewChannel]
+    },
+    {
+        id: user.id,
+        allow: [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages,
+            PermissionsBitField.Flags.ReadMessageHistory
+        ]
+    },
+    ...config.STAFF_ROLES.map(roleId => ({
+        id: roleId,
+        allow: [
+            PermissionsBitField.Flags.ViewChannel,
+            PermissionsBitField.Flags.SendMessages,
+            PermissionsBitField.Flags.ReadMessageHistory
+        ]
+    }))
+]
 
                 const row = new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId("claim_ticket").setLabel("🛡 Reivindicar").setStyle(ButtonStyle.Secondary),
