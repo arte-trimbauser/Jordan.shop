@@ -1,213 +1,192 @@
 const { 
     EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, 
-    PermissionsBitField, StringSelectMenuBuilder, ModalBuilder, 
-    TextInputBuilder, TextInputStyle, ChannelType
+    PermissionsBitField, StringSelectMenuBuilder, ChannelType 
 } = require("discord.js");
+
 const config = require("../config");
-const menus = require("../menus");
+const isStaff = require("../helpers/isStaff");
 const discordTranscripts = require("discord-html-transcripts");
-const OpenAI = require('openai');
 
-const supabase = require("../../supabase");
+const { createClient } = require("@supabase/supabase-js");
 
-// --- Configuração OpenAI ---
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const memory = new Map();
-const MAX_HISTORY = 6;
-const SYSTEM_PROMPT = `És um assistente inteligente no Discord (Jordan Shop). Respondes em PT-PT.`;
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_KEY
+);
 
+const emojisPagamento = {
+    "MBWay": "<:mbway:1464608251516813446>",
+    "PayPal": "<:paypal:1464608396383883314>",
+    "Revolut": "<:revolut:1464608485617565726>",
+    "CartaoCredito": "<:creditcard:1464608966826004676>",
+    "GooglePay": "<:googlepay:1464609044315508797>",
+    "ApplePay": "<:applepay:1464609102906003588>",
+    "ReferenciaMultibanco": "<:multibanco:1464609317926735902>"
+};
 
-// ================= TRANSCRIPT =================
 async function sendTranscript(channel, userTag) {
     try {
-        const logChannel = await channel.guild.channels
-            .fetch(config.TRANSCRIPT_LOG_CHANNEL_ID)
-            .catch(() => null);
-
         const attachment = await discordTranscripts.createTranscript(channel, {
-            limit: -1,
             filename: `ticket-${channel.name}.html`,
             saveImages: true,
             poweredBy: false
         });
 
-        const nomeFicheiro = `ticket-${channel.name}.html`
-            .replace(/\s+/g, '_')
+        const fileName = `ticket-${channel.name}.html`
+            .replace(/\s+/g, "_")
             .toLowerCase();
 
         const { error } = await supabase.storage
-            .from('transcripts')
-            .upload(nomeFicheiro, attachment.attachment, {
-                contentType: 'text/html',
+            .from("transcripts")
+            .upload(fileName, attachment.attachment, {
+                contentType: "text/html",
                 upsert: true
             });
 
         if (error) return console.error(error);
 
         const { data } = supabase.storage
-            .from('transcripts')
-            .getPublicUrl(nomeFicheiro);
+            .from("transcripts")
+            .getPublicUrl(fileName);
 
         const link = data.publicUrl;
 
-        if (logChannel) {
+        const logChan = await channel.guild.channels
+            .fetch(config.TRANSCRIPT_LOG_CHANNEL_ID)
+            .catch(() => null);
+
+        if (logChan) {
             const embed = new EmbedBuilder()
-                .setTitle("📄 Transcrição Arquivada")
-                .setDescription(`**Canal:** \`${channel.name}\`\n**Fechado por:** \`${userTag}\``)
-                .setColor("#b00000");
+                .setTitle("📄 Transcript Guardado")
+                .setDescription(`Ticket: ${channel.name}\nFechado por: ${userTag}`)
+                .setColor("#2f3136");
 
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
-                    .setLabel("Ver no Painel Web")
+                    .setLabel("Abrir Transcript")
                     .setURL(link)
                     .setStyle(ButtonStyle.Link)
             );
 
-            await logChannel.send({
-                embeds: [embed],
-                components: [row]
-            });
+            await logChan.send({ embeds: [embed], components: [row] });
         }
 
     } catch (err) {
-        console.error("Erro transcript:", err);
+        console.error("Transcript error:", err);
     }
 }
 
-// ================= CORE =================
-module.exports = async (client) => {
-    client.on("interactionCreate", async (interaction) => {
-        try {
+module.exports = (client) => {
+client.on("interactionCreate", async (interaction) => {
 
-            /* CHAT AI */
-            if (interaction.isChatInputCommand() && interaction.commandName === 'chat') {
-                const userPrompt = interaction.options.getString('mensagem');
-                await interaction.deferReply();
+try {
 
-                if (!memory.has(interaction.user.id)) memory.set(interaction.user.id, []);
-                const history = memory.get(interaction.user.id);
+if (!interaction.guild) return;
+const { guild, channel, user, member, customId: cid } = interaction;
 
-                history.push({ role: 'user', content: userPrompt });
+if (interaction.isStringSelectMenu() && cid === "menu_ticket") {
+const tipo = interaction.values[0];
 
-                const completion = await openai.chat.completions.create({
-                    model: 'gpt-4o-mini',
-                    messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...history]
-                });
+const embed = new EmbedBuilder()
+.setTitle("⚖️ Termos de Serviço")
+.setDescription("Ao aceitar concordas com os termos.")
+.setColor("#ff0000");
 
-                const reply = completion.choices[0].message.content;
-                history.push({ role: 'assistant', content: reply });
+const row = new ActionRowBuilder().addComponents(
+new ButtonBuilder().setCustomId(`aceitar_termos_${tipo}`).setLabel("Aceitar").setStyle(ButtonStyle.Success),
+new ButtonBuilder().setCustomId(`recusar_termos_${tipo}`).setLabel("Recusar").setStyle(ButtonStyle.Danger)
+);
 
-                return interaction.editReply(reply);
-            }
+return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+}
 
-            /* MENU TICKET */
-            if (interaction.isStringSelectMenu() && interaction.customId === "menu_ticket") {
-                const tipo = interaction.values[0];
+if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
+const tipo = cid.replace("aceitar_termos_", "");
 
-                const termosEmbed = new EmbedBuilder()
-                    .setTitle("📜 Termos de Serviço")
-                    .setDescription(`
-🔁 **Termos de Serviço de Reembolso**
-Não oferecemos reembolsos após a conclusão de uma compra ou serviço.
+const menu = new StringSelectMenuBuilder()
+.setCustomId(`pagamento_${tipo}`)
+.setPlaceholder("Seleciona pagamento")
+.addOptions(Object.keys(emojisPagamento).map(m => ({
+label: m,
+value: m,
+emoji: emojisPagamento[m].match(/\d+/)[0]
+})));
 
-🔄 **Termos de Serviço de Substituição**
-A substituição só é possível com um voucher.
-Sem voucher = sem garantia ou substituição.
+return interaction.update({
+content: "Escolhe pagamento:",
+components: [new ActionRowBuilder().addComponents(menu)]
+});
+}
 
-👤 **Termos de Serviço da Conta**
-Altere e-mail e senha imediatamente. Não nos responsabilizamos após a entrega.
+if (interaction.isStringSelectMenu() && cid?.startsWith("pagamento_")) {
 
-💸 **Termos de Serviço do PayPal**
-Pagamentos via "Amigos e Familiares" – sem mensagem.
+await interaction.deferReply({ ephemeral: true });
 
-🌐 **Idioma do Ticket**
-Suporte apenas em Português.
+const tipo = cid.replace("pagamento_", "");
+const metodo = interaction.values[0];
+const emoji = emojisPagamento[metodo] || "💰";
 
-**Atenciosamente, Jordan.**`)
-                    .setColor("#ff0000");
-
-                const row = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`aceitar_termos_${tipo}`)
-                        .setLabel("Aceitar")
-                        .setStyle(ButtonStyle.Success),
-                    new ButtonBuilder()
-                        .setCustomId("recusar_termos")
-                        .setLabel("Recusar")
-                        .setStyle(ButtonStyle.Danger)
-                );
-
-                return interaction.reply({ embeds: [termosEmbed], components: [row], ephemeral: true });
-            }
-
-            /* CRIAR TICKET */
-            if (interaction.isButton() && interaction.customId.startsWith("aceitar_termos_")) {
-
-                const tipo = interaction.customId.replace("aceitar_termos_", "");
-                await interaction.update({ content: "⏳ A criar seu ticket/pedido...", embeds: [], components: [] });
-
-                let category = interaction.guild.channels.cache.find(
-                    c => c.name === config.CATEGORY_NAME && c.type === ChannelType.GuildCategory
-                );
-
-                if (!category) {
-                    category = await interaction.guild.channels.create({
-                        name: config.CATEGORY_NAME,
-                        type: ChannelType.GuildCategory
-                    });
-                }
-
-             const canal = await interaction.guild.channels.create({
-    name: `teste-${interaction.user.username}`,
-    type: ChannelType.GuildText
+const ticket = await guild.channels.create({
+name: `ticket-${user.username}`,
+type: ChannelType.GuildText,
+parent: config.CATEGORY_ID,
+topic: `${user.id}|${metodo}`,
+permissionOverwrites: [
+{ id: guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+{ id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+...config.STAFF_ROLES.map(r => ({
+id: r,
+allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
+}))
+]
 });
 
-                const row = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId("claim_ticket")
-                        .setLabel("🛡 Reivindicar")
-                        .setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder()
-                        .setCustomId("close_ticket")
-                        .setLabel("❌ Fechar")
-                        .setStyle(ButtonStyle.Danger)
-                );
+const embed = new EmbedBuilder()
+.setTitle("Jordan Shop")
+.setDescription(`🛡 Staff: Aguardando\n💳 ${emoji} ${metodo}`)
+.setColor("#2f3136");
 
-                await canal.send({
-                    content: `✅ <@${interaction.user.id}> Ticket aberto!\n**Produto:** ${tipo.toUpperCase()}`,
-                    components: [row]
-                });
+const row = new ActionRowBuilder().addComponents(
+new ButtonBuilder().setCustomId("claim_ticket").setLabel("Reivindicar").setStyle(ButtonStyle.Secondary),
+new ButtonBuilder().setCustomId("close_ticket").setLabel("Fechar").setStyle(ButtonStyle.Danger)
+);
 
-                return interaction.editReply({ content: `Ticket: <#${canal.id}>` });
-            }
+await ticket.send({
+content: `<@${user.id}> ticket aberto`,
+embeds: [embed],
+components: [row]
+});
 
-            /* FECHAR */
-            if (interaction.isButton() && interaction.customId === "close_ticket") {
-                const row = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId("sale_yes")
-                        .setLabel("✅ Venda")
-                        .setStyle(ButtonStyle.Success),
-                    new ButtonBuilder()
-                        .setCustomId("sale_no")
-                        .setLabel("❌ Não")
-                        .setStyle(ButtonStyle.Danger)
-                );
+return interaction.editReply({
+content: `✅ Ticket criado: <#${ticket.id}>`
+});
+}
 
-                return interaction.reply({ content: "Houve venda?", components: [row] });
-            }
+if (interaction.isButton() && cid === "claim_ticket") {
+if (!isStaff(member)) return;
 
-            /* TRANSCRIPT */
-            if (interaction.isButton() && interaction.customId === "sale_no") {
-                await interaction.update({ content: "📂 A gerar transcrição e a fechar...", components: [] });
+const [uid, met] = channel.topic.split("|");
+const emoji = emojisPagamento[met] || "💰";
 
-                await sendTranscript(interaction.channel, interaction.user.tag);
+const embed = new EmbedBuilder()
+.setTitle("Ticket Reivindicado")
+.setDescription(`Staff: <@${user.id}>\n💳 ${emoji} ${met}`)
+.setColor("#57f287");
 
-                setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
-            }
+return interaction.update({ embeds: [embed], components: [] });
+}
 
-        } catch (err) {
-            console.error("Erro interaction:", err);
-        }
-    });
+if (interaction.isButton() && cid === "close_ticket") {
+if (!isStaff(member)) return;
+
+await interaction.reply("A fechar...");
+await sendTranscript(channel, user.tag);
+setTimeout(() => channel.delete().catch(()=>{}), 4000);
+}
+
+} catch (err) {
+console.error(err);
+}
+
+});
 };
