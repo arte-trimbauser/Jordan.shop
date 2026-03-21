@@ -1,4 +1,4 @@
-const supabase = require('../database/supabase'); // Importa a tua config
+const supabase = require('../../database/supabase'); // Importa a tua config
 const discordTranscripts = require('discord-html-transcripts');
 
 async function sendTranscript(channel, userName) {
