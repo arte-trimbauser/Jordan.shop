@@ -1,22 +1,32 @@
 const { EmbedBuilder, ActivityType } = require("discord.js");
 
 module.exports = async (client) => {
-    // IMPORTANTE: Mantemos 'ready' para o status funcionar
     client.once("ready", async () => {
         const LOG_CHANNEL_ID = process.env.LOG_CHANNEL_ID;
 
         console.log(`✅ Jordan Shop Online: ${client.user.tag}`);
 
-        // Define a atividade para aparecer a "Competir"
-        client.user.setPresence({ 
-            activities: [{ 
-                name: "Jordan Shop | discord.gg/6hhZeqb7Qk", 
-                type: ActivityType.Competing 
-            }], 
-            status: "online" 
-        });
+        // --- SISTEMA DE STATUS ROTATIVO ---
+        const statusList = [
+            { name: "Jordan Shop | discord.gg/6hhZeqb7Qk", type: ActivityType.Competing },
+            { name: "Os melhores preços!", type: ActivityType.Watching },
+            { name: "Jordan Shop #100", type: ActivityType.Listening },
+            { name: "MELHOR LOJA DE CHE4TS DE PORTUGAL!!!", type: ActivityType.Playing }
+        ];
 
-        // Envio do Log de Inicialização (como tinhas antes)
+        let i = 0;
+        setInterval(() => {
+            client.user.setPresence({
+                activities: [statusList[i]],
+                status: "online"
+            });
+            
+            // Muda para o próximo status, se chegar ao fim volta ao início
+            i = (i + 1) % statusList.length;
+        }, 15000); // 15000ms = 15 segundos (tempo ideal para o Discord não te dar block)
+        // ----------------------------------
+
+        // Envio do Log de Inicialização
         if (LOG_CHANNEL_ID) {
             try {
                 const logChannel = await client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
