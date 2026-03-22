@@ -7,8 +7,7 @@ const config = require("../config");
 const isStaff = require("../helpers/isStaff");
 const sendTranscript = require("../helpers/sendTranscript");
 
-// IMPORTANTE: Definir os cooldowns aqui para não dar erro
-const cooldowns = new Map();;
+const cooldowns = new Map();
 
 const emojisPagamento = {
     "MBWay": "<:mbway:1464608251516813446>",
@@ -27,89 +26,88 @@ module.exports = (client) => {
         const { guild, channel, user, member, customId: cid } = interaction;
 
         try {
-
             /* ================= MENU ================= */
             if (interaction.isStringSelectMenu() && (cid === "menu_ticket" || cid === "menu_produtos")) {
                 const tipo = interaction.values[0];
 
                 const embed = new EmbedBuilder()
-                .setTitle("⚖️ Termos de Serviço - Jordan Shop")
-                .setDescription(
-            "**Termos de Serviço de Reembolso**\n" +
-            "Não oferecemos reembolsos após a conclusão de uma compra ou serviço. Em casos excepcionais, uma substituição pode ser oferecida, se possível.\n\n" +
-            "**Termos de Serviço de Substituição**\n" +
-            "A substituição só é possível com um voucher.\n" +
-            "Sem voucher = sem garantia ou substituição.\n\n" +
-            "**Termos de Serviço da Conta**\n" +
-            "Após receber uma conta, você deverá alterar seu endereço de e-mail e senha imediatamente.\n" +
-            "Não assumimos qualquer responsabilidade ou substituição caso você não o faça.\n\n" +
-            "**Termos de Serviço do PayPal**\n" +
-            "Os pagamentos devem ser enviados via \"Amigos e Familiares\" – sem uma mensagem nos detalhes de pagamento.\n" +
-            "Não nos responsabilizamos se nossa conta do PayPal for bloqueada e os fundos permanecerem lá. Não há reembolsos possíveis!\n\n" +
-            "**Idioma do Ticket**\n" +
-            "O suporte e os tickets são processados exclusivamente em Português.\n\n" +
-            "**Comportamento do Ticket**\n" +
-            "Por favor, não envie spam ou ping várias vezes em DM ou tickets.\n" +
-            "Aguarde pacientemente até receber seu produto ou uma resposta.\n\n" +
-            "*Atenciosamente, Jordan.*"
-          )
-          .setColor("#ff0000");
+                    .setTitle("⚖️ Termos de Serviço - Jordan Shop")
+                    .setDescription(
+                        "**Termos de Serviço de Reembolso**\n" +
+                        "Não oferecemos reembolsos após a conclusão de uma compra ou serviço. Em casos excepcionais, uma substituição pode ser oferecida, se possível.\n\n" +
+                        "**Termos de Serviço de Substituição**\n" +
+                        "A substituição só é possível com um voucher.\n" +
+                        "Sem voucher = sem garantia ou substituição.\n\n" +
+                        "**Termos de Serviço da Conta**\n" +
+                        "Após receber uma conta, você deverá alterar seu endereço de e-mail e senha imediatamente.\n" +
+                        "Não assumimos qualquer responsabilidade ou substituição caso você não o faça.\n\n" +
+                        "**Termos de Serviço do PayPal**\n" +
+                        "Os pagamentos devem ser enviados via \"Amigos e Familiares\" – sem uma mensagem nos detalhes de pagamento.\n" +
+                        "Não nos responsabilizamos se nossa conta do PayPal for bloqueada e os fundos permanecerem lá. Não há reembolsos possíveis!\n\n" +
+                        "**Idioma do Ticket**\n" +
+                        "O suporte e os tickets são processados exclusivamente em Português.\n\n" +
+                        "**Comportamento do Ticket**\n" +
+                        "Por favor, não envie spam ou ping várias vezes em DM ou tickets.\n" +
+                        "Aguarde pacientemente até receber seu produto ou uma resposta.\n\n" +
+                        "*Atenciosamente, Jordan.*"
+                    )
+                    .setColor("#ff0000");
 
                 const row = new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId(`aceitar_termos_${tipo}`).setLabel("Aceitar os Termos").setStyle(ButtonStyle.Success),
                     new ButtonBuilder().setCustomId(`recusar_termos_${tipo}`).setLabel("Recusar os Termos").setStyle(ButtonStyle.Danger)
                 );
 
-                return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+                // CORREÇÃO: De ephemeral: true para flags: [64]
+                return interaction.reply({ embeds: [embed], components: [row], flags: [64] });
             }
 
             /* ================= RECUSAR ================= */
-if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
-    const tipo = cid.replace("recusar_termos_", "");
-    
-    // CORREÇÃO AQUI: Usar o nome correto da variável do config.js
-    const logChan = await guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID).catch(() => null);
+            if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
+                const tipo = cid.replace("recusar_termos_", "");
+                const logChan = await guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID).catch(() => null);
 
-    if (logChan && typeof logChan.send === 'function') {
-        await logChan.send(`❌ <@${user.id}> não aceitou os termos para **${tipo}**.`);
-    }
-
-    return interaction.update({
-        content: "⚠️ Tens de aceitar os termos para abrir seu ticket/pedido.",
-        embeds: [],
-        components: []
-    });
-}
-            /* ================= ACEITAR ================= */
-if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
-    const tipo = cid.replace("aceitar_termos_", "");
-    
-    // CORREÇÃO AQUI: Usar o nome correto da variável do config.js
-    const logChan = await guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID).catch(() => null);
-
-    if (logChan && typeof logChan.send === 'function') {
-        await logChan.send(`✅ <@${user.id}> aceitou os termos para **${tipo}**.`);
-    }
-
-                const menu = new StringSelectMenuBuilder()
-                    .setCustomId(`pagamento_${tipo}`)
-                    .setPlaceholder("Seleciona o método de pagamento...")
-                    .addOptions(Object.keys(emojisPagamento).map(m => ({
-                        label: m,
-                        value: m
-                    })));
+                if (logChan && typeof logChan.send === 'function') {
+                    await logChan.send(`❌ <@${user.id}> não aceitou os termos para **${tipo}**.`);
+                }
 
                 return interaction.update({
-                    content: "💳 **Termos aceites!** Escolhe o pagamento:",
+                    content: "⚠️ Tens de aceitar os termos para abrir seu ticket/pedido.",
                     embeds: [],
-                    components: [new ActionRowBuilder().addComponents(menu)]
+                    components: []
                 });
             }
 
+            /* ================= ACEITAR ================= */
+            if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
+                const tipo = cid.replace("aceitar_termos_", "");
+                const logChan = await guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID).catch(() => null);
+
+                if (logChan && typeof logChan.send === 'function') {
+                    await logChan.send(`✅ <@${user.id}> aceitou os termos para **${tipo}**.`);
+                }
+
+const menu = new StringSelectMenuBuilder()
+        .setCustomId(`pagamento_${tipo}`)
+        .setPlaceholder("Seleciona o método de pagamento...")
+        .addOptions(Object.keys(emojisPagamento).map(m => ({
+            label: m,
+            value: m,
+            // Adiciona o emoji correspondente à frente do texto
+            emoji: emojisPagamento[m] 
+        })));
+
+    return interaction.update({
+        content: "💳 **Termos aceites!** Escolhe o pagamento:",
+        embeds: [],
+        components: [new ActionRowBuilder().addComponents(menu)]
+    });
+}
+
             /* ================= CRIAR TICKET ================= */
             if (interaction.isStringSelectMenu() && cid?.startsWith("pagamento_")) {
-
-                await interaction.deferReply({ ephemeral: true });
+                // CORREÇÃO: De ephemeral: true para flags: [64]
+                await interaction.deferReply({ flags: [64] });
 
                 const tipo = cid.replace("pagamento_", "");
                 const metodo = interaction.values[0];
@@ -159,12 +157,11 @@ if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 );
 
                 await ticket.send({
-                    content: `<@${user.id}> ticket aberto para **${tipo}**!`,
+                    content: `<@${user.id}> obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
                     embeds: [embedTicket],
                     components: [btns]
                 });
 
-// ESTE É O BOTÃO QUE PERGUNTASTE:
                 const rowGo = new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
                         .setLabel("Ir para o Ticket/Pedido")
@@ -177,7 +174,8 @@ if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                     components: [rowGo], embeds: [] 
                 });
             }
-// 5. REIVINDICAR TICKET
+
+            // 5. REIVINDICAR TICKET
             if (cid === "claim_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas Staff.", flags: [64] });
                 
@@ -204,8 +202,12 @@ if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 const tempoEspera = 300000; // 5 minutos
                 const agora = Date.now();
                 if (cooldowns.has(user.id) && (agora < cooldowns.get(user.id) + tempoEspera)) {
-                    return await interaction.reply({ content: `⚠️ Aguarda para chamar novamente!`, flags: [64] });
-                }
+    const restante = Math.ceil(((cooldowns.get(user.id) + tempoEspera) - agora) / 60000);
+    return await interaction.reply({ 
+        content: `⚠️ Aguarda **${restante} minuto(s)** para poder chamar novamente!`, 
+        flags: [64] 
+    });
+}
 
                 const members = await guild.members.fetch();
                 const staffOnline = members
@@ -217,7 +219,7 @@ if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 const opts = staffOnline.map(m => ({ label: m.displayName, value: m.id })).slice(0, 25);
                 const menuS = new StringSelectMenuBuilder().setCustomId("notify_staff_id").setPlaceholder("Escolhe um Staff").addOptions(opts);
                 
-                return await interaction.reply({ content: "Quem queres chamar?", components: [new ActionRowBuilder().addComponents(menuS)], flags: [64] });
+                return await interaction.reply({ content: "Quem pretendes chamar?", components: [new ActionRowBuilder().addComponents(menuS)], flags: [64] });
             }
 
             if (cid === "notify_staff_id") {
@@ -232,14 +234,12 @@ if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 return await interaction.update({ content: "✅ Staff notificado.", components: [] });
             }
 
-            // 7. FECHAR TICKET (Lógica de Transcripts + Anexo 8KB)
+            // 7. FECHAR TICKET
             if (cid === "close_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas staff pode fechar.", flags: [64] });
 
                 const messages = await channel.messages.fetch({ limit: 50 });
                 const msgCount = messages.size; 
-
-                const sendTranscript = require("../helpers/sendTranscript");
 
                 if (msgCount >= 5) {
                     await interaction.reply("🔒 Ticket com atividade. A gerar transcrição...");
@@ -262,7 +262,6 @@ if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
 
             if (cid === "confirm_close_save") {
                 await interaction.update({ content: "🔒 A guardar log e a eliminar...", embeds: [], components: [] });
-                const sendTranscript = require("../helpers/sendTranscript");
                 await sendTranscript(channel, user.tag);
                 return setTimeout(() => channel.delete().catch(() => {}), 3000);
             }
