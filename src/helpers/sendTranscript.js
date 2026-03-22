@@ -12,19 +12,21 @@ async function sendTranscript(channel, userName) {
             poweredBy: false
         });
 
-        const filePath = `transcripts/transcript-${channel.id}-${Date.now()}.html`;
+        // CORREÇÃO: Nome simples para a rota do index.js encontrar facilmente
+        const fileName = `${channel.id}.html`;
+        const filePath = `transcripts/${fileName}`; 
 
         // 2. Envia para o bucket do Supabase
         const { error: storageError } = await supabase.storage
             .from('transcripts') 
             .upload(filePath, attachment.attachment, {
                 contentType: 'text/html',
-                upsert: true
+                upsert: true // Se o ticket for reaberto e fechado, ele atualiza o log
             });
 
         if (storageError) console.error("⚠️ Erro Supabase Storage:", storageError.message);
 
-// 3. Criar o Embed para o Discord
+        // 3. Criar o Embed para o Discord
         const logEmbed = new EmbedBuilder()
             .setTitle("📄 Transcrição Arquivada")
             .setColor("#ff0000")
@@ -32,18 +34,18 @@ async function sendTranscript(channel, userName) {
                 { name: "Canal:", value: `\`${channel.name}\``, inline: true },
                 { name: "Fechado por:", value: `\`${userName}\``, inline: true }
             )
-            // IMPORTANTE: O link agora aponta para a nossa nova rota usando o ID do canal
+            // O link aponta para a tua ponte no Render
             .setDescription(`🔗 **Ver Online:** [Clique Aqui](https://jordan-shop.onrender.com/transcripts/${channel.id})`)
             .setFooter({ text: "Jordan Shop | Transcript" })
             .setTimestamp();
         
-        // 4. Enviar para o canal de logs (ID que pediste)
+        // 4. Enviar para o canal de logs
         const logChannel = await channel.guild.channels.fetch("1424461544317517854").catch(() => null);
         
         if (logChannel) {
             await logChannel.send({ 
                 embeds: [logEmbed], 
-                files: [attachment] // Isto faz aparecer o retângulo de download (8KB)
+                files: [attachment] // Mantém o anexo para backup direto no Discord
             });
         }
 
