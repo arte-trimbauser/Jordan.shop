@@ -24,18 +24,19 @@ async function sendTranscript(channel, userName) {
 
         if (storageError) console.error("⚠️ Erro Supabase Storage:", storageError.message);
 
-        // 3. Criar o Embed para o Discord (O visual que tu queres)
+// 3. Criar o Embed para o Discord
         const logEmbed = new EmbedBuilder()
             .setTitle("📄 Transcrição Arquivada")
-            .setColor("#ff0000") // Barra vermelha Jordan Shop
+            .setColor("#ff0000")
             .addFields(
                 { name: "Canal:", value: `\`${channel.name}\``, inline: true },
                 { name: "Fechado por:", value: `\`${userName}\``, inline: true }
             )
+            // IMPORTANTE: O link agora aponta para a nossa nova rota usando o ID do canal
             .setDescription(`🔗 **Ver Online:** [Clique Aqui](https://jordan-shop.onrender.com/transcripts/${channel.id})`)
-            .setFooter({ text: "Jordan Shop System" })
+            .setFooter({ text: "Jordan Shop | Transcript" })
             .setTimestamp();
-
+        
         // 4. Enviar para o canal de logs (ID que pediste)
         const logChannel = await channel.guild.channels.fetch("1424461544317517854").catch(() => null);
         
