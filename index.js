@@ -96,33 +96,40 @@ app.post('/api/enviar-embed', async (req, res) => {
         res.status(500).send("Erro ao comunicar com o Discord.");
     }
 });
-// --- ROTA DE TRANSCRIPTS (PONTE SUPABASE) ---
+
+// --- ROTA DE TRANSCRIPTS (CORREÇÃO FINAL) ---
 app.get('/transcripts/:channelId', async (req, res) => {
     const { channelId } = req.params;
 
     try {
-        // Procuramos no bucket o ficheiro que começa com o ID do canal
+        // Procuramos o ficheiro no bucket 'transcripts' dentro da pasta 'transcripts/'
         const { data: files, error: listError } = await supabase.storage
             .from('transcripts')
-            .list('transcripts', { search: channelId });
+            .list('transcripts', {
+                limit: 10,
+                offset: 0,
+                sortBy: { column: 'name', order: 'desc' },
+                search: channelId
+            });
 
         if (listError || !files || files.length === 0) {
-            return res.status(404).send("❌ Transcrição não encontrada ou ainda está a ser processada.");
+            return res.status(404).send("❌ Transcrição não encontrada. O ticket pode ser muito recente ou o ficheiro não foi gerado.");
         }
 
-        // Pegamos no link público do ficheiro mais recente encontrado
+        // Obtemos o link público do ficheiro encontrado
         const { data } = supabase.storage
             .from('transcripts')
             .getPublicUrl(`transcripts/${files[0].name}`);
 
         if (!data || !data.publicUrl) {
-            return res.status(404).send("❌ Erro ao gerar link de visualização.");
+            return res.status(404).send("❌ Erro ao gerar o URL de visualização.");
         }
 
-        // Redireciona o utilizador para o HTML no Supabase
+        // Redireciona para o HTML no Supabase
         res.redirect(data.publicUrl);
     } catch (err) {
-        res.status(500).send("❌ Erro interno ao procurar log.");
+        console.error("Erro na rota /transcripts:", err.message);
+        res.status(500).send("❌ Erro interno no servidor ao procurar o log.");
     }
 });
 
