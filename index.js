@@ -96,6 +96,35 @@ app.post('/api/enviar-embed', async (req, res) => {
         res.status(500).send("Erro ao comunicar com o Discord.");
     }
 });
+// --- ROTA DE TRANSCRIPTS (PONTE SUPABASE) ---
+app.get('/transcripts/:channelId', async (req, res) => {
+    const { channelId } = req.params;
+
+    try {
+        // Procuramos no bucket o ficheiro que começa com o ID do canal
+        const { data: files, error: listError } = await supabase.storage
+            .from('transcripts')
+            .list('transcripts', { search: channelId });
+
+        if (listError || !files || files.length === 0) {
+            return res.status(404).send("❌ Transcrição não encontrada ou ainda está a ser processada.");
+        }
+
+        // Pegamos no link público do ficheiro mais recente encontrado
+        const { data } = supabase.storage
+            .from('transcripts')
+            .getPublicUrl(`transcripts/${files[0].name}`);
+
+        if (!data || !data.publicUrl) {
+            return res.status(404).send("❌ Erro ao gerar link de visualização.");
+        }
+
+        // Redireciona o utilizador para o HTML no Supabase
+        res.redirect(data.publicUrl);
+    } catch (err) {
+        res.status(500).send("❌ Erro interno ao procurar log.");
+    }
+});
 
 // --- BOT DISCORD ---
 const client = new Client({ 
