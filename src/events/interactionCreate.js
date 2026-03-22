@@ -26,7 +26,7 @@ module.exports = (client) => {
         const { guild, channel, user, member, customId: cid } = interaction;
 
         try {
-            /* ================= MENU ================= */
+            /* ================= MENU PRINCIPAL ================= */
             if (interaction.isStringSelectMenu() && (cid === "menu_ticket" || cid === "menu_produtos")) {
                 const tipo = interaction.values[0];
 
@@ -61,7 +61,7 @@ module.exports = (client) => {
                 return interaction.reply({ embeds: [embed], components: [row], flags: [64] });
             }
 
-            /* ================= RECUSAR ================= */
+            /* ================= BOTÃO RECUSAR ================= */
             if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
                 const tipo = cid.replace("recusar_termos_", "");
                 const logChan = await guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID).catch(() => null);
@@ -77,11 +77,11 @@ module.exports = (client) => {
                 });
             }
 
-            /* ================= ACEITAR ================= */
+            /* ================= BOTÃO ACEITAR ================= */
             if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 const tipo = cid.replace("aceitar_termos_", "");
+                
                 const logChan = await guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID).catch(() => null);
-
                 if (logChan && typeof logChan.send === 'function') {
                     await logChan.send(`✅ <@${user.id}> aceitou os termos para **${tipo}**.`);
                 }
@@ -102,8 +102,9 @@ module.exports = (client) => {
                 });
             }
 
-            /* ================= CRIAR TICKET ================= */
+            /* ================= CRIAR O TICKET (APÓS PAGAMENTO) ================= */
             if (interaction.isStringSelectMenu() && cid?.startsWith("pagamento_")) {
+                // Importante: deferReply para evitar que a interação expire
                 await interaction.deferReply({ flags: [64] });
 
                 const tipo = cid.replace("pagamento_", "");
@@ -111,7 +112,7 @@ module.exports = (client) => {
                 const emoji = emojisPagamento[metodo] || "💰";
 
                 const ticket = await guild.channels.create({
-                    name: `ticket-${tipo}-${user.username}`.toLowerCase(),
+                    name: `ticket-${tipo}-${user.username}`.toLowerCase().substring(0, 32),
                     type: ChannelType.GuildText,
                     parent: config.CATEGORY_ID || null,
                     topic: `${user.id}|${metodo}|${tipo}`,
@@ -168,11 +169,12 @@ module.exports = (client) => {
 
                 return await interaction.editReply({ 
                     content: `✅ Ticket/Pedido criado com sucesso: <#${ticket.id}>`, 
-                    components: [rowGo], embeds: [] 
+                    components: [rowGo], 
+                    embeds: [] 
                 });
             }
 
-            /* ================= REIVINDICAR TICKET ================= */
+            /* ================= REIVINDICAR ================= */
             if (cid === "claim_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas Staff.", flags: [64] });
                 
@@ -236,9 +238,7 @@ module.exports = (client) => {
                         .setURL(`https://discord.com/channels/${guild.id}/${channel.id}`)
                 );
                 
-                await target.send({ embeds: [embedDM], components: [rowL] }).catch(() => {
-                    console.log(`⚠️ Não consegui enviar DM ao Staff ${target.displayName}`);
-                });
+                await target.send({ embeds: [embedDM], components: [rowL] }).catch(() => {});
 
                 return await interaction.update({ 
                     content: `📢 <@${target.id}>, foste solicitado aqui por **${user.username}**!`, 
