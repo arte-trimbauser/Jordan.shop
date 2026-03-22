@@ -197,17 +197,40 @@ const menu = new StringSelectMenuBuilder()
                 });
             }
 
+            // 5. REIVINDICAR TICKET
+            if (cid === "claim_ticket") {
+                if (!isStaff(member)) return interaction.reply({ content: "Apenas Staff.", flags: [64] });
+                
+                const [uid, met, pdr] = channel.topic?.split("|") || ["?", "Não definido", "Geral"];
+                const emj = emojisPagamento[met] || "💰";
+
+                const embedClaim = new EmbedBuilder()
+                    .setTitle("🛡️ Ticket Reivindicado")
+                    .setDescription(`👤 **Staff:** <@${user.id}>\n**Produto:** ${pdr}\n**Método:** ${emj} ${met}`)
+                    .setColor("#57f287");
+
+                return await interaction.update({
+                    embeds: [embedClaim],
+                    components: [new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId("claimed").setLabel("Reivindicado").setStyle(ButtonStyle.Success).setDisabled(true),
+                        new ButtonBuilder().setCustomId("call_staff_list").setLabel("🔔 Chamar Staff").setStyle(ButtonStyle.Primary),
+                        new ButtonBuilder().setCustomId("close_ticket").setLabel("Fechar").setStyle(ButtonStyle.Danger)
+                    )]
+                });
+            }
+
             // 6. CHAMAR STAFF
             if (cid === "call_staff_list") {
                 const tempoEspera = 300000; // 5 minutos
                 const agora = Date.now();
+                
                 if (cooldowns.has(user.id) && (agora < cooldowns.get(user.id) + tempoEspera)) {
-    const restante = Math.ceil(((cooldowns.get(user.id) + tempoEspera) - agora) / 60000);
-    return await interaction.reply({ 
-        content: `⚠️ Aguarda **${restante} minuto(s)** para poder chamar novamente!`, 
-        flags: [64] 
-    });
-}
+                    const restante = Math.ceil(((cooldowns.get(user.id) + tempoEspera) - agora) / 60000);
+                    return await interaction.reply({ 
+                        content: `⚠️ Aguarda **${restante} minuto(s)** para poder chamar novamente!`, 
+                        flags: [64] 
+                    });
+                }
 
                 const members = await guild.members.fetch();
                 const staffOnline = members
@@ -226,12 +249,26 @@ const menu = new StringSelectMenuBuilder()
                 const target = await guild.members.fetch(interaction.values[0]);
                 cooldowns.set(user.id, Date.now());
                 
-                const embedDM = new EmbedBuilder().setTitle("📞 Chamada de Staff").setDescription(`O cliente **${user.username}** chamou-te em ${channel}`).setColor("#f1c40f");
-                const rowL = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel("Ir para o Ticket").setStyle(ButtonStyle.Link).setURL(`https://discord.com/channels/${guild.id}/${channel.id}`));
+                const embedDM = new EmbedBuilder()
+                    .setTitle("📞 Chamada de Staff")
+                    .setDescription(`O cliente **${user.username}** chamou-te em ${channel}`)
+                    .setColor("#f1c40f");
+
+                const rowL = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setLabel("Ir para o Ticket")
+                        .setStyle(ButtonStyle.Link)
+                        .setURL(`https://discord.com/channels/${guild.id}/${channel.id}`)
+                );
                 
-                await target.send({ embeds: [embedDM], components: [rowL] }).catch(() => {});
-                await channel.send({ content: `📢 <@${target.id}>, foste solicitado aqui!` });
-                return await interaction.update({ content: "✅ Staff notificado.", components: [] });
+                await target.send({ embeds: [embedDM], components: [rowL] }).catch(() => {
+                    console.log(`⚠️ Não consegui enviar DM ao Staff ${target.displayName}`);
+                });
+
+                return await interaction.update({ 
+                    content: `📢 <@${target.id}>, foste solicitado aqui por **${user.username}**!`, 
+                    components: [] 
+                });
             }
 
             // 7. FECHAR TICKET
@@ -242,7 +279,8 @@ const menu = new StringSelectMenuBuilder()
                 const msgCount = messages.size; 
 
                 if (msgCount >= 5) {
-                    await interaction.reply("🔒 Ticket com atividade. A gerar transcrição...");
+                    // Crases corrigidas aqui:
+                    await interaction.reply(`🔒 Ticket com mensagens suficientes (**${msgCount}**). A gerar transcrição...`);
                     await sendTranscript(channel, user.tag); 
                     return setTimeout(() => channel.delete().catch(() => {}), 5000);
                 } else {
