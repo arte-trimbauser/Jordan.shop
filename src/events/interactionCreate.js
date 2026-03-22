@@ -48,7 +48,7 @@ module.exports = (client) => {
                         "O suporte e os tickets são processados exclusivamente em Português.\n\n" +
                         "**Comportamento do Ticket**\n" +
                         "Por favor, não envie spam ou ping várias vezes em DM ou tickets.\n" +
-                        "Aguarde pacientemente até receber seu produto ou uma resposta.\n\n" +
+                        "Aguarde pacientemente até receber seu product ou uma resposta.\n\n" +
                         "*Atenciosamente, Jordan.*"
                     )
                     .setColor("#ff0000");
@@ -58,7 +58,6 @@ module.exports = (client) => {
                     new ButtonBuilder().setCustomId(`recusar_termos_${tipo}`).setLabel("Recusar os Termos").setStyle(ButtonStyle.Danger)
                 );
 
-                // CORREÇÃO: De ephemeral: true para flags: [64]
                 return interaction.reply({ embeds: [embed], components: [row], flags: [64] });
             }
 
@@ -87,26 +86,24 @@ module.exports = (client) => {
                     await logChan.send(`✅ <@${user.id}> aceitou os termos para **${tipo}**.`);
                 }
 
-const menu = new StringSelectMenuBuilder()
-        .setCustomId(`pagamento_${tipo}`)
-        .setPlaceholder("Seleciona o método de pagamento...")
-        .addOptions(Object.keys(emojisPagamento).map(m => ({
-            label: m,
-            value: m,
-            // Adiciona o emoji correspondente à frente do texto
-            emoji: emojisPagamento[m] 
-        })));
+                const menu = new StringSelectMenuBuilder()
+                    .setCustomId(`pagamento_${tipo}`)
+                    .setPlaceholder("Seleciona o método de pagamento...")
+                    .addOptions(Object.keys(emojisPagamento).map(m => ({
+                        label: m,
+                        value: m,
+                        emoji: emojisPagamento[m] 
+                    })));
 
-    return interaction.update({
-        content: "💳 **Termos aceites!** Escolhe o pagamento:",
-        embeds: [],
-        components: [new ActionRowBuilder().addComponents(menu)]
-    });
-}
+                return interaction.update({
+                    content: "💳 **Termos aceites!** Escolhe o pagamento:",
+                    embeds: [],
+                    components: [new ActionRowBuilder().addComponents(menu)]
+                });
+            }
 
             /* ================= CRIAR TICKET ================= */
             if (interaction.isStringSelectMenu() && cid?.startsWith("pagamento_")) {
-                // CORREÇÃO: De ephemeral: true para flags: [64]
                 await interaction.deferReply({ flags: [64] });
 
                 const tipo = cid.replace("pagamento_", "");
@@ -175,7 +172,7 @@ const menu = new StringSelectMenuBuilder()
                 });
             }
 
-            // 5. REIVINDICAR TICKET
+            /* ================= REIVINDICAR TICKET ================= */
             if (cid === "claim_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas Staff.", flags: [64] });
                 
@@ -197,31 +194,9 @@ const menu = new StringSelectMenuBuilder()
                 });
             }
 
-            // 5. REIVINDICAR TICKET
-            if (cid === "claim_ticket") {
-                if (!isStaff(member)) return interaction.reply({ content: "Apenas Staff.", flags: [64] });
-                
-                const [uid, met, pdr] = channel.topic?.split("|") || ["?", "Não definido", "Geral"];
-                const emj = emojisPagamento[met] || "💰";
-
-                const embedClaim = new EmbedBuilder()
-                    .setTitle("🛡️ Ticket Reivindicado")
-                    .setDescription(`👤 **Staff:** <@${user.id}>\n**Produto:** ${pdr}\n**Método:** ${emj} ${met}`)
-                    .setColor("#57f287");
-
-                return await interaction.update({
-                    embeds: [embedClaim],
-                    components: [new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId("claimed").setLabel("Reivindicado").setStyle(ButtonStyle.Success).setDisabled(true),
-                        new ButtonBuilder().setCustomId("call_staff_list").setLabel("🔔 Chamar Staff").setStyle(ButtonStyle.Primary),
-                        new ButtonBuilder().setCustomId("close_ticket").setLabel("Fechar").setStyle(ButtonStyle.Danger)
-                    )]
-                });
-            }
-
-            // 6. CHAMAR STAFF
+            /* ================= CHAMAR STAFF ================= */
             if (cid === "call_staff_list") {
-                const tempoEspera = 300000; // 5 minutos
+                const tempoEspera = 300000; 
                 const agora = Date.now();
                 
                 if (cooldowns.has(user.id) && (agora < cooldowns.get(user.id) + tempoEspera)) {
@@ -271,7 +246,7 @@ const menu = new StringSelectMenuBuilder()
                 });
             }
 
-            // 7. FECHAR TICKET
+            /* ================= FECHAR TICKET ================= */
             if (cid === "close_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas staff pode fechar.", flags: [64] });
 
@@ -279,7 +254,6 @@ const menu = new StringSelectMenuBuilder()
                 const msgCount = messages.size; 
 
                 if (msgCount >= 5) {
-                    // Crases corrigidas aqui:
                     await interaction.reply(`🔒 Ticket com mensagens suficientes (**${msgCount}**). A gerar transcrição...`);
                     await sendTranscript(channel, user.tag); 
                     return setTimeout(() => channel.delete().catch(() => {}), 5000);
