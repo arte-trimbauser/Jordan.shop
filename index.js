@@ -9,13 +9,13 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const port = process.env.PORT || 10000;
 
-// --- CONFIGURAÇÃO SUPABASE ---
+// --- CONFIGURAÇÃO SUPABASE (Mantido) ---
 const supabase = createClient(
     'https://fdbmhgcfhdnnpwuodxzh.supabase.co',
     process.env.SUPABASE_KEY
 );
 
-// --- CONFIGURAÇÃO DE SEGURANÇA ---
+// --- CONFIGURAÇÃO DE SEGURANÇA (Mantido) ---
 const staffAutorizado = {
     "924344854232834068": "Jordan Costa",
     "996454465555136675": "Arteex26",
@@ -28,7 +28,7 @@ let tokensAtivos = new Set();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'site'), { index: false }));
 
-// --- ROTAS DE LOGIN ---
+// --- ROTAS DE LOGIN (Mantido) ---
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'site', 'login.html'));
 });
@@ -70,7 +70,7 @@ app.get('/callback', async (req, res) => {
     }
 });
 
-// --- API: ENVIAR EMBED ---
+// --- API: ENVIAR EMBED (Mantido) ---
 app.post('/api/enviar-embed', async (req, res) => {
     const { titulo, desc, cor, canalId, produtos } = req.body;
     if (!titulo || !desc || !canalId) return res.status(400).send("Faltam campos.");
@@ -97,12 +97,10 @@ app.post('/api/enviar-embed', async (req, res) => {
     }
 });
 
-// --- ROTA DE TRANSCRIPTS (CORREÇÃO FINAL) ---
+// --- ROTA DE TRANSCRIPTS (Mantido) ---
 app.get('/transcripts/:channelId', async (req, res) => {
     const { channelId } = req.params;
-
     try {
-        // Procuramos o ficheiro no bucket 'transcripts' dentro da pasta 'transcripts/'
         const { data: files, error: listError } = await supabase.storage
             .from('transcripts')
             .list('transcripts', {
@@ -116,7 +114,6 @@ app.get('/transcripts/:channelId', async (req, res) => {
             return res.status(404).send("❌ Transcrição não encontrada. O ticket pode ser muito recente ou o ficheiro não foi gerado.");
         }
 
-        // Obtemos o link público do ficheiro encontrado
         const { data } = supabase.storage
             .from('transcripts')
             .getPublicUrl(`transcripts/${files[0].name}`);
@@ -125,7 +122,6 @@ app.get('/transcripts/:channelId', async (req, res) => {
             return res.status(404).send("❌ Erro ao gerar o URL de visualização.");
         }
 
-        // Redireciona para o HTML no Supabase
         res.redirect(data.publicUrl);
     } catch (err) {
         console.error("Erro na rota /transcripts:", err.message);
@@ -133,7 +129,7 @@ app.get('/transcripts/:channelId', async (req, res) => {
     }
 });
 
-// --- BOT DISCORD ---
+// --- BOT DISCORD (ESTRUTURA CORRIGIDA) ---
 const client = new Client({ 
     intents: [
         GatewayIntentBits.Guilds, 
@@ -143,23 +139,34 @@ const client = new Client({
     ] 
 });
 
-client.on(Events.ClientReady, (c) => {
+// Carregamos os ficheiros de eventos ANTES do login para evitar erros no Render
+const inicializarBot = () => {
     try {
+        // 1. Sistema de Interações
         const interactionPath = path.join(__dirname, "src", "events", "interactionCreate.js");
         if (fs.existsSync(interactionPath)) {
             require(interactionPath)(client);
             console.log("✅ Interaction System carregado.");
         }
-        const readyPath = path.join(__dirname, "src", "events", "ready.js");
-        if (fs.existsSync(readyPath)) {
-            const readyEvent = require(readyPath);
-            if (typeof readyEvent === "function") readyEvent(client);
-        }
+
+        // 2. Evento Ready e Ready.js
+        client.once(Events.ClientReady, (c) => {
+            console.log(`✅ Bot online como ${c.user.tag}`);
+            
+            const readyPath = path.join(__dirname, "src", "events", "ready.js");
+            if (fs.existsSync(readyPath)) {
+                const readyEvent = require(readyPath);
+                if (typeof readyEvent === "function") readyEvent(client);
+            }
+        });
     } catch (e) {
         console.warn("⚠️ Erro ao carregar eventos:", e.message);
     }
-});
+};
 
+inicializarBot();
+
+// --- INICIALIZAÇÃO DO SERVIDOR ---
 app.listen(port, "0.0.0.0", () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
 });
@@ -168,5 +175,7 @@ const TOKEN = process.env.TOKEN || process.env.DISCORD_TOKEN;
 if (!TOKEN) {
     console.error("❌ ERRO: Token não encontrado!");
 } else {
-    client.login(TOKEN).catch(err => console.error("❌ ERRO NO LOGIN:", err.message));
+    client.login(TOKEN).catch(err => {
+        console.error("❌ ERRO NO LOGIN DO DISCORD:", err.message);
+    });
 }
