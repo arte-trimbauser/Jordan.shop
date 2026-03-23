@@ -103,13 +103,14 @@ module.exports = (client) => {
                         { label: "Multibanco", value: "ReferenciaMultibanco", emoji: "1464609317926735902" }
                     ]);
                 
-                return interaction.update({
+                    return interaction.update({
                     content: "✅ **Termos aceites!** Seleciona o método de pagamento:",
                     embeds: [],
                     components: [new ActionRowBuilder().addComponents(menuPag)]
                 });
-            }
-       /* ================= CRIAR TICKET ================= */
+            } // <--- ESTA CHAVETA TEM DE ESTAR AQUI!
+
+        /* ================= CRIAR TICKET ================= */
             if (interaction.isStringSelectMenu() && cid?.startsWith("pagamento_")) {
                 await interaction.deferReply({ flags: [64] });
 
