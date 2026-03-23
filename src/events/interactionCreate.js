@@ -94,7 +94,7 @@ module.exports = (client) => {
                 const menu = new StringSelectMenuBuilder()
                     .setCustomId(`pagamento_${tipo}`)
 
-            /* ================= CRIAR TICKET ================= */
+       /* ================= CRIAR TICKET ================= */
             if (interaction.isStringSelectMenu() && cid?.startsWith("pagamento_")) {
                 await interaction.deferReply({ flags: [64] });
 
@@ -102,11 +102,15 @@ module.exports = (client) => {
                 const metodo = interaction.values[0];
                 const emoji = emojisPagamento[metodo] || "💰";
 
+                // Criar o canal com as configurações certas
                 const ticket = await guild.channels.create({
                     name: `ticket-${tipo}-${user.username}`.toLowerCase(),
                     type: ChannelType.GuildText,
                     parent: config.CATEGORY_ID || null,
-                    topic: `${user.id}|${metodo}|${tipo}`,
+                    
+                    // IMPORTANTE: ID do user no início para o sistema de DM o encontrar
+                    topic: `${user.id}|${metodo}|${tipo}`, 
+                    
                     permissionOverwrites: [
                         { id: guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
                         { 
