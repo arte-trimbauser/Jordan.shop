@@ -16,12 +16,17 @@ async function sendTranscript(channel, userName) {
         const fileName = `${channel.id}.html`;
         const filePath = `transcripts/${fileName}`; 
 
-        // 2. Envia para o storage do Supabase
+        // 2. ENVIAR PARA O SUPABASE COM OS METADADOS (Onde metes o código novo)
         const { error: storageError } = await supabase.storage
             .from('transcripts') 
             .upload(filePath, attachment.attachment, {
                 contentType: 'text/html',
-                upsert: true 
+                upsert: true,
+                cacheControl: '3600',
+                metadata: { 
+                    cliente: userName, 
+                    canal: channel.name 
+                }
             });
 
         if (storageError) console.error("⚠️ Erro Supabase Storage:", storageError.message);
@@ -48,7 +53,7 @@ async function sendTranscript(channel, userName) {
             });
         }
 
-        console.log(`✅ Transcript de ${channel.name} guardado.`);
+        console.log(`✅ Transcript de ${channel.name} guardado com metadados.`);
         return filePath;
 
     } catch (err) {
