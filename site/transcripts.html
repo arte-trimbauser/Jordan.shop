@@ -3,102 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jordan Shop | Transcripts</title>
+    <title>Jordan Shop | Painel Staff</title>
     <link rel="icon" type="image/png" href="logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     
     <script>
+        const params = new URLSearchParams(window.location.search);
+        const userNoLink = params.get('user');
+
+        if (userNoLink) {
+            sessionStorage.setItem('staff_sessao', userNoLink);
+            window.history.replaceState({}, document.title, "loja.html");
+        } 
+
+        if (!sessionStorage.getItem('staff_sessao')) {
+            alert("⚠️ Sessão Inválida! Faz login novamente.");
+            window.location.href = "login.html";
+        }
+
         const utilizadorLogado = sessionStorage.getItem('staff_sessao');
-        if (!utilizadorLogado) { window.location.href = "login.html"; }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('nav-username').innerText = utilizadorLogado;
+            document.getElementById('main-welcome').innerText = "Bem-Vindo, " + utilizadorLogado;
+            
+            setTimeout(() => {
+                const splash = document.getElementById('welcome-screen');
+                splash.style.opacity = '0';
+                setTimeout(() => splash.style.display = 'none', 800);
+            }, 1500);
+        });
     </script>
 
     <style>
-        :root {
-            --primary-red: #8b0000;
-            --card-bg: rgba(25, 25, 25, 0.95);
-        }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Open Sans', sans-serif; color: white; background: #000; overflow-x: hidden; }
+:root {
+    /* Este tom #8b0000 é o vermelho escuro clássico que aparece no teu header */
+    --primary-red: #8b0000; 
+    --overlay-dark: rgba(0, 0, 0, 0.85); /* Mantém o fundo escuro para realçar a imagem */
+}
+        * { box-sizing: border-box; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Open Sans', sans-serif; color: white; overflow: hidden; }
         
-        .bg-full { position: fixed; top:0; left:0; width:100%; height:100%; background: url('menu.png') no-repeat center center; background-size: cover; z-index:-2; filter: brightness(0.4); }
-        .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); z-index:-1; }
-
-        header { background: var(--primary-red); height:60px; display:flex; justify-content:space-between; align-items:center; padding:0 30px; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .user-tag { background: rgba(0,0,0,0.4); padding:8px 15px; border-radius:5px; display: flex; align-items: center; gap: 10px; font-weight: 600; }
-
-        .container { display:flex; min-height: calc(100vh - 60px); }
+.bg-full {
+    background: url('teu-fundo-personalizado.png') no-repeat center center;
+    background-size: cover;
+    filter: brightness(0.4); /* Ajusta isto para a imagem não ficar demasiado clara e tapar o texto */
+}        .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--overlay-dark); z-index:-1; }
         
-        aside { width:260px; background: rgba(30,30,30,0.7); backdrop-filter: blur(10px); padding:20px; border-right:1px solid rgba(255,255,255,0.1); }
-        .nav-btn { display: block; background: var(--primary-red); color:white; padding:14px; border-radius:6px; font-weight:600; text-decoration:none; text-align:center; margin-bottom: 15px; transition: 0.3s; border: none; width: 100%; cursor: pointer; }
-        .nav-btn:hover { background: #ff0000; transform: scale(1.02); }
+        #welcome-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: #000; display:flex; justify-content:center; align-items:center; z-index:9999; transition: opacity 0.8s ease; }
+        
+        header { background: var(--primary-red); height:60px; display:flex; justify-content:space-between; align-items:center; padding:0 30px; box-shadow:0 4px 15px rgba(0,0,0,0.5); z-index: 10; position: relative; }
+        .logo-link { color: white; text-decoration: none; font-weight: 800; font-size: 1.3rem; }
+        .user-tag { background: rgba(0,0,0,0.4); padding:8px 15px; border-radius:5px; font-weight:600; display: flex; align-items: center; gap: 10px; }
 
-        main { flex:1; padding:40px; overflow-y:auto; }
-        h1 { font-size: 2.5rem; margin-bottom: 30px; text-shadow: 2px 2px 10px rgba(0,0,0,0.5); font-weight: 800; }
+        .container { display:flex; height: calc(100vh - 60px); }
+        
+        aside { width:260px; background: rgba(40,40,40,0.6); backdrop-filter: blur(15px); padding:20px; display:flex; flex-direction:column; border-right:1px solid rgba(255,255,255,0.1); }
+        .nav-links { display: flex; flex-direction: column; gap: 12px; flex-grow: 1; }
+        
+        .search-box { width:100%; padding:12px; border-radius:5px; border:none; background: rgba(255,255,255,0.1); color:white; outline:none; border-bottom:2px solid transparent; transition:0.3s; margin-bottom: 20px; }
+        .search-box:focus { border-bottom:2px solid var(--primary-red); }
 
-        .logs-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
-            gap: 20px; 
-            width: 100%;
-        }
+        .nav-btn { background: var(--primary-red); color:white; border:none; padding:14px; border-radius:6px; font-weight:600; cursor:pointer; transition: var(--transition-speed); text-align:center; }
+.nav-btn:hover {
+    background: #a30000; /* Um vermelho ligeiramente mais claro para o efeito de clique */
+    box-shadow: 0 0 15px rgba(139, 0, 0, 0.4);
+    transform: translateX(5px);
+}
+        .logout-btn { background: #b30000; color: white; padding: 12px; border-radius: 6px; text-decoration: none; font-weight: bold; text-align: center; margin-top: auto; transition: 0.3s; }
+        .logout-btn:hover { background: #ff0000; }
 
-        .log-card {
-            background: var(--card-bg);
-            border: 1px solid #333;
-            border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            transition: 0.3s;
-            position: relative;
-            overflow: hidden;
-            border-left: 5px solid var(--primary-red);
-        }
+        main { flex:1; padding:40px; overflow-y:auto; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .content-div { width: 100%; max-width: 850px; display: none; animation: fadeIn 0.4s ease; }
+        
+        h1 { font-size:2.5rem; font-weight:800; text-shadow:2px 2px 8px rgba(0,0,0,0.8); margin-bottom: 30px; }
 
-        .log-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--primary-red);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
-        }
+        /* Estilo das Vendas */
+.log-item {
+    background: rgba(20, 20, 20, 0.8); /* O 0.8 dá a transparência necessária */
+    backdrop-filter: blur(5px); /* Dá aquele efeito de vidro fosc */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-left: 5px solid var(--primary-red); /* Mantém a linha vermelha à esquerda */
+}
+        .log-item:hover { border-color: var(--primary-red); transform: scale(1.01); }
+        .log-info strong { display: block; font-size: 1rem; color: #fff; }
+        .log-info span { color: #bbb; font-size: 0.85rem; }
+        .status-badge { padding: 5px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; background: #00ff00; color: #000; min-width: 80px; text-align: center; }
 
-        .log-card strong { font-size: 1.1rem; color: #fff; margin-bottom: 5px; display: block; text-transform: uppercase; letter-spacing: 1px; }
-        .log-card span { color: #888; font-size: 0.85rem; margin-bottom: 20px; flex-grow: 1; }
+        /* Estilo do Criador de Embed */
+        .embed-card { background: rgba(20, 20, 20, 0.95); padding: 30px; border-radius: 15px; border-top: 5px solid var(--primary-red); text-align: left; }
+        .form-label { display: block; color: #bbb; margin-bottom: 8px; font-weight: bold; font-size: 0.9rem; }
+        .embed-input { width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid #444; border-radius: 6px; color: white; margin-bottom: 20px; outline: none; }
+        .embed-input:focus { border-color: var(--primary-red); }
 
-        .btn-open {
-            background: #fff;
-            color: #000;
-            text-align: center;
-            padding: 12px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 800;
-            font-size: 0.85rem;
-            transition: 0.3s;
-            text-transform: uppercase;
-        }
+        .status-card { background: rgba(20, 20, 20, 0.95); padding: 30px; border-radius: 15px; border-left: 8px solid #00ff00; text-align: left; width: 100%; max-width: 500px; }
 
-        .btn-open:hover {
-            background: var(--primary-red);
-            color: #fff;
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
+
+    <div id="welcome-screen">
+        <h2 style="font-size: 2.5rem;">Jordan Shop | Painel Staff</h2>
+    </div>
 
     <div class="bg-full"></div>
     <div class="overlay"></div>
 
     <header>
-        <a href="loja.html" style="color:white; text-decoration:none; font-weight:800; letter-spacing: 1px;">JORDAN SHOP | STAFF</a>
+        <a href="javascript:location.reload()" class="logo-link">Jordan Shop | 🔃 Atualizar</a>
         <div class="user-tag">
+            <img src="logo.png" style="width:25px; border-radius:50%;" alt="User">
             Olá, <span id="nav-username">Staff</span>
         </div>
     </header>
 
     <div class="container">
         <aside>
-            <a href="loja.html" class="nav-btn">VOLTAR AO MENU</a>
-            <button class="nav-btn" onclick="fetchLogs()">ATUALIZAR LISTA</button>
+            <input type="text" id="search" class="search-box" placeholder="Procurar função..." onkeyup="filtrarMenu()">
+            <div class="nav-links">
+                <button class="nav-btn" onclick="showSection('welcome-section')">INÍCIO</button>
+                <button class="nav-btn" onclick="window.location.href='https://jordan-shop.onrender.com/transcripts.html'">TRANSCRIPTS</button>
+                <button class="nav-btn" onclick="showSection('vendas-section')">VENDAS</button>
+                <button class="nav-btn" onclick="showSection('embed-section')">CRIAR EMBED</button>
+                <button class="nav-btn" onclick="showSection('bot-status-section')">SITE ONLINE</button>
+            </div>
+            <a href="login.html" class="logout-btn" onclick="sessionStorage.clear()">SAIR 🚪</a>
         </aside>
+
+        <main>
+            <div id="welcome-section" class="content-div" style="display:block;">
+                <h1 id="main-welcome">Bem-Vindo</h1>
+                <p style="font-size: 1.2rem; opacity: 0.8;">Painel de Administração e Gestão da Jordan Shop</p>
+            </div>
 
         <main>
             <h1>📄 Histórico de Transcripts</h1>
