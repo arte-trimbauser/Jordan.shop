@@ -35,7 +35,12 @@ app.get('/', (req, res) => {
 
 app.post('/api/login-manual', (req, res) => {
     const { username, password } = req.body;
-    if (username === "Arteex26" && password === "Arteex_26") {
+    if (username === "Jordan Costa" && password === "Jordan26Costa"),
+    if (username === "Arteex26" && password === "Arteex_26"),
+    if (username === "lucasvieira0453" && password === "lucasvieira"),
+    if (username === "migueldodrip_09110" && password === "migueldodrip"),
+    if (username === "pincher11" && password === "pincher11")
+    {
         const tokenSessao = Math.random().toString(36).substring(2, 15);
         tokensAtivos.add(tokenSessao);
         return res.json({ success: true, user: username, token: tokenSessao });
