@@ -79,7 +79,7 @@ module.exports = (client) => {
                 });
             }
 
-            /* ================= ACEITAR ================= */
+/* ================= ACEITAR TERMOS -> MOSTRAR PAGAMENTO ================= */
             if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 const tipo = cid.replace("aceitar_termos_", "");
                 const canalLogs = guild.channels.cache.get(config.STAFF_LOGS_CHANNEL_ID);
@@ -90,10 +90,24 @@ module.exports = (client) => {
                     });
                 }
                 
-                // O resto do teu código do menu de pagamento continua aqui...
-                const menu = new StringSelectMenuBuilder()
+                // Configurar o menu de pagamento corretamente
+                const menuPagamento = new StringSelectMenuBuilder()
                     .setCustomId(`pagamento_${tipo}`)
+                    .setPlaceholder("💳 Escolha o método de pagamento")
+                    .addOptions([
+                        { label: "MBWay", value: "MBWay", emoji: "1464608251516813446" },
+                        { label: "PayPal", value: "PayPal", emoji: "1464608396383883314" },
+                        { label: "Revolut", value: "Revolut", emoji: "1464608485617565726" },
+                        { label: "Multibanco", value: "ReferenciaMultibanco", emoji: "1464609317926735902" }
+                    ]);
 
+                // Responder ao utilizador com o menu
+                return interaction.update({
+                    content: "✅ **Termos aceites!** Agora seleciona o método de pagamento:",
+                    embeds: [],
+                    components: [new ActionRowBuilder().addComponents(menuPagamento)]
+                });
+            }
        /* ================= CRIAR TICKET ================= */
             if (interaction.isStringSelectMenu() && cid?.startsWith("pagamento_")) {
                 await interaction.deferReply({ flags: [64] });
