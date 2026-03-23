@@ -177,7 +177,7 @@ app.get('/transcripts/:channelId', async (req, res) => {
     }
 });
 
-// --- INICIALIZAR BOT ---
+// --- INICIALIZAR BOT (Corrigido e Completo) ---
 const inicializarBot = () => {
     try {
         // 1. Carregar Sistema de Interações
@@ -187,27 +187,42 @@ const inicializarBot = () => {
             console.log("✅ Sistema de Interações preparado.");
         }
 
-        // 2. Carregar o Evento Ready corretamente
+        // 2. Carregar o Evento Ready
         const readyPath = path.join(__dirname, "src", "events", "ready.js");
         if (fs.existsSync(readyPath)) {
             const readyEvent = require(readyPath);
             if (typeof readyEvent === "function") {
-                // Registamos o evento ANTES do login
                 client.once(Events.ClientReady, (...args) => readyEvent(client, ...args));
                 console.log("✅ Evento Ready configurado.");
             }
+        }
+
+        // 3. Carregar Sistema de Notificações (DM Staff -> Cliente)
+        const messagePath = path.join(__dirname, "src", "events", "messageCreate.js");
+        if (fs.existsSync(messagePath)) {
+            client.on("messageCreate", (message) => {
+                try {
+                    require(messagePath)(client, message);
+                } catch (err) {
+                    console.error("⚠️ Erro no messageCreate:", err.message);
+                }
+            });
+            console.log("✅ Sistema de Notificações Staff -> Cliente ativo.");
         }
     } catch (e) {
         console.warn("⚠️ Erro ao configurar eventos:", e.message);
     }
 };
 
+// Executar a inicialização
 inicializarBot();
 
+// --- INICIAR SERVIDOR HTTP ---
 app.listen(port, "0.0.0.0", () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
 });
 
+// --- LOGIN DO DISCORD ---
 const TOKEN = process.env.TOKEN || process.env.DISCORD_TOKEN;
 if (!TOKEN) {
     console.error("❌ ERRO: Token não encontrado!");
