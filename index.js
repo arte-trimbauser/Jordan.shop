@@ -97,35 +97,44 @@ app.post('/api/enviar-embed', async (req, res) => {
     }
 });
 
-// --- ROTA DE TRANSCRIPTS (Mantido) ---
+// --- API: LISTAR TRANSCRIPTS (Para a grelha do site) ---
+app.get('/api/list-transcripts', async (req, res) => {
+    try {
+        const { data: files, error } = await supabase.storage
+            .from('transcripts')
+            .list('transcripts', {
+                limit: 100,
+                sortBy: { column: 'created_at', order: 'desc' }
+            });
+
+        if (error) throw error;
+        const logs = files.filter(f => f.name.endsWith('.html') && f.name !== ".gitkeep");
+        res.json(logs);
+    } catch (err) {
+        console.error("Erro ao listar logs:", err.message);
+        res.status(500).json({ error: "Erro ao procurar logs no Supabase" });
+    }
+});
+
+// --- ROTA DE VISUALIZAÇÃO (Para o botão "Abrir" funcionar) ---
 app.get('/transcripts/:channelId', async (req, res) => {
     const { channelId } = req.params;
     try {
         const { data: files, error: listError } = await supabase.storage
             .from('transcripts')
-            .list('transcripts', {
-                limit: 10,
-                offset: 0,
-                sortBy: { column: 'name', order: 'desc' },
-                search: channelId
-            });
+            .list('transcripts', { search: channelId });
 
         if (listError || !files || files.length === 0) {
-            return res.status(404).send("❌ Transcrição não encontrada. O ticket pode ser muito recente ou o ficheiro não foi gerado.");
+            return res.status(404).send("❌ Transcrição não encontrada.");
         }
 
         const { data } = supabase.storage
             .from('transcripts')
             .getPublicUrl(`transcripts/${files[0].name}`);
 
-        if (!data || !data.publicUrl) {
-            return res.status(404).send("❌ Erro ao gerar o URL de visualização.");
-        }
-
         res.redirect(data.publicUrl);
     } catch (err) {
-        console.error("Erro na rota /transcripts:", err.message);
-        res.status(500).send("❌ Erro interno no servidor ao procurar o log.");
+        res.status(500).send("❌ Erro ao procurar o log.");
     }
 });
 
