@@ -9,13 +9,16 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const port = process.env.PORT || 10000;
 
-// --- CONFIGURAÇÃO SUPABASE (Mantido) ---
+// --- CONFIGURAÇÃO SUPABASE ---
 const supabase = createClient(
     'https://fdbmhgcfhdnnpwuodxzh.supabase.co',
     process.env.SUPABASE_KEY
 );
 
-// --- CONFIGURAÇÃO DE SEGURANÇA (Mantido) ---
+// Canal de logs
+const ID_CANAL_LOGS = "1437076921627181228";
+
+// --- CONFIGURAÇÃO DE SEGURANÇA ---
 const staffAutorizado = {
     "924344854232834068": "Jordan Costa",
     "996454465555136675": "Arteex26",
@@ -28,21 +31,32 @@ let tokensAtivos = new Set();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'site'), { index: false }));
 
-// --- ROTAS DE LOGIN (Mantido) ---
+// --- ROTAS DE LOGIN ---
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'site', 'login.html'));
 });
 
-app.post('/api/login-manual', (req, res) => {
+app.post('/api/login-manual', async (req, res) => {
     const { username, password } = req.body;
-    if (username === "Jordan Costa" && password === "Jordan26Costa"),
-    if (username === "Arteex26" && password === "Arteex_26"),
-    if (username === "lucasvieira0453" && password === "lucasvieira"),
-    if (username === "migueldodrip_09110" && password === "migueldodrip"),
-    if (username === "pincher11" && password === "pincher11")
-    {
+
+    // Lógica de verificação corrigida mantendo os teus dados
+    const loginValido = 
+        (username === "Jordan Costa" && password === "Jordan26Costa") ||
+        (username === "Arteex26" && password === "Arteex_26") ||
+        (username === "lucasvieira0453" && password === "lucasvieira") ||
+        (username === "migueldodrip_09110" && password === "migueldodrip") ||
+        (username === "pincher11" && password === "pincher11");
+
+    if (loginValido) {
         const tokenSessao = Math.random().toString(36).substring(2, 15);
         tokensAtivos.add(tokenSessao);
+
+        // Enviar log de login para o Discord
+        const canalLogsLogin = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
+        if (canalLogsLogin) {
+            canalLogsLogin.send(`🔐 **[SISTEMA]** O utilizador **${username}** acabou de entrar no painel de controlo da Jordan Shop.`);
+        }
+
         return res.json({ success: true, user: username, token: tokenSessao });
     } else {
         return res.status(401).json({ success: false, message: "Utilizador ou Password incorretos!" });
@@ -75,7 +89,7 @@ app.get('/callback', async (req, res) => {
     }
 });
 
-// --- API: ENVIAR EMBED (Mantido) ---
+// --- API: ENVIAR EMBED ---
 app.post('/api/enviar-embed', async (req, res) => {
     const { titulo, desc, cor, canalId, produtos } = req.body;
     if (!titulo || !desc || !canalId) return res.status(400).send("Faltam campos.");
@@ -96,13 +110,20 @@ app.post('/api/enviar-embed', async (req, res) => {
             components.push(new ActionRowBuilder().addComponents(selectMenu));
         }
         await canal.send({ embeds: [embed], components: components });
+
+        // Enviar log de envio de embed
+        const canalLogsStaff = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
+        if (canalLogsStaff) {
+            canalLogsStaff.send(`📦 **[PAINEL]** O embed de produtos foi enviado para o canal <#${canalId}>.`);
+        }
+
         res.status(200).send("✅ Enviado!");
     } catch (error) {
         res.status(500).send("Erro ao comunicar com o Discord.");
     }
 });
 
-// --- API: LISTAR TRANSCRIPTS (Para a grelha do site) ---
+// --- API: LISTAR TRANSCRIPTS ---
 app.get('/api/list-transcripts', async (req, res) => {
     try {
         const { data: files, error } = await supabase.storage
@@ -121,11 +142,10 @@ app.get('/api/list-transcripts', async (req, res) => {
     }
 });
 
-// --- ROTA DE VISUALIZAÇÃO (Para o botão "Abrir" funcionar) ---
+// --- ROTA DE VISUALIZAÇÃO ---
 app.get('/transcripts/:channelId', async (req, res) => {
     const { channelId } = req.params;
     try {
-        // 1. Procurar o ficheiro no Supabase
         const { data: files, error: listError } = await supabase.storage
             .from('transcripts')
             .list('transcripts', { search: channelId });
@@ -134,17 +154,13 @@ app.get('/transcripts/:channelId', async (req, res) => {
             return res.status(404).send("❌ Transcrição não encontrada.");
         }
 
-        // 2. Em vez de redirecionar, vamos descarregar o conteúdo do ficheiro
         const { data, error: downloadError } = await supabase.storage
             .from('transcripts')
             .download(`transcripts/${files[0].name}`);
 
         if (downloadError) throw downloadError;
 
-        // 3. Transformar o conteúdo em texto
         const conteudoHTML = await data.text();
-
-        // 4. Enviar para o navegador avisando que é um HTML (isto é o que faz aparecer bonito!)
         res.setHeader('Content-Type', 'text/html');
         res.send(conteudoHTML);
 
@@ -154,7 +170,7 @@ app.get('/transcripts/:channelId', async (req, res) => {
     }
 });
 
-// --- BOT DISCORD (ESTRUTURA CORRIGIDA) ---
+// --- BOT DISCORD ---
 const client = new Client({ 
     intents: [
         GatewayIntentBits.Guilds, 
@@ -164,17 +180,14 @@ const client = new Client({
     ] 
 });
 
-// Carregamos os ficheiros de eventos ANTES do login para evitar erros no Render
 const inicializarBot = () => {
     try {
-        // 1. Sistema de Interações
         const interactionPath = path.join(__dirname, "src", "events", "interactionCreate.js");
         if (fs.existsSync(interactionPath)) {
             require(interactionPath)(client);
             console.log("✅ Interaction System carregado.");
         }
 
-        // 2. Evento Ready e Ready.js
         client.once(Events.ClientReady, (c) => {
             console.log(`✅ Bot online como ${c.user.tag}`);
             
