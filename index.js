@@ -177,7 +177,7 @@ app.get('/transcripts/:channelId', async (req, res) => {
     }
 });
 
-// --- INICIALIZAR BOT (Corrigido e Completo) ---
+// --- INICIALIZAR BOT (VERSÃO FINAL CORRIGIDA) ---
 const inicializarBot = () => {
     try {
         // 1. Carregar Sistema de Interações
@@ -214,7 +214,7 @@ const inicializarBot = () => {
     }
 };
 
-// Executar a inicialização
+// Chama a função para preparar os eventos
 inicializarBot();
 
 // --- INICIAR SERVIDOR HTTP ---
@@ -223,11 +223,12 @@ app.listen(port, "0.0.0.0", () => {
 });
 
 // --- LOGIN DO DISCORD ---
-const TOKEN = process.env.TOKEN || process.env.DISCORD_TOKEN;
-if (!TOKEN) {
+const TOKEN_BOT = process.env.TOKEN || process.env.DISCORD_TOKEN;
+
+if (!TOKEN_BOT) {
     console.error("❌ ERRO: Token não encontrado!");
 } else {
-    client.login(TOKEN).catch(err => {
+    client.login(TOKEN_BOT).catch((err) => {
         console.error("❌ ERRO NO LOGIN DO DISCORD:", err.message);
     });
 }
