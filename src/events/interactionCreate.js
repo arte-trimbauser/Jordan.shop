@@ -26,7 +26,7 @@ module.exports = (client) => {
         const { guild, channel, user, member, customId: cid } = interaction;
 
         try {
-            /* ================= MENU PRINCIPAL ================= */
+            /* ================= MENU ================= */
             if (interaction.isStringSelectMenu() && (cid === "menu_ticket" || cid === "menu_produtos")) {
                 const tipo = interaction.values[0];
 
@@ -61,15 +61,8 @@ module.exports = (client) => {
                 return interaction.reply({ embeds: [embed], components: [row], flags: [64] });
             }
 
-            /* ================= BOTÃO RECUSAR ================= */
+            /* ================= RECUSAR ================= */
             if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
-                const tipo = cid.replace("recusar_termos_", "");
-                const logChan = await guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID).catch(() => null);
-
-                if (logChan && typeof logChan.send === 'function') {
-                    await logChan.send(`❌ <@${user.id}> não aceitou os termos para **${tipo}**.`);
-                }
-
                 return interaction.update({
                     content: "⚠️ Tens de aceitar os termos para abrir seu ticket/pedido.",
                     embeds: [],
@@ -77,15 +70,10 @@ module.exports = (client) => {
                 });
             }
 
-            /* ================= BOTÃO ACEITAR ================= */
+            /* ================= ACEITAR ================= */
             if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 const tipo = cid.replace("aceitar_termos_", "");
                 
-                const logChan = await guild.channels.fetch(config.TRANSCRIPT_LOG_CHANNEL_ID).catch(() => null);
-                if (logChan && typeof logChan.send === 'function') {
-                    await logChan.send(`✅ <@${user.id}> aceitou os termos para **${tipo}**.`);
-                }
-
                 const menu = new StringSelectMenuBuilder()
                     .setCustomId(`pagamento_${tipo}`)
                     .setPlaceholder("Seleciona o método de pagamento...")
@@ -102,9 +90,8 @@ module.exports = (client) => {
                 });
             }
 
-            /* ================= CRIAR O TICKET (APÓS PAGAMENTO) ================= */
+            /* ================= CRIAR TICKET ================= */
             if (interaction.isStringSelectMenu() && cid?.startsWith("pagamento_")) {
-                // Importante: deferReply para evitar que a interação expire
                 await interaction.deferReply({ flags: [64] });
 
                 const tipo = cid.replace("pagamento_", "");
@@ -112,40 +99,30 @@ module.exports = (client) => {
                 const emoji = emojisPagamento[metodo] || "💰";
 
                 const ticket = await guild.channels.create({
-                    name: `ticket-${tipo}-${user.username}`.toLowerCase().substring(0, 32),
+                    name: `ticket-${tipo}-${user.username}`.toLowerCase(),
                     type: ChannelType.GuildText,
                     parent: config.CATEGORY_ID || null,
                     topic: `${user.id}|${metodo}|${tipo}`,
                     permissionOverwrites: [
-                        {
-                            id: guild.id,
-                            deny: [PermissionsBitField.Flags.ViewChannel]
-                        },
-                        {
-                            id: user.id,
+                        { id: guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+                        { 
+                            id: user.id, 
                             allow: [
                                 PermissionsBitField.Flags.ViewChannel,
                                 PermissionsBitField.Flags.SendMessages,
                                 PermissionsBitField.Flags.AttachFiles
-                            ]
+                            ] 
                         },
                         ...((config.STAFF_ROLES || []).map(r => ({
                             id: r,
-                            allow: [
-                                PermissionsBitField.Flags.ViewChannel,
-                                PermissionsBitField.Flags.SendMessages
-                            ]
+                            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
                         })))
                     ]
                 });
 
                 const embedTicket = new EmbedBuilder()
                     .setTitle("Jordan Shop | Suporte")
-                    .setDescription(
-                        `📦 **Produto:** ${tipo}\n` +
-                        `🛡️ **Staff:** Aguardando...\n` +
-                        `💳 **Método:** ${emoji} ${metodo}`
-                    )
+                    .setDescription(`📦 **Produto:** ${tipo}\n🛡️ **Staff:** Aguardando...\n💳 **Método:** ${emoji} ${metodo}`)
                     .setColor("#2f3136");
 
                 const btns = new ActionRowBuilder().addComponents(
@@ -169,8 +146,7 @@ module.exports = (client) => {
 
                 return await interaction.editReply({ 
                     content: `✅ Ticket/Pedido criado com sucesso: <#${ticket.id}>`, 
-                    components: [rowGo], 
-                    embeds: [] 
+                    components: [rowGo] 
                 });
             }
 
@@ -198,9 +174,9 @@ module.exports = (client) => {
 
             /* ================= CHAMAR STAFF ================= */
             if (cid === "call_staff_list") {
-                const tempoEspera = 300000; 
+                const tempoEspera = 300000;
                 const agora = Date.now();
-                
+
                 if (cooldowns.has(user.id) && (agora < cooldowns.get(user.id) + tempoEspera)) {
                     const restante = Math.ceil(((cooldowns.get(user.id) + tempoEspera) - agora) / 60000);
                     return await interaction.reply({ 
@@ -218,14 +194,14 @@ module.exports = (client) => {
 
                 const opts = staffOnline.map(m => ({ label: m.displayName, value: m.id })).slice(0, 25);
                 const menuS = new StringSelectMenuBuilder().setCustomId("notify_staff_id").setPlaceholder("Escolhe um Staff").addOptions(opts);
-                
+
                 return await interaction.reply({ content: "Quem pretendes chamar?", components: [new ActionRowBuilder().addComponents(menuS)], flags: [64] });
             }
 
             if (cid === "notify_staff_id") {
                 const target = await guild.members.fetch(interaction.values[0]);
                 cooldowns.set(user.id, Date.now());
-                
+
                 const embedDM = new EmbedBuilder()
                     .setTitle("📞 Chamada de Staff")
                     .setDescription(`O cliente **${user.username}** chamou-te em ${channel}`)
@@ -237,7 +213,7 @@ module.exports = (client) => {
                         .setStyle(ButtonStyle.Link)
                         .setURL(`https://discord.com/channels/${guild.id}/${channel.id}`)
                 );
-                
+
                 await target.send({ embeds: [embedDM], components: [rowL] }).catch(() => {});
 
                 return await interaction.update({ 
@@ -246,7 +222,7 @@ module.exports = (client) => {
                 });
             }
 
-            /* ================= FECHAR TICKET ================= */
+            /* ================= FECHAR ================= */
             if (cid === "close_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas staff pode fechar.", flags: [64] });
 
