@@ -15,7 +15,7 @@ const supabase = createClient(
     process.env.SUPABASE_KEY
 );
 
-// Canal de logs
+// Canal de logs que definiste
 const ID_CANAL_LOGS = "1437076921627181228";
 
 // --- CONFIGURAÇÃO DE SEGURANÇA ---
@@ -39,7 +39,7 @@ app.get('/', (req, res) => {
 app.post('/api/login-manual', async (req, res) => {
     const { username, password } = req.body;
 
-    // Lógica de verificação corrigida mantendo os teus dados
+    // CORREÇÃO: Usar o operador OR (||) para validar os utilizadores corretamente
     const loginValido = 
         (username === "Jordan Costa" && password === "Jordan26Costa") ||
         (username === "Arteex26" && password === "Arteex_26") ||
@@ -51,7 +51,7 @@ app.post('/api/login-manual', async (req, res) => {
         const tokenSessao = Math.random().toString(36).substring(2, 15);
         tokensAtivos.add(tokenSessao);
 
-        // Enviar log de login para o Discord
+        // LOG DE LOGIN NO DISCORD
         const canalLogsLogin = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
         if (canalLogsLogin) {
             canalLogsLogin.send(`🔐 **[SISTEMA]** O utilizador **${username}** acabou de entrar no painel de controlo da Jordan Shop.`);
@@ -111,7 +111,7 @@ app.post('/api/enviar-embed', async (req, res) => {
         }
         await canal.send({ embeds: [embed], components: components });
 
-        // Enviar log de envio de embed
+        // LOG DE ENVIO DE EMBED NO DISCORD
         const canalLogsStaff = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
         if (canalLogsStaff) {
             canalLogsStaff.send(`📦 **[PAINEL]** O embed de produtos foi enviado para o canal <#${canalId}>.`);
@@ -123,7 +123,7 @@ app.post('/api/enviar-embed', async (req, res) => {
     }
 });
 
-// --- API: LISTAR TRANSCRIPTS ---
+// --- API: LISTAR TRANSCRIPTS (Mantido) ---
 app.get('/api/list-transcripts', async (req, res) => {
     try {
         const { data: files, error } = await supabase.storage
@@ -142,7 +142,7 @@ app.get('/api/list-transcripts', async (req, res) => {
     }
 });
 
-// --- ROTA DE VISUALIZAÇÃO ---
+// --- ROTA DE VISUALIZAÇÃO (Mantido) ---
 app.get('/transcripts/:channelId', async (req, res) => {
     const { channelId } = req.params;
     try {
@@ -159,11 +159,9 @@ app.get('/transcripts/:channelId', async (req, res) => {
             .download(`transcripts/${files[0].name}`);
 
         if (downloadError) throw downloadError;
-
         const conteudoHTML = await data.text();
         res.setHeader('Content-Type', 'text/html');
         res.send(conteudoHTML);
-
     } catch (err) {
         console.error(err);
         res.status(500).send("❌ Erro ao processar o log.");
@@ -204,7 +202,6 @@ const inicializarBot = () => {
 
 inicializarBot();
 
-// --- INICIALIZAÇÃO DO SERVIDOR ---
 app.listen(port, "0.0.0.0", () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
 });
