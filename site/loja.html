@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     
     <script>
-        // Lógica de Sessão e Redirecionamento
         const params = new URLSearchParams(window.location.search);
         const userNoLink = params.get('user');
 
@@ -39,74 +38,71 @@
     <style>
         :root {
             --primary-red: #8b0000;
-            --overlay-dark: rgba(0, 0, 0, 0.8);
-            --transition-speed: 0.4s;
+            --overlay-dark: rgba(0, 0, 0, 0.85);
+            --transition-speed: 0.3s;
         }
         * { box-sizing: border-box; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Open Sans', sans-serif; color: white; overflow: hidden; }
         
-        .bg-full { position: fixed; top:0; left:0; width:100%; height:100%; background: url('menu.png') no-repeat center center; background-size: cover; z-index:-2; }
+        .bg-full { position: fixed; top:0; left:0; width:100%; height:100%; background: url('menu.png') no-repeat center center; background-size: cover; z-index:-2; filter: brightness(0.3); }
         .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--overlay-dark); z-index:-1; }
         
         #welcome-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: #000; display:flex; justify-content:center; align-items:center; z-index:9999; transition: opacity 0.8s ease; }
-        .welcome-content { text-align:center; animation: pulse 2s infinite; }
-
-        header { background: var(--primary-red); height:60px; display:flex; justify-content:space-between; align-items:center; padding:0 30px; box-shadow:0 4px 15px rgba(0,0,0,0.5); }
-        .logo-link { color: white; text-decoration: none; font-weight: 800; font-size: 1.3rem; cursor: pointer; }
+        
+        header { background: var(--primary-red); height:60px; display:flex; justify-content:space-between; align-items:center; padding:0 30px; box-shadow:0 4px 15px rgba(0,0,0,0.5); z-index: 10; position: relative; }
+        .logo-link { color: white; text-decoration: none; font-weight: 800; font-size: 1.3rem; }
         .user-tag { background: rgba(0,0,0,0.4); padding:8px 15px; border-radius:5px; font-weight:600; display: flex; align-items: center; gap: 10px; }
-        .user-avatar { width: 25px; height: 25px; border-radius: 50%; border: 1px solid white; }
 
         .container { display:flex; height: calc(100vh - 60px); }
         
-        aside { width:260px; background: rgba(40,40,40,0.6); backdrop-filter: blur(10px); padding:20px; display:flex; flex-direction:column; border-right:1px solid rgba(255,255,255,0.1); position: relative; }
+        aside { width:260px; background: rgba(40,40,40,0.6); backdrop-filter: blur(15px); padding:20px; display:flex; flex-direction:column; border-right:1px solid rgba(255,255,255,0.1); }
         .nav-links { display: flex; flex-direction: column; gap: 12px; flex-grow: 1; }
+        
         .search-box { width:100%; padding:12px; border-radius:5px; border:none; background: rgba(255,255,255,0.1); color:white; outline:none; border-bottom:2px solid transparent; transition:0.3s; margin-bottom: 20px; }
         .search-box:focus { border-bottom:2px solid var(--primary-red); }
-        
-        .nav-btn { background: var(--primary-red); color:white; border:none; padding:14px; border-radius:6px; font-weight:600; cursor:pointer; transition: var(--transition-speed); text-align:center; text-decoration:none; }
+
+        .nav-btn { background: var(--primary-red); color:white; border:none; padding:14px; border-radius:6px; font-weight:600; cursor:pointer; transition: var(--transition-speed); text-align:center; }
         .nav-btn:hover { transform: translateX(10px); filter: brightness(1.3); }
 
-        .logout-btn { background: #b30000; color: white; padding: 12px; border-radius: 6px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; margin-top: auto; }
-        .logout-btn:hover { background: #ff0000; transform: scale(1.02); }
+        .logout-btn { background: #b30000; color: white; padding: 12px; border-radius: 6px; text-decoration: none; font-weight: bold; text-align: center; margin-top: auto; transition: 0.3s; }
+        .logout-btn:hover { background: #ff0000; }
 
-        /* Estilo para centralizar textos nas secções */
-        main { flex:1; display:flex; flex-direction:column; align-items: center; padding:40px; overflow-y:auto; text-align: center; }
-        h1 { font-size:2.5rem; margin-bottom: 20px; font-weight:800; text-shadow:2px 2px 8px rgba(0,0,0,0.8); width: 100%; }
+        main { flex:1; padding:40px; overflow-y:auto; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .content-div { width: 100%; max-width: 850px; display: none; animation: fadeIn 0.4s ease; }
+        
+        h1 { font-size:2.5rem; font-weight:800; text-shadow:2px 2px 8px rgba(0,0,0,0.8); margin-bottom: 30px; }
 
-        .log-item { background: rgba(20, 20, 20, 0.9); padding:15px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid #333; transition:0.3s; margin-bottom:10px; width: 100%; max-width: 850px; text-align: left; }
-        .log-item:hover { border-color: var(--primary-red); }
+        /* Estilo das Vendas */
+        .log-item { background: rgba(20, 20, 20, 0.9); padding:15px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid #333; margin-bottom:10px; text-align: left; transition: 0.3s; }
+        .log-item:hover { border-color: var(--primary-red); transform: scale(1.01); }
         .log-info strong { display: block; font-size: 1rem; color: #fff; }
-        .log-info span { color:#bbb; font-size:0.85rem; line-height: 1.6; }
-        .status-badge { padding: 5px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+        .log-info span { color: #bbb; font-size: 0.85rem; }
+        .status-badge { padding: 5px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; background: #00ff00; color: #000; min-width: 80px; text-align: center; }
 
-        /* Ajuste para o Site Online ficar à esquerda */
-        #bot-status-section { width: 100%; display: flex; justify-content: flex-start; }
-        .status-card { background: rgba(20, 20, 20, 0.95); padding: 30px; border-radius: 15px; border-left: 8px solid #00ff00; text-align: left; width: 100%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .success-img { width: 100%; border-radius: 10px; margin-top: 20px; border: 1px solid #444; }
+        /* Estilo do Criador de Embed */
+        .embed-card { background: rgba(20, 20, 20, 0.95); padding: 30px; border-radius: 15px; border-top: 5px solid var(--primary-red); text-align: left; }
+        .form-label { display: block; color: #bbb; margin-bottom: 8px; font-weight: bold; font-size: 0.9rem; }
+        .embed-input { width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid #444; border-radius: 6px; color: white; margin-bottom: 20px; outline: none; }
+        .embed-input:focus { border-color: var(--primary-red); }
 
-        .embed-creator-card { background: rgba(20, 20, 20, 0.95); padding: 30px; border-radius: 15px; border-top: 5px solid var(--primary-red); text-align: left; width: 100%; max-width: 800px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin: 0 auto; }
-        .form-label { display: block; color: #bbb; margin-bottom: 5px; font-size: 0.9rem; font-weight: bold; }
+        .status-card { background: rgba(20, 20, 20, 0.95); padding: 30px; border-radius: 15px; border-left: 8px solid #00ff00; text-align: left; width: 100%; max-width: 500px; }
 
-        .content-div { width: 100%; }
-
-        @keyframes pulse { 0%{transform:scale(1);opacity:0.8;} 50%{transform:scale(1.05);opacity:1;} 100%{transform:scale(1);opacity:0.8;} }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
     <div id="welcome-screen">
-        <div class="welcome-content">
-            <h2 style="font-size: 2.5rem;">Jordan Shop | Painel de Administração</h2>
-        </div>
+        <h2 style="font-size: 2.5rem;">Jordan Shop | Painel Staff</h2>
     </div>
 
     <div class="bg-full"></div>
     <div class="overlay"></div>
 
     <header>
-        <a href="javascript:location.reload()" class="logo-link">Jordan Shop Site | 🔃 Atualizar </a>
+        <a href="javascript:location.reload()" class="logo-link">Jordan Shop | 🔃 Atualizar</a>
         <div class="user-tag">
-            <img src="logo.png" class="user-avatar" alt="Logo">
+            <img src="logo.png" style="width:25px; border-radius:50%;" alt="User">
             Olá, <span id="nav-username">Staff</span>
         </div>
     </header>
@@ -116,69 +112,85 @@
             <input type="text" id="search" class="search-box" placeholder="Procurar função..." onkeyup="filtrarMenu()">
             <div class="nav-links">
                 <button class="nav-btn" onclick="showSection('welcome-section')">INÍCIO</button>
-                <button class="nav-btn" onclick="showSection('transcripts-section')">TRANSCRIPTS</button>
+                <button class="nav-btn" onclick="window.location.href='https://jordan-shop.onrender.com/transcripts.html'">TRANSCRIPTS</button>
                 <button class="nav-btn" onclick="showSection('vendas-section')">VENDAS</button>
                 <button class="nav-btn" onclick="showSection('embed-section')">CRIAR EMBED</button>
                 <button class="nav-btn" onclick="showSection('bot-status-section')">SITE ONLINE</button>
             </div>
-            <a href="login.html" class="logout-btn" onclick="sessionStorage.clear()">
-                <span>SAIR</span> 🚪
-            </a>
+            <a href="login.html" class="logout-btn" onclick="sessionStorage.clear()">SAIR 🚪</a>
         </aside>
 
         <main>
-            <div id="welcome-section" class="content-div">
+            <div id="welcome-section" class="content-div" style="display:block;">
                 <h1 id="main-welcome">Bem-Vindo</h1>
-                <p style="font-size: 1.2rem; opacity: 0.8;">Bem-Vindo ao painel de Administração e Gestão da Jordan Shop</p>
+                <p style="font-size: 1.2rem; opacity: 0.8;">Painel de Administração e Gestão da Jordan Shop</p>
             </div>
 
-            <div id="transcripts-section" class="content-div" style="display:none;">
-                <h1>Logs de Transcripts</h1>
-                <div id="logs-list" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
-                    <p>A carregar registos...</p>
+            <div id="vendas-section" class="content-div">
+                <h1>💰 Histórico de Vendas</h1>
+                
+                <div class="log-item">
+                    <div class="log-info">
+                        <strong>@silvafvm | 20/10/2025</strong>
+                        <span>Produto: ⁠🦈・shark-menu | Staff: @! Jordan</span>
+                    </div>
+                    <span class="status-badge">LIFETIME</span>
+                </div>
+
+                <div class="log-item">
+                    <div class="log-info">
+                        <strong>@silvafvm | 29/09/2025</strong>
+                        <span>Produto: ⁠🌎・vpn-service | Staff: @! Jordan</span>
+                    </div>
+                    <span class="status-badge">INFINITO</span>
+                </div>
+
+                <div class="log-item">
+                    <div class="log-info">
+                        <strong>@silvafvm | 29/09/2025</strong>
+                        <span>Produto: ⁠⭐・rockstar-unban | Staff: @! Jordan</span>
+                    </div>
+                    <span class="status-badge">INFINITO</span>
+                </div>
+
+                <div class="log-item">
+                    <div class="log-info">
+                        <strong>@Tonethegoat | 27/09/2025</strong>
+                        <span>Produto: ⁠🦈・shark-menu | Staff: Jordan/Miguel</span>
+                    </div>
+                    <span class="status-badge" style="background:#fff">SEMANAL</span>
+                </div>
+
+                <div class="log-item">
+                    <div class="log-info">
+                        <strong>@silvafvm | 27/09/2025</strong>
+                        <span>Produto: ⁠🔥・sp00fer-1click | Staff: Jordan/Miguel</span>
+                    </div>
+                    <span class="status-badge">LIFETIME</span>
                 </div>
             </div>
 
-            <div id="vendas-section" class="content-div" style="display:none;">
-                <h1>Histórico de Vendas</h1>
-                <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
-                    <div class="log-item">
-                        <div class="log-info">
-                            <strong>Comprador: @silvexxx | 27/09/2025</strong>
-                            <span>Produto: 🔥・sp00fer-1click<br>Staff: @! Jordan</span>
-                        </div>
-                        <span class="status-badge" style="background: #00ff00; color: #000;">LIFETIME</span>
-                    </div>
-                    </div>
-            </div>
-
-            <div id="embed-section" class="content-div" style="display:none;">
+            <div id="embed-section" class="content-div">
                 <h1>🎫 Criar Painel de Tickets</h1>
-                <div class="embed-creator-card">
-                    <div style="margin-bottom: 15px;">
-                        <label class="form-label">🆔 ID do Canal de Destino</label>
-                        <input type="text" id="emb-canal" class="search-box" placeholder="Copia o ID do canal aqui">
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label class="form-label">🖊️ Título (Opcional)</label>
-                        <input type="text" id="emb-titulo" class="search-box" placeholder="Ex: Atendimento Jordan Shop">
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label class="form-label">📝 Mensagem e Preços</label>
-                        <textarea id="emb-desc" class="search-box" style="height:150px; resize:vertical;" placeholder="Ex: Cyber Ghost - €3.00"></textarea>
-                    </div>
-                    <button id="btn-env-emb" onclick="enviarEmbed()" class="nav-btn" style="width:100%; background: #FF0000;">
-                        🚀 ENVIAR PAINEL DE TICKETS
-                    </button>
+                <div class="embed-card">
+                    <label class="form-label">🆔 ID do Canal Discord</label>
+                    <input type="text" class="embed-input" placeholder="Ex: 123456789012345678">
+                    
+                    <label class="form-label">🖊️ Título do Painel</label>
+                    <input type="text" class="embed-input" placeholder="Ex: Atendimento Jordan Shop">
+                    
+                    <label class="form-label">📝 Descrição e Preços</label>
+                    <textarea class="embed-input" style="height: 120px; resize: none;" placeholder="Descreve os produtos aqui..."></textarea>
+                    
+                    <button class="nav-btn" style="width: 100%; background: #222; border: 1px solid var(--primary-red);">🚀 ENVIAR PARA O DISCORD</button>
                 </div>
             </div>
 
-            <div id="bot-status-section" class="content-div" style="display:none;">
+            <div id="bot-status-section" class="content-div">
                 <div class="status-card">
                     <h2 style="margin: 0; color: #00ff00;">✅ Site está online!</h2>
-                    <p>O sistema do bot e a API do site estão operacionais.</p>
-                    <p>🕒 <strong>Hora Local:</strong> <span id="relogio-realtime">00:00:00</span></p>
-                    <img src="success.png" class="success-img" alt="Sucesso">
+                    <p>O sistema e a API Supabase estão operacionais.</p>
+                    <p>🕒 <strong>Hora:</strong> <span id="relogio-realtime">00:00:00</span></p>
                 </div>
             </div>
         </main>
@@ -187,14 +199,13 @@
     <script>
         function showSection(id) {
             document.querySelectorAll('.content-div').forEach(s => s.style.display = 'none');
-            document.getElementById(id).style.display = (id === 'bot-status-section') ? 'flex' : 'block';
-            if(id === 'transcripts-section') fetchLogs();
+            const target = document.getElementById(id);
+            if(target) target.style.display = 'block';
         }
 
         function filtrarMenu() {
             let input = document.getElementById('search').value.toLowerCase();
-            let buttons = document.querySelectorAll('.nav-btn');
-            buttons.forEach(btn => {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.style.display = btn.innerText.toLowerCase().includes(input) ? "block" : "none";
             });
         }
@@ -205,12 +216,6 @@
         }
         setInterval(atualizarRelogio, 1000);
         atualizarRelogio();
-
-        // Exemplo de função fetchLogs (ajusta conforme o teu repositório)
-        async function fetchLogs() {
-            const list = document.getElementById('logs-list');
-            list.innerHTML = '<p style="color: #888;">Funcionalidade de logs ligada ao GitHub.</p>';
-        }
     </script>
 </body>
 </html>
