@@ -48,7 +48,7 @@ module.exports = (client) => {
                         "O suporte e os tickets são processados exclusivamente em Português.\n\n" +
                         "**Comportamento do Ticket**\n" +
                         "Por favor, não envie spam ou ping várias vezes em DM ou tickets.\n" +
-                        "Aguarde pacientemente até receber seu product ou uma resposta.\n\n" +
+                        "Aguarde pacientemente até receber seu produto  ou uma resposta.\n\n" +
                         "*Atenciosamente, Jordan.*"
                     )
                     .setColor("#ff0000");
@@ -63,12 +63,12 @@ module.exports = (client) => {
 
             /* ================= RECUSAR ================= */
             if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
-                const tipo = cid.replace("aceitar_termos_", ""); // Limpa o ID para saber a opção
+                const tipo = cid.replace("recusar_termos_", ""); 
                 const canalLogs = guild.channels.cache.get(config.STAFF_LOGS_CHANNEL_ID);
 
                 if (canalLogs) {
                     canalLogs.send({
-                        content: `❌ **${user.tag}** (ID: ${user.id}) **não aceitou** os termos para abrir ticket de: \`${tipo}\``
+                        content: `❌ **${user.tag}** (ID: ${user.id}) **não aceitou** os termos para: \`${tipo}\``
                     });
                 }
 
@@ -79,19 +79,18 @@ module.exports = (client) => {
                 });
             }
 
-/* ================= ACEITAR TERMOS -> MOSTRAR PAGAMENTO ================= */
+            /* ================= ACEITAR ================= */
             if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 const tipo = cid.replace("aceitar_termos_", "");
                 const canalLogs = guild.channels.cache.get(config.STAFF_LOGS_CHANNEL_ID);
 
                 if (canalLogs) {
                     canalLogs.send({
-                        content: `✅ **${user.tag}** (ID: ${user.id}) **aceitou** os termos para abrir ticket de: \`${tipo}\``
+                        content: `✅ **${user.tag}** (ID: ${user.id}) **aceitou** os termos para: \`${tipo}\``
                     });
                 }
                 
-                // Configurar o menu de pagamento corretamente
-                const menuPagamento = new StringSelectMenuBuilder()
+                const menuPag = new StringSelectMenuBuilder()
                     .setCustomId(`pagamento_${tipo}`)
                     .setPlaceholder("💳 Escolha o método de pagamento")
                     .addOptions([
@@ -101,11 +100,10 @@ module.exports = (client) => {
                         { label: "Multibanco", value: "ReferenciaMultibanco", emoji: "1464609317926735902" }
                     ]);
 
-                // Responder ao utilizador com o menu
                 return interaction.update({
-                    content: "✅ **Termos aceites!** Agora seleciona o método de pagamento:",
+                    content: "✅ **Termos aceites!** Seleciona o método de pagamento:",
                     embeds: [],
-                    components: [new ActionRowBuilder().addComponents(menuPagamento)]
+                    components: [new ActionRowBuilder().addComponents(menuPag)]
                 });
             }
        /* ================= CRIAR TICKET ================= */
