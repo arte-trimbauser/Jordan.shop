@@ -15,20 +15,19 @@ module.exports = async (client, message) => {
 
     try {
         // 4. Buscar o ID do cliente no tópico do canal
-        const clienteId = message.channel.topic;
-        if (!clienteId) return;
+        // No ficheiro messageCreate.js, altera para:
+const topic = message.channel.topic;
+if (!topic) return;
 
+// Pegamos apenas o ID que está antes do primeiro "|"
+const clienteId = topic.split("|")[0];
         const cliente = await client.users.fetch(clienteId).catch(() => null);
         if (!cliente) return;
 
-        // 5. Criar o aviso para a DM do cliente
+// 5. Criar o aviso para a DM do cliente exatamente como no print
         const embedDM = new EmbedBuilder()
-            .setColor("#8b0000")
-            .setTitle("🔔 Atualização no teu Ticket!")
-            .setDescription(`Olá **${cliente.username}**,\nA Staff da **Jordan Shop** acabou de responder ao teu ticket!`)
-            .addFields({ name: "Mensagem da Staff:", value: message.content.substring(0, 1024) || "*(Ficheiro ou Imagem)*" })
-            .setFooter({ text: "Jordan Shop System" })
-            .setTimestamp();
+            .setColor("#2b2d31") // Cor escura para parecer o tema do Discord
+            .setDescription("👋 | Olá **" + cliente.username + "**,\n🔔 | Seu ticket recebeu uma atualização. 😄");
 
         const botaoIr = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
@@ -37,9 +36,13 @@ module.exports = async (client, message) => {
                 .setStyle(ButtonStyle.Link)
         );
 
-        // Enviar a DM
-        await cliente.send({ embeds: [embedDM], components: [botaoIr] }).catch(() => {
-            console.log(`Não consegui avisar o ${cliente.username} (DMs fechadas).`);
+        // Enviar a DM com a menção fora do embed
+        await cliente.send({ 
+            content: `<@${cliente.id}>`, // Menção fora do embed como na imagem
+            embeds: [embedDM], 
+            components: [botaoIr] 
+        }).catch(() => {
+            console.log(`❌ Não consegui avisar o ${cliente.username} (DMs fechadas).`);
         });
 
     } catch (err) {
