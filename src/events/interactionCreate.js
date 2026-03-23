@@ -97,9 +97,12 @@ module.exports = (client) => {
                         { label: "MBWay", value: "MBWay", emoji: "1464608251516813446" },
                         { label: "PayPal", value: "PayPal", emoji: "1464608396383883314" },
                         { label: "Revolut", value: "Revolut", emoji: "1464608485617565726" },
+                        { label: "Cartão de Crédito", value: "CartaoCredito", emoji: "1464608966826004676" },
+                        { label: "Google Pay", value: "GooglePay", emoji: "1464609044315508797" },
+                        { label: "Apple Pay", value: "ApplePay", emoji: "1464609102906003588" },
                         { label: "Multibanco", value: "ReferenciaMultibanco", emoji: "1464609317926735902" }
                     ]);
-
+                
                 return interaction.update({
                     content: "✅ **Termos aceites!** Seleciona o método de pagamento:",
                     embeds: [],
