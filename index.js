@@ -120,6 +120,7 @@ app.get('/api/list-transcripts', async (req, res) => {
 app.get('/transcripts/:channelId', async (req, res) => {
     const { channelId } = req.params;
     try {
+        // 1. Procurar o ficheiro no Supabase
         const { data: files, error: listError } = await supabase.storage
             .from('transcripts')
             .list('transcripts', { search: channelId });
@@ -128,13 +129,23 @@ app.get('/transcripts/:channelId', async (req, res) => {
             return res.status(404).send("❌ Transcrição não encontrada.");
         }
 
-        const { data } = supabase.storage
+        // 2. Em vez de redirecionar, vamos descarregar o conteúdo do ficheiro
+        const { data, error: downloadError } = await supabase.storage
             .from('transcripts')
-            .getPublicUrl(`transcripts/${files[0].name}`);
+            .download(`transcripts/${files[0].name}`);
 
-        res.redirect(data.publicUrl);
+        if (downloadError) throw downloadError;
+
+        // 3. Transformar o conteúdo em texto
+        const conteudoHTML = await data.text();
+
+        // 4. Enviar para o navegador avisando que é um HTML (isto é o que faz aparecer bonito!)
+        res.setHeader('Content-Type', 'text/html');
+        res.send(conteudoHTML);
+
     } catch (err) {
-        res.status(500).send("❌ Erro ao procurar o log.");
+        console.error(err);
+        res.status(500).send("❌ Erro ao processar o log.");
     }
 });
 
