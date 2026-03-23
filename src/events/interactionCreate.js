@@ -48,7 +48,7 @@ module.exports = (client) => {
                         "O suporte e os tickets são processados exclusivamente em Português.\n\n" +
                         "**Comportamento do Ticket**\n" +
                         "Por favor, não envie spam ou ping várias vezes em DM ou tickets.\n" +
-                        "Aguarde pacientemente até receber seu produto  ou uma resposta.\n\n" +
+                        "Aguarde pacientemente até receber seu produto ou uma resposta.\n\n" +
                         "*Atenciosamente, Jordan.*"
                     )
                     .setColor("#ff0000");
