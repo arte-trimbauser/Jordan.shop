@@ -9,7 +9,7 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const port = process.env.PORT || 10000;
 
-// --- 1. DEFINIÇÃO DO CLIENT (Movido para cima para as rotas o encontrarem) ---
+// --- 1. DEFINIÇÃO DO CLIENT ---
 const client = new Client({ 
     intents: [
         GatewayIntentBits.Guilds, 
@@ -19,16 +19,15 @@ const client = new Client({
     ] 
 });
 
-// --- CONFIGURAÇÃO SUPABASE ---
+// --- 2. CONFIGURAÇÃO SUPABASE ---
 const supabase = createClient(
     'https://fdbmhgcfhdnnpwuodxzh.supabase.co',
     process.env.SUPABASE_KEY
 );
 
-// Canal de logs que definiste
 const ID_CANAL_LOGS = "1437076921627181228";
 
-// --- CONFIGURAÇÃO DE SEGURANÇA ---
+// --- 3. CONFIGURAÇÃO DE SEGURANÇA ---
 const staffAutorizado = {
     "924344854232834068": "Jordan Costa",
     "996454465555136675": "Arteex26",
@@ -41,14 +40,13 @@ let tokensAtivos = new Set();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'site'), { index: false }));
 
-// --- ROTAS DE LOGIN ---
+// --- 4. ROTAS DO EXPRESS (PAINEL WEB) ---
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'site', 'login.html'));
 });
 
 app.post('/api/login-manual', async (req, res) => {
     const { username, password } = req.body;
-
     const loginValido = 
         (username === "Jordan Costa" && password === "Jordan26Costa") ||
         (username === "Arteex26" && password === "Arteex_26") ||
@@ -59,17 +57,11 @@ app.post('/api/login-manual', async (req, res) => {
     if (loginValido) {
         const tokenSessao = Math.random().toString(36).substring(2, 15);
         tokensAtivos.add(tokenSessao);
-
-        // LOG DE LOGIN NO DISCORD
         const canalLogsLogin = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
-        if (canalLogsLogin) {
-            canalLogsLogin.send(`🔐 **[SISTEMA]** O utilizador **${username}** acabou de entrar no painel de controlo da Jordan Shop.`);
-        }
-
+        if (canalLogsLogin) canalLogsLogin.send(`🔐 **[SISTEMA]** O utilizador **${username}** entrou no painel.`);
         return res.json({ success: true, user: username, token: tokenSessao });
-    } else {
-        return res.status(401).json({ success: false, message: "Utilizador ou Password incorretos!" });
     }
+    return res.status(401).json({ success: false, message: "Utilizador ou Password incorretos!" });
 });
 
 app.get('/callback', async (req, res) => {
@@ -98,10 +90,8 @@ app.get('/callback', async (req, res) => {
     }
 });
 
-// --- API: ENVIAR EMBED ---
 app.post('/api/enviar-embed', async (req, res) => {
     const { titulo, desc, cor, canalId, produtos } = req.body;
-    if (!titulo || !desc || !canalId) return res.status(400).send("Faltam campos.");
     try {
         const canal = await client.channels.fetch(canalId);
         if (!canal) return res.status(404).send("Canal não encontrado.");
@@ -119,116 +109,57 @@ app.post('/api/enviar-embed', async (req, res) => {
             components.push(new ActionRowBuilder().addComponents(selectMenu));
         }
         await canal.send({ embeds: [embed], components: components });
-
-        // LOG DE ENVIO DE EMBED NO DISCORD
         const canalLogsStaff = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
-        if (canalLogsStaff) {
-            canalLogsStaff.send(`📦 **[PAINEL]** O embed de produtos foi enviado para o canal <#${canalId}>.`);
-        }
-
+        if (canalLogsStaff) canalLogsStaff.send(`📦 **[PAINEL]** Embed enviado para <#${canalId}>.`);
         res.status(200).send("✅ Enviado!");
-    } catch (error) {
-        res.status(500).send("Erro ao comunicar com o Discord.");
-    }
+    } catch (error) { res.status(500).send("Erro ao comunicar com o Discord."); }
 });
 
-// --- API: LISTAR TRANSCRIPTS ---
+// --- 5. ROTA DE TRANSCRIPTS (SUPABASE) ---
 app.get('/api/list-transcripts', async (req, res) => {
     try {
         const { data: files, error } = await supabase.storage
             .from('transcripts')
-            .list('transcripts', {
-                limit: 100,
-                sortBy: { column: 'created_at', order: 'desc' }
-            });
-
+            .list('transcripts', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
         if (error) throw error;
-        const logs = files.filter(f => f.name.endsWith('.html') && f.name !== ".gitkeep");
-        res.json(logs);
-    } catch (err) {
-        console.error("Erro ao listar logs:", err.message);
-        res.status(500).json({ error: "Erro ao procurar logs no Supabase" });
-    }
+        res.json(files.filter(f => f.name.endsWith('.html')));
+    } catch (err) { res.status(500).json({ error: "Erro Supabase" }); }
 });
 
-// --- ROTA DE VISUALIZAÇÃO ---
-app.get('/transcripts/:channelId', async (req, res) => {
-    const { channelId } = req.params;
-    try {
-        const { data: files, error: listError } = await supabase.storage
-            .from('transcripts')
-            .list('transcripts', { search: channelId });
-
-        if (listError || !files || files.length === 0) {
-            return res.status(404).send("❌ Transcrição não encontrada.");
-        }
-
-        const { data, error: downloadError } = await supabase.storage
-            .from('transcripts')
-            .download(`transcripts/${files[0].name}`);
-
-        if (downloadError) throw downloadError;
-        const conteudoHTML = await data.text();
-        res.setHeader('Content-Type', 'text/html');
-        res.send(conteudoHTML);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("❌ Erro ao processar o log.");
+// --- 6. INICIALIZAR EVENTOS DO BOT ---
+const carregarEventos = () => {
+    const interactionPath = path.join(__dirname, "src", "events", "interactionCreate.js");
+    if (fs.existsSync(interactionPath)) {
+        require(interactionPath)(client);
+        console.log("✅ Interaction System preparado.");
     }
-});
 
-// --- INICIALIZAR BOT (VERSÃO FINAL CORRIGIDA) ---
-const inicializarBot = () => {
-    try {
-        // 1. Carregar Sistema de Interações
-        const interactionPath = path.join(__dirname, "src", "events", "interactionCreate.js");
-        if (fs.existsSync(interactionPath)) {
-            require(interactionPath)(client);
-            console.log("✅ Sistema de Interações preparado.");
-        }
+    const readyPath = path.join(__dirname, "src", "events", "ready.js");
+    if (fs.existsSync(readyPath)) {
+        const readyHandler = require(readyPath);
+        client.once(Events.ClientReady, (...args) => readyHandler(client, ...args));
+        console.log("✅ Ready Event configurado.");
+    }
 
-        // 2. Carregar o Evento Ready
-        const readyPath = path.join(__dirname, "src", "events", "ready.js");
-        if (fs.existsSync(readyPath)) {
-            const readyEvent = require(readyPath);
-            if (typeof readyEvent === "function") {
-                client.once(Events.ClientReady, (...args) => readyEvent(client, ...args));
-                console.log("✅ Evento Ready configurado.");
-            }
-        }
-
-        // 3. Carregar Sistema de Notificações (DM Staff -> Cliente)
-        const messagePath = path.join(__dirname, "src", "events", "messageCreate.js");
-        if (fs.existsSync(messagePath)) {
-            client.on("messageCreate", (message) => {
-                try {
-                    require(messagePath)(client, message);
-                } catch (err) {
-                    console.error("⚠️ Erro no messageCreate:", err.message);
-                }
-            });
-            console.log("✅ Sistema de Notificações Staff -> Cliente ativo.");
-        }
-    } catch (e) {
-        console.warn("⚠️ Erro ao configurar eventos:", e.message);
+    const messagePath = path.join(__dirname, "src", "events", "messageCreate.js");
+    if (fs.existsSync(messagePath)) {
+        client.on("messageCreate", (msg) => {
+            try { require(messagePath)(client, msg); } catch(e) {}
+        });
+        console.log("✅ Message System ativo.");
     }
 };
 
-// Chama a função para preparar os eventos
-inicializarBot();
+// --- 7. ARRANQUE FINAL ---
+carregarEventos();
 
-// --- INICIAR SERVIDOR HTTP ---
 app.listen(port, "0.0.0.0", () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
 });
 
-// --- LOGIN DO DISCORD ---
 const TOKEN_BOT = process.env.TOKEN || process.env.DISCORD_TOKEN;
-
-if (!TOKEN_BOT) {
-    console.error("❌ ERRO: Token não encontrado!");
+if (TOKEN_BOT) {
+    client.login(TOKEN_BOT).catch(err => console.error("❌ Erro Login:", err.message));
 } else {
-    client.login(TOKEN_BOT).catch((err) => {
-        console.error("❌ ERRO NO LOGIN DO DISCORD:", err.message);
-    });
+    console.error("❌ ERRO: Token não encontrado!");
 }
