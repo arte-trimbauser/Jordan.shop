@@ -63,8 +63,17 @@ module.exports = (client) => {
 
             /* ================= RECUSAR ================= */
             if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
+                const tipo = cid.replace("aceitar_termos_", ""); // Limpa o ID para saber a opção
+                const canalLogs = guild.channels.cache.get(config.STAFF_LOGS_CHANNEL_ID);
+
+                if (canalLogs) {
+                    canalLogs.send({
+                        content: `❌ **${user.tag}** (ID: ${user.id}) **não aceitou** os termos para abrir ticket de: \`${tipo}\``
+                    });
+                }
+
                 return interaction.update({
-                    content: "⚠️ Tens de aceitar os termos para abrir seu ticket/pedido.",
+                    content: "⚠️ Tens de aceitar os termos para abrir o teu ticket/pedido.",
                     embeds: [],
                     components: []
                 });
@@ -73,22 +82,17 @@ module.exports = (client) => {
             /* ================= ACEITAR ================= */
             if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 const tipo = cid.replace("aceitar_termos_", "");
+                const canalLogs = guild.channels.cache.get(config.STAFF_LOGS_CHANNEL_ID);
+
+                if (canalLogs) {
+                    canalLogs.send({
+                        content: `✅ **${user.tag}** (ID: ${user.id}) **aceitou** os termos para abrir ticket de: \`${tipo}\``
+                    });
+                }
                 
+                // O resto do teu código do menu de pagamento continua aqui...
                 const menu = new StringSelectMenuBuilder()
                     .setCustomId(`pagamento_${tipo}`)
-                    .setPlaceholder("Seleciona o método de pagamento...")
-                    .addOptions(Object.keys(emojisPagamento).map(m => ({
-                        label: m,
-                        value: m,
-                        emoji: emojisPagamento[m] 
-                    })));
-
-                return interaction.update({
-                    content: "💳 **Termos aceites!** Escolhe o pagamento:",
-                    embeds: [],
-                    components: [new ActionRowBuilder().addComponents(menu)]
-                });
-            }
 
             /* ================= CRIAR TICKET ================= */
             if (interaction.isStringSelectMenu() && cid?.startsWith("pagamento_")) {
