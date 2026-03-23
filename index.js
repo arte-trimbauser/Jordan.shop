@@ -180,23 +180,27 @@ const client = new Client({
 
 const inicializarBot = () => {
     try {
+        // 1. Carregar Sistema de Interações
         const interactionPath = path.join(__dirname, "src", "events", "interactionCreate.js");
         if (fs.existsSync(interactionPath)) {
             require(interactionPath)(client);
-            console.log("✅ Interaction System carregado.");
+            console.log("✅ Sistema de Interações preparado.");
         }
 
-        client.once(Events.ClientReady, (c) => {
-            console.log(`✅ Bot online como ${c.user.tag}`);
+        // 2. Carregar o Evento Ready corretamente
+        const readyPath = path.join(__dirname, "src", "events", "ready.js");
+        if (fs.existsSync(readyPath)) {
+            const readyEvent = require(readyPath);
             
-            const readyPath = path.join(__dirname, "src", "events", "ready.js");
-            if (fs.existsSync(readyPath)) {
-                const readyEvent = require(readyPath);
-                if (typeof readyEvent === "function") readyEvent(client);
+            // Verificamos se o que o ficheiro exporta é uma função
+            if (typeof readyEvent === "function") {
+                // Registamos o evento de forma oficial no cliente
+                client.once(Events.ClientReady, (...args) => readyEvent(client, ...args));
+                console.log("✅ Evento Ready configurado.");
             }
-        });
+        }
     } catch (e) {
-        console.warn("⚠️ Erro ao carregar eventos:", e.message);
+        console.warn("⚠️ Erro ao configurar eventos:", e.message);
     }
 };
 
