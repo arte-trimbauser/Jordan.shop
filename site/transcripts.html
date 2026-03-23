@@ -17,13 +17,13 @@
             --primary-red: #8b0000;
             --card-bg: rgba(25, 25, 25, 0.95);
         }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Open Sans', sans-serif; color: white; background: #000; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Open Sans', sans-serif; color: white; background: #000; overflow-x: hidden; }
         
-        .bg-full { position: fixed; top:0; left:0; width:100%; height:100%; background: url('menu.png') no-repeat center center; background-size: cover; z-index:-2; }
+        .bg-full { position: fixed; top:0; left:0; width:100%; height:100%; background: url('menu.png') no-repeat center center; background-size: cover; z-index:-2; filter: brightness(0.4); }
         .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); z-index:-1; }
 
-        header { background: var(--primary-red); height:60px; display:flex; justify-content:space-between; align-items:center; padding:0 30px; position: sticky; top: 0; z-index: 100; }
-        .user-tag { background: rgba(0,0,0,0.4); padding:8px 15px; border-radius:5px; display: flex; align-items: center; gap: 10px; }
+        header { background: var(--primary-red); height:60px; display:flex; justify-content:space-between; align-items:center; padding:0 30px; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .user-tag { background: rgba(0,0,0,0.4); padding:8px 15px; border-radius:5px; display: flex; align-items: center; gap: 10px; font-weight: 600; }
 
         .container { display:flex; min-height: calc(100vh - 60px); }
         
@@ -32,11 +32,11 @@
         .nav-btn:hover { background: #ff0000; transform: scale(1.02); }
 
         main { flex:1; padding:40px; overflow-y:auto; }
-        h1 { font-size: 2.5rem; margin-bottom: 30px; text-shadow: 2px 2px 10px rgba(0,0,0,0.5); }
+        h1 { font-size: 2.5rem; margin-bottom: 30px; text-shadow: 2px 2px 10px rgba(0,0,0,0.5); font-weight: 800; }
 
         .logs-grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
             gap: 20px; 
             width: 100%;
         }
@@ -51,10 +51,7 @@
             transition: 0.3s;
             position: relative;
             overflow: hidden;
-        }
-
-        .log-card::before {
-            content: ""; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--primary-red);
+            border-left: 5px solid var(--primary-red);
         }
 
         .log-card:hover {
@@ -63,14 +60,14 @@
             box-shadow: 0 10px 20px rgba(0,0,0,0.4);
         }
 
-        .log-card strong { font-size: 1.1rem; color: #fff; margin-bottom: 8px; display: block; }
-        .log-card span { color: #aaa; font-size: 0.85rem; margin-bottom: 20px; flex-grow: 1; }
+        .log-card strong { font-size: 1.1rem; color: #fff; margin-bottom: 5px; display: block; text-transform: uppercase; letter-spacing: 1px; }
+        .log-card span { color: #888; font-size: 0.85rem; margin-bottom: 20px; flex-grow: 1; }
 
         .btn-open {
             background: #fff;
             color: #000;
             text-align: center;
-            padding: 10px;
+            padding: 12px;
             border-radius: 6px;
             text-decoration: none;
             font-weight: 800;
@@ -91,7 +88,7 @@
     <div class="overlay"></div>
 
     <header>
-        <a href="loja.html" style="color:white; text-decoration:none; font-weight:800;">JORDAN SHOP | STAFF</a>
+        <a href="loja.html" style="color:white; text-decoration:none; font-weight:800; letter-spacing: 1px;">JORDAN SHOP | STAFF</a>
         <div class="user-tag">
             Olá, <span id="nav-username">Staff</span>
         </div>
@@ -100,11 +97,11 @@
     <div class="container">
         <aside>
             <a href="loja.html" class="nav-btn">VOLTAR AO MENU</a>
-            <button class="nav-btn" onclick="fetchLogs()">ATUALIZAR LOGS</button>
+            <button class="nav-btn" onclick="fetchLogs()">ATUALIZAR LISTA</button>
         </aside>
 
         <main>
-            <h1>📄 Transcripts de Tickets</h1>
+            <h1>📄 Histórico de Transcripts</h1>
             <div class="logs-grid" id="logs-list">
                 <p>A procurar registos no sistema...</p>
             </div>
@@ -116,16 +113,16 @@
 
         async function fetchLogs() {
             const grid = document.getElementById('logs-list');
+            grid.innerHTML = '<p style="color:#888;">A carregar base de dados...</p>';
             
             try {
-                // Agora pedimos ao teu próprio servidor Render
                 const response = await fetch('/api/list-transcripts');
                 const logs = await response.json();
                 
                 grid.innerHTML = '';
 
                 if (!logs || logs.length === 0) {
-                    grid.innerHTML = "<p>Nenhum ticket arquivado no sistema.</p>";
+                    grid.innerHTML = "<p>Nenhum ticket arquivado encontrado.</p>";
                     return;
                 }
 
@@ -133,24 +130,25 @@
                     const card = document.createElement('div');
                     card.className = 'log-card';
                     
-                    // Limpar o nome (remove .html e troca hífens por espaços)
-                    const nomeExibicao = file.name.replace('.html', '').replace(/-/g, ' ');
+                    // Extrai o nome do utilizador do nome do ficheiro (ex: ticket-nome-id)
+                    // Se o nome for apenas o ID, mostra "Ticket Antigo"
+                    let nomeLimpo = file.name.replace('.html', '').split('-')[1] || "ID: " + file.name.split('.')[0];
+                    const dataFormatada = new Date(file.created_at).toLocaleString('pt-PT');
 
                     card.innerHTML = `
-                        <strong>Ticket: ${nomeExibicao}</strong>
-                        <span>Registado em: ${new Date(file.created_at).toLocaleString('pt-PT')}</span>
-                        <a href="/transcripts/${file.name.replace('.html', '')}" target="_blank" class="btn-open">ABRIR EM NOVO SEPARADOR</a>
+                        <strong>👤 CLIENTE: ${nomeLimpo.toUpperCase()}</strong>
+                        <span>Registado em: ${dataFormatada}</span>
+                        <a href="/transcripts/${file.name.replace('.html', '')}" target="_blank" class="btn-open">ABRIR REGISTO</a>
                     `;
                     grid.appendChild(card);
                 });
 
             } catch (e) {
-                console.error("Erro ao carregar lista:", e);
-                grid.innerHTML = "<p>❌ Erro ao ligar ao servidor de ficheiros.</p>";
+                console.error("Erro:", e);
+                grid.innerHTML = "<p>❌ Erro de ligação ao servidor.</p>";
             }
         }
 
-        // Inicia a procura assim que abres a página
         fetchLogs();
     </script>
 </body>
