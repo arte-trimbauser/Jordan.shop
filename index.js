@@ -1,5 +1,4 @@
 require("dotenv").config();
-const cron = require("node-cron");
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
@@ -205,19 +204,6 @@ inicializarBot();
 app.listen(port, "0.0.0.0", () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
 });
-
-// --- CRON JOB (02:00) ---
-cron.schedule('0 2 * * *', async () => {
-    try {
-        const canalLogs = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
-        if (canalLogs) {
-            await canalLogs.send("🌙 **[SISTEMA]** Modo de descanso ativado. Volto on às 10:00! 👋");
-        }
-        setTimeout(() => { process.exit(0); }, 5000);
-    } catch (err) {
-        console.error("Erro ao encerrar:", err);
-    }
-}, { timezone: "Europe/Lisbon" });
 
 // --- LOGIN DISCORD ---
 const TOKEN_FINAL = process.env.TOKEN || process.env.DISCORD_TOKEN;
