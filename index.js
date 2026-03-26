@@ -211,16 +211,17 @@ app.listen(port, "0.0.0.0", () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
 });
 
-// --- TESTE DE DESLIGAR (14:40) ---
-cron.schedule('40 14 * * *', async () => {
+// --- SISTEMA DE DESLIGAR AUTOMÁTICO (02:00) ---
+cron.schedule('0 2 * * *', async () => {
     try {
         const canalLogs = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
         if (canalLogs) {
-            await canalLogs.send("🧪 **[TESTE FINAL]** Vou desligar às 14:40 para poupar horas. O Cron-job acorda-me às 14:45!");
+            await canalLogs.send("🌙 **[SISTEMA]** Eu (bot) vou dormir e entrar em modo de descanso para poupar recursos. Volto on às 10:00! 👋");
         }
+        console.log("A encerrar para poupar horas...");
         setTimeout(() => { process.exit(0); }, 5000);
     } catch (err) {
-        console.error(err);
+        console.error("Erro ao encerrar:", err);
     }
 }, {
     timezone: "Europe/Lisbon"
