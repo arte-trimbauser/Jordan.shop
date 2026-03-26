@@ -211,14 +211,13 @@ app.listen(port, "0.0.0.0", () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
 });
 
-// --- TESTE DE DESLIGAR (11:28) ---
-cron.schedule('35 11 * * *', async () => {
+// --- TESTE DE DESLIGAR (14:40) ---
+cron.schedule('40 14 * * *', async () => {
     try {
         const canalLogs = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
         if (canalLogs) {
-            await canalLogs.send("🧪 **[TESTE]** A desligar às 11:35 O Cron-job vai ligar-me às 11:40!");
+            await canalLogs.send("🧪 **[TESTE FINAL]** Vou desligar às 14:40 para poupar horas. O Cron-job acorda-me às 14:45!");
         }
-        console.log("A encerrar para o teste das 11:35...");
         setTimeout(() => { process.exit(0); }, 5000);
     } catch (err) {
         console.error(err);
