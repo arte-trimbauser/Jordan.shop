@@ -1,4 +1,5 @@
 require("dotenv").config();
+const cron = require("node-cron");
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
@@ -208,6 +209,21 @@ inicializarBot();
 
 app.listen(port, "0.0.0.0", () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
+});
+
+// --- TESTE DE DESLIGAR (11:21) ---
+cron.schedule('21 11 * * *', async () => {
+    try {
+        const canalLogs = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
+        if (canalLogs) {
+            await canalLogs.send("🧪 **[TESTE]** A desligar agora (11:21). Vou voltar às 11:23!");
+        }
+        setTimeout(() => { process.exit(0); }, 5000);
+    } catch (err) {
+        console.error(err);
+    }
+}, {
+    timezone: "Europe/Lisbon"
 });
 
 const TOKEN = process.env.TOKEN || process.env.DISCORD_TOKEN;
