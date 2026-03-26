@@ -16,6 +16,7 @@ const supabase = createClient(
     process.env.SUPABASE_KEY
 );
 
+// Canal de logs que definiste
 const ID_CANAL_LOGS = "1437076921627181228";
 
 // --- CONFIGURAÇÃO DE SEGURANÇA ---
@@ -31,7 +32,7 @@ let tokensAtivos = new Set();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'site'), { index: false }));
 
-// --- BOT DISCORD (Definição Global) ---
+// --- INICIALIZAÇÃO DO BOT DISCORD ---
 const client = new Client({ 
     intents: [
         GatewayIntentBits.Guilds, 
@@ -60,7 +61,7 @@ app.post('/api/login-manual', async (req, res) => {
         const tokenSessao = Math.random().toString(36).substring(2, 15);
         tokensAtivos.add(tokenSessao);
 
-        // Enviar log se o bot estiver online
+        // LOG DE LOGIN NO DISCORD (Verifica se o bot está pronto)
         if (client.isReady()) {
             const canalLogsLogin = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
             if (canalLogsLogin) {
@@ -124,7 +125,7 @@ app.post('/api/enviar-embed', async (req, res) => {
 
         const canalLogsStaff = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
         if (canalLogsStaff) {
-            canalLogsStaff.send(`📦 **[PAINEL]** O embed foi enviado para o canal <#${canalId}>.`);
+            canalLogsStaff.send(`📦 **[PAINEL]** O embed de produtos foi enviado para o canal <#${canalId}>.`);
         }
 
         res.status(200).send("✅ Enviado!");
@@ -176,7 +177,7 @@ app.get('/transcripts/:channelId', async (req, res) => {
     }
 });
 
-// --- INICIALIZAR EVENTOS ---
+// --- CARREGAR EVENTOS ---
 const inicializarBot = () => {
     try {
         const interactionPath = path.join(__dirname, "src", "events", "interactionCreate.js");
@@ -200,16 +201,17 @@ const inicializarBot = () => {
 
 inicializarBot();
 
+// --- INICIAR SERVIDOR ---
 app.listen(port, "0.0.0.0", () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
 });
 
-// --- CRON JOB: DESLIGAR AUTOMÁTICO ---
+// --- CRON JOB (02:00) ---
 cron.schedule('0 2 * * *', async () => {
     try {
         const canalLogs = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
         if (canalLogs) {
-            await canalLogs.send("🌙 **[SISTEMA]** Entrar em modo de descanso. Volto às 10:00! 👋");
+            await canalLogs.send("🌙 **[SISTEMA]** Modo de descanso ativado. Volto on às 10:00! 👋");
         }
         setTimeout(() => { process.exit(0); }, 5000);
     } catch (err) {
@@ -221,10 +223,11 @@ cron.schedule('0 2 * * *', async () => {
 const TOKEN_FINAL = process.env.TOKEN || process.env.DISCORD_TOKEN;
 
 if (!TOKEN_FINAL) {
-    console.error("❌ [ERRO CRÍTICO] Token não configurado!");
+    console.error("❌ [ERRO CRÍTICO] Token não encontrado no Render!");
 } else {
+    console.log("⏳ A tentar ligar ao Discord...");
     client.login(TOKEN_FINAL)
-        .then(() => console.log("✅ Ligado ao Discord!"))
+        .then(() => console.log("✅ Login realizado com sucesso no Discord!"))
         .catch(err => console.error("❌ [ERRO NO LOGIN]:", err.message));
 }
 
