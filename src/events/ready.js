@@ -26,9 +26,9 @@ module.exports = async (client) => {
         i = (i + 1) % statusList.length;
     };
 
-    // Inicia o ciclo de status (muda a cada 15 segundos)
+    // Inicia o ciclo de status (muda a cada 5 segundos)
     updateStatus();
-    setInterval(updateStatus, 15000);
+    setInterval(updateStatus, 5000);
 
     // --- ENVIO DO LOG DE INICIALIZAÇÃO NO DISCORD ---
     const LOG_ID = process.env.LOG_CHANNEL_ID || "1437076921627181228";
