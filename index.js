@@ -16,7 +16,6 @@ const supabase = createClient(
     process.env.SUPABASE_KEY
 );
 
-// Canal de logs que definiste
 const ID_CANAL_LOGS = "1437076921627181228";
 
 // --- CONFIGURAÇÃO DE SEGURANÇA ---
@@ -32,6 +31,16 @@ let tokensAtivos = new Set();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'site'), { index: false }));
 
+// --- BOT DISCORD (Definição Global) ---
+const client = new Client({ 
+    intents: [
+        GatewayIntentBits.Guilds, 
+        GatewayIntentBits.GuildMessages, 
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.MessageContent
+    ] 
+});
+
 // --- ROTAS DE LOGIN ---
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'site', 'login.html'));
@@ -40,7 +49,6 @@ app.get('/', (req, res) => {
 app.post('/api/login-manual', async (req, res) => {
     const { username, password } = req.body;
 
-    // CORREÇÃO: Usar o operador OR (||) para validar os utilizadores corretamente
     const loginValido = 
         (username === "Jordan Costa" && password === "Jordan26Costa") ||
         (username === "Arteex26" && password === "Arteex_26") ||
@@ -52,10 +60,12 @@ app.post('/api/login-manual', async (req, res) => {
         const tokenSessao = Math.random().toString(36).substring(2, 15);
         tokensAtivos.add(tokenSessao);
 
-        // LOG DE LOGIN NO DISCORD
-        const canalLogsLogin = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
-        if (canalLogsLogin) {
-            canalLogsLogin.send(`🔐 **[SISTEMA]** O utilizador **${username}** acabou de entrar no painel de controlo da Jordan Shop.`);
+        // Enviar log se o bot estiver online
+        if (client.isReady()) {
+            const canalLogsLogin = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
+            if (canalLogsLogin) {
+                canalLogsLogin.send(`🔐 **[SISTEMA]** O utilizador **${username}** acabou de entrar no painel de controlo.`);
+            }
         }
 
         return res.json({ success: true, user: username, token: tokenSessao });
@@ -112,10 +122,9 @@ app.post('/api/enviar-embed', async (req, res) => {
         }
         await canal.send({ embeds: [embed], components: components });
 
-        // LOG DE ENVIO DE EMBED NO DISCORD
         const canalLogsStaff = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
         if (canalLogsStaff) {
-            canalLogsStaff.send(`📦 **[PAINEL]** O embed de produtos foi enviado para o canal <#${canalId}>.`);
+            canalLogsStaff.send(`📦 **[PAINEL]** O embed foi enviado para o canal <#${canalId}>.`);
         }
 
         res.status(200).send("✅ Enviado!");
@@ -124,7 +133,7 @@ app.post('/api/enviar-embed', async (req, res) => {
     }
 });
 
-// --- API: LISTAR TRANSCRIPTS (Mantido) ---
+// --- API: LISTAR TRANSCRIPTS ---
 app.get('/api/list-transcripts', async (req, res) => {
     try {
         const { data: files, error } = await supabase.storage
@@ -138,12 +147,11 @@ app.get('/api/list-transcripts', async (req, res) => {
         const logs = files.filter(f => f.name.endsWith('.html') && f.name !== ".gitkeep");
         res.json(logs);
     } catch (err) {
-        console.error("Erro ao listar logs:", err.message);
         res.status(500).json({ error: "Erro ao procurar logs no Supabase" });
     }
 });
 
-// --- ROTA DE VISUALIZAÇÃO (Mantido) ---
+// --- ROTA DE VISUALIZAÇÃO ---
 app.get('/transcripts/:channelId', async (req, res) => {
     const { channelId } = req.params;
     try {
@@ -164,38 +172,23 @@ app.get('/transcripts/:channelId', async (req, res) => {
         res.setHeader('Content-Type', 'text/html');
         res.send(conteudoHTML);
     } catch (err) {
-        console.error(err);
         res.status(500).send("❌ Erro ao processar o log.");
     }
 });
 
-// --- BOT DISCORD ---
-const client = new Client({ 
-    intents: [
-        GatewayIntentBits.Guilds, 
-        GatewayIntentBits.GuildMessages, 
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.MessageContent
-    ] 
-});
-
+// --- INICIALIZAR EVENTOS ---
 const inicializarBot = () => {
     try {
-        // 1. Carregar Sistema de Interações
         const interactionPath = path.join(__dirname, "src", "events", "interactionCreate.js");
         if (fs.existsSync(interactionPath)) {
             require(interactionPath)(client);
             console.log("✅ Sistema de Interações preparado.");
         }
 
-        // 2. Carregar o Evento Ready corretamente
         const readyPath = path.join(__dirname, "src", "events", "ready.js");
         if (fs.existsSync(readyPath)) {
             const readyEvent = require(readyPath);
-
-            // Verificamos se o que o ficheiro exporta é uma função
             if (typeof readyEvent === "function") {
-                // Registamos o evento de forma oficial no cliente
                 client.once(Events.ClientReady, (...args) => readyEvent(client, ...args));
                 console.log("✅ Evento Ready configurado.");
             }
@@ -211,27 +204,29 @@ app.listen(port, "0.0.0.0", () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
 });
 
-// --- SISTEMA DE DESLIGAR AUTOMÁTICO (02:00) ---
+// --- CRON JOB: DESLIGAR AUTOMÁTICO ---
 cron.schedule('0 2 * * *', async () => {
     try {
         const canalLogs = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
         if (canalLogs) {
-            await canalLogs.send("🌙 **[SISTEMA]** Eu (bot) vou dormir e entrar em modo de descanso para poupar recursos. Volto on às 10:00! 👋");
+            await canalLogs.send("🌙 **[SISTEMA]** Entrar em modo de descanso. Volto às 10:00! 👋");
         }
-        console.log("A encerrar para poupar horas...");
         setTimeout(() => { process.exit(0); }, 5000);
     } catch (err) {
         console.error("Erro ao encerrar:", err);
     }
-}, {
-    timezone: "Europe/Lisbon"
-});
+}, { timezone: "Europe/Lisbon" });
 
-const TOKEN = process.env.TOKEN || process.env.DISCORD_TOKEN;
-if (!TOKEN) {
-    console.error("❌ ERRO: Token não encontrado!");
+// --- LOGIN DISCORD ---
+const TOKEN_FINAL = process.env.TOKEN || process.env.DISCORD_TOKEN;
+
+if (!TOKEN_FINAL) {
+    console.error("❌ [ERRO CRÍTICO] Token não configurado!");
 } else {
-    client.login(TOKEN).catch(err => {
-        console.error("❌ ERRO NO LOGIN DO DISCORD:", err.message);
-    });
+    client.login(TOKEN_FINAL)
+        .then(() => console.log("✅ Ligado ao Discord!"))
+        .catch(err => console.error("❌ [ERRO NO LOGIN]:", err.message));
 }
+
+client.on("error", (e) => console.error("❌ [ERRO DE CLIENTE]:", e));
+client.on("warn", (e) => console.warn("⚠️ [AVISO]:", e));
