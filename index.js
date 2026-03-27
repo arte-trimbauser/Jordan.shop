@@ -22,11 +22,18 @@ const {
 
 const { createClient } = require("@supabase/supabase-js");
 
+// --- BOT DISCORD ---
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.MessageContent
+    ]
+});
+
+// --- CONFIGURAÇÕES ---
 const app = express();
-
-// ✅ Confia no proxy do Render (resolve o erro do X-Forwarded-For)
-app.set("trust proxy", 1);
-
 const port = process.env.PORT || 10000;
 
 app.use(helmet());
@@ -36,7 +43,6 @@ const limiter = rateLimit({
     windowMs: 60 * 1000,
     max: 120
 });
-
 app.use(limiter);
 
 // --- CONFIGURAÇÃO SUPABASE ---
@@ -87,6 +93,7 @@ app.post("/api/login-manual", async (req, res) => {
 
     try {
         const canalLogsLogin = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
+
         if (canalLogsLogin) {
             canalLogsLogin.send(`🔐 **[SISTEMA]** O utilizador **${username}** acabou de entrar no painel de controlo da Jordan Shop.`);
         }
@@ -157,13 +164,13 @@ app.post("/api/enviar-embed", async (req, res) => {
                     description: `Preço: ${p.preco}`,
                     value: `prod_${p.nome.replace(/\s+/g, "_").toLowerCase()}`
                 })));
-
             components.push(new ActionRowBuilder().addComponents(selectMenu));
         }
 
         await canal.send({ embeds: [embed], components });
 
         const canalLogsStaff = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
+
         if (canalLogsStaff) {
             canalLogsStaff.send(`📦 **[PAINEL]** O embed de produtos foi enviado para o canal <#${canalId}>.`);
         }
@@ -175,16 +182,7 @@ app.post("/api/enviar-embed", async (req, res) => {
     }
 });
 
-// --- BOT DISCORD ---
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.MessageContent
-    ]
-});
-
+// --- INICIALIZAÇÃO BOT ---
 const inicializarBot = () => {
     try {
         const interactionPath = path.join(__dirname, "src/events/interactionCreate.js");
@@ -220,21 +218,22 @@ if (!TOKEN) {
 console.log("🔐 A tentar login no Discord...");
 
 client.login(TOKEN)
-.then(() => {
-    console.log("✅ Pedido de login enviado ao Discord");
-})
-.catch(err => {
-    console.error("❌ ERRO NO LOGIN:", err);
-});
+    .then(() => {
+        console.log("✅ Pedido de login enviado ao Discord");
+    })
+    .catch(err => {
+        console.error("❌ ERRO NO LOGIN:", err);
+    });
 
-client.on("ready", () => {
+// --- START EXPRESS APENAS QUANDO BOT ESTIVER READY ---
+client.once("ready", () => {
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
+
+    // Aqui o servidor só começa depois do bot estar pronto
+    app.listen(port, () => {
+        console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
+    });
 });
 
 client.on("error", console.error);
 client.on("shardError", console.error);
-
-// ✅ Inicia o servidor HTTP
-app.listen(port, () => {
-    console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
-});
