@@ -220,21 +220,26 @@ const inicializarBot = () => {
 
 inicializarBot();
 
-client.once("ready", () => {
+const TOKEN = process.env.DISCORD_TOKEN;
+
+if (!TOKEN) {
+    console.error("❌ Token não encontrado!");
+    process.exit(1);
+}
+
+console.log("🔐 A tentar login no Discord...");
+
+client.login(TOKEN)
+.then(() => {
+    console.log("✅ Pedido de login enviado ao Discord");
+})
+.catch(err => {
+    console.error("❌ ERRO NO LOGIN:", err);
+});
+
+client.on("ready", () => {
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
 });
 
-app.listen(port, "0.0.0.0", () => {
-    console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
-});
-
-const TOKEN = process.env.TOKEN || process.env.DISCORD_TOKEN;
-
-if (!TOKEN) {
-    console.error("❌ ERRO: Token não encontrado!");
-} else {
-    console.log("🔐 A tentar login no Discord...");
-    client.login(TOKEN).catch(err => {
-        console.error("❌ ERRO NO LOGIN DO DISCORD:", err);
-    });
-}
+client.on("error", console.error);
+client.on("shardError", console.error);
