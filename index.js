@@ -23,6 +23,10 @@ const {
 const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
+
+// ✅ Confia no proxy do Render (resolve o erro do X-Forwarded-For)
+app.set("trust proxy", 1);
+
 const port = process.env.PORT || 10000;
 
 app.use(helmet());
@@ -63,7 +67,6 @@ app.get("/", (req, res) => {
 });
 
 app.post("/api/login-manual", async (req, res) => {
-
     const { username, password } = req.body;
 
     if (!username || !password)
@@ -84,7 +87,6 @@ app.post("/api/login-manual", async (req, res) => {
 
     try {
         const canalLogsLogin = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
-
         if (canalLogsLogin) {
             canalLogsLogin.send(`🔐 **[SISTEMA]** O utilizador **${username}** acabou de entrar no painel de controlo da Jordan Shop.`);
         }
@@ -95,12 +97,10 @@ app.post("/api/login-manual", async (req, res) => {
 
 // --- CALLBACK DISCORD ---
 app.get("/callback", async (req, res) => {
-
     const code = req.query.code;
     if (!code) return res.redirect("/login.html?error=no_code");
 
     try {
-
         const params = new URLSearchParams({
             client_id: "1424479855466123284",
             client_secret: process.env.CLIENT_SECRET,
@@ -125,7 +125,6 @@ app.get("/callback", async (req, res) => {
         tokensAtivos.add(tokenSessao);
 
         res.redirect(`/loja.html?user=${encodeURIComponent(discordUser)}&id=${discordID}&token=${tokenSessao}`);
-
     } catch {
         res.redirect("/login.html?error=auth_failed");
     }
@@ -133,14 +132,12 @@ app.get("/callback", async (req, res) => {
 
 // --- ENVIAR EMBED ---
 app.post("/api/enviar-embed", async (req, res) => {
-
     const { titulo, desc, cor, canalId, produtos } = req.body;
 
     if (!titulo || !desc || !canalId)
         return res.status(400).send("Faltam campos.");
 
     try {
-
         const canal = await client.channels.fetch(canalId);
         if (!canal) return res.status(404).send("Canal não encontrado.");
 
@@ -152,7 +149,6 @@ app.post("/api/enviar-embed", async (req, res) => {
         const components = [];
 
         if (produtos?.length) {
-
             const selectMenu = new StringSelectMenuBuilder()
                 .setCustomId("menu_produtos")
                 .setPlaceholder("Escolhe uma opção")
@@ -168,13 +164,11 @@ app.post("/api/enviar-embed", async (req, res) => {
         await canal.send({ embeds: [embed], components });
 
         const canalLogsStaff = await client.channels.fetch(ID_CANAL_LOGS).catch(() => null);
-
         if (canalLogsStaff) {
             canalLogsStaff.send(`📦 **[PAINEL]** O embed de produtos foi enviado para o canal <#${canalId}>.`);
         }
 
         res.send("✅ Enviado!");
-
     } catch (error) {
         console.error(error);
         res.status(500).send("Erro ao comunicar com o Discord.");
@@ -192,9 +186,7 @@ const client = new Client({
 });
 
 const inicializarBot = () => {
-
     try {
-
         const interactionPath = path.join(__dirname, "src/events/interactionCreate.js");
 
         if (fs.existsSync(interactionPath)) {
@@ -206,13 +198,11 @@ const inicializarBot = () => {
 
         if (fs.existsSync(readyPath)) {
             const readyEvent = require(readyPath);
-
             if (typeof readyEvent === "function") {
                 client.once(Events.ClientReady, (...args) => readyEvent(client, ...args));
                 console.log("✅ Evento Ready configurado.");
             }
         }
-
     } catch (e) {
         console.warn("⚠️ Erro ao configurar eventos:", e.message);
     }
@@ -243,3 +233,8 @@ client.on("ready", () => {
 
 client.on("error", console.error);
 client.on("shardError", console.error);
+
+// ✅ Inicia o servidor HTTP
+app.listen(port, () => {
+    console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
+});
