@@ -24,18 +24,12 @@
             display: none; z-index: 1000;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             border: 1px solid #ff4444;
-            animation: fadeIn 0.5s ease-in-out;
-            max-width: 90%;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
         }
         .login-box {
             background: rgba(15, 5, 5, 0.92);
             padding: 35px 20px;
             border-radius: 20px;
-            width: 92%; 
+            width: 90%; 
             max-width: 340px;
             text-align: center;
             border: 1px solid rgba(139, 0, 0, 0.3);
@@ -50,32 +44,28 @@
         .input-group {
             background: rgba(255, 255, 255, 0.05); margin: 15px 0; padding: 12px;
             border-radius: 8px; display: flex; align-items: center;
-            border: 1px solid rgba(255, 255, 255, 0.1); transition: 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .input-group:focus-within { border-color: #8b0000; background: rgba(255, 255, 255, 0.1); }
         input { background: transparent; border: none; color: white; width: 100%; outline: none; font-size: 15px; }
        
         .toggle-btn {
             width: 24px; height: 24px; cursor: pointer;
-            margin-left: 10px; border-radius: 4px; transition: 0.2s;
+            margin-left: 10px;
         }
-        .toggle-btn:hover { transform: scale(1.1); }
         .btn-entrar {
             width: 100%; padding: 15px; background: #8b0000; color: white;
             border: none; border-radius: 8px; cursor: pointer;
-            font-weight: 800; margin-top: 10px; transition: 0.3s;
-            text-transform: uppercase; letter-spacing: 1px;
+            font-weight: 800; margin-top: 10px;
         }
-        .btn-entrar:hover { background: #ff0000; box-shadow: 0 0 20px rgba(255, 0, 0, 0.4); }
+        .btn-entrar:hover { background: #ff0000; }
         .divider { color: #666; font-size: 11px; margin: 20px 0; font-weight: bold; }
         .btn-discord {
             background: #ffffff; color: #5865F2; text-decoration: none;
             padding: 14px; border-radius: 8px; display: flex;
             align-items: center; justify-content: center;
-            font-weight: bold; transition: 0.3s;
-            border: 1px solid #5865F2; font-size: 0.9rem;
+            font-weight: bold;
+            border: 1px solid #5865F2;
         }
-        .btn-discord:hover { background: #f0f0f0; transform: translateY(-2px); }
         .discord-logo { width: 20px; margin-right: 12px; }
     </style>
 </head>
@@ -131,7 +121,7 @@
             if (data.success) {
                 window.location.href = `loja.html?user=${encodeURIComponent(data.user)}&token=${data.token}`;
             } else {
-                mostrarErro('❌ ' + (data.message || 'Dados incorretos!'));
+                mostrarErro('❌ Dados incorretos!');
                 btn.innerText = "ENTRAR";
                 btn.disabled = false;
             }
@@ -162,11 +152,7 @@
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('error')) {
-            if (urlParams.get('error') === 'nao_autorizado') {
-                mostrarErro('❌ Erro: Não tens permissão de Staff no Discord.');
-            } else {
-                mostrarErro('❌ Erro na autenticação do Discord.');
-            }
+            mostrarErro('❌ Erro na autenticação.');
         }
     }
 </script>
