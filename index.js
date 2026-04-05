@@ -67,6 +67,27 @@ app.use(helmet({
     }
 }));
 
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: [
+                "'self'",
+                "'unsafe-inline'",
+                "fonts.googleapis.com",
+                "cdn.jsdelivr.net",
+                "cdnjs.cloudflare.com"
+            ],
+            scriptSrcAttr: ["'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "fonts.gstatic.com"],
+            fontSrc: ["'self'", "fonts.googleapis.com", "fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:", "https://i.postimg.cc", "https://cdn.discordapp.com", "https://cdnjs.cloudflare.com"],
+            connectSrc: ["'self'"],
+            frameSrc: ["'none'"]
+        }
+    }
+}));
+
 app.use(express.json({ limit: "1mb" }));
 
 const limiter = rateLimit({ windowMs: 60 * 1000, max: 120 });
