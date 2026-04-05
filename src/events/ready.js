@@ -17,14 +17,14 @@ module.exports = async (client) => {
     ].filter(Boolean);
 
     try {
-        // Registo apenas no teu servidor (evita duplicados)
         const testGuild = client.guilds.cache.get("1393629457599828040");
 
         if (testGuild) {
+            // Registo apenas no teu servidor (mais rápido e sem duplicados)
             await testGuild.commands.set(commands.map(cmd => cmd.data.toJSON()));
             console.log(`✅ ${commands.length} comandos registados no servidor com sucesso!`);
         } else {
-            console.log("⚠️ Servidor não encontrado, a registar globalmente...");
+            console.log("⚠️ Servidor não encontrado. A registar globalmente...");
             await client.application.commands.set(commands.map(cmd => cmd.data.toJSON()));
         }
     } catch (err) {
@@ -53,7 +53,7 @@ module.exports = async (client) => {
 
     // ==================== LOG DE INICIALIZAÇÃO ====================
     const LOG_ID = process.env.LOG_CHANNEL_ID || "1437076921627181228";
-  
+ 
     try {
         const logChannel = await client.channels.fetch(LOG_ID).catch(() => null);
         if (logChannel) {
