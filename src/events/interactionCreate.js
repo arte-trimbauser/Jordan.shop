@@ -7,6 +7,7 @@ const config = require("../config");
 const isStaff = require("../helpers/isStaff");
 const sendTranscript = require("../helpers/sendTranscript");
 
+const carrinhos = new Map(); // Carrinho de cada utilizador
 const cooldowns = new Map();
 
 const emojisPagamento = {
@@ -61,6 +62,41 @@ module.exports = (client) => {
                 return interaction.reply({ embeds: [embed], components: [row], flags: [64] });
             }
 
+                        /* ================= ADICIONAR AO CARRINHO ================= */
+            if (interaction.isStringSelectMenu() && cid === "adicionar_produto") {
+                const menuId = interaction.values[0];
+                const menuSelecionado = menus.find(m => m.id === menuId);
+
+                if (!menuSelecionado) {
+                    return interaction.reply({ content: "❌ Produto não encontrado.", ephemeral: true });
+                }
+
+                // Guardar no carrinho do utilizador
+                if (!carrinhos.has(user.id)) {
+                    carrinhos.set(user.id, []);
+                }
+
+                const carrinhoUser = carrinhos.get(user.id);
+
+                // Adiciona o menu inteiro (para depois escolher duração)
+                carrinhoUser.push({
+                    menuId: menuId,
+                    titulo: menuSelecionado.title,
+                    embedDesc: menuSelecionado.embedDesc,
+                    options: menuSelecionado.options,
+                    quantidade: 1   // começa com 1
+                });
+
+                const embed = new EmbedBuilder()
+                    .setTitle("✅ Produto adicionado ao carrinho!")
+                    .setDescription(`**${menuSelecionado.title}** foi adicionado.\n\nAgora podes:\n• Usar \`/adicionar\` para mais produtos\n• Usar \`/carrinho\` para ver o teu carrinho`)
+                    .setColor("#00ff00");
+
+                await interaction.update({ 
+                    embeds: [embed], 
+                    components: [] 
+                });
+            }
 /* ================= BOTÃO RECUSAR ================= */
 if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
     const tipoRec = cid.replace("recusar_termos_", "");
