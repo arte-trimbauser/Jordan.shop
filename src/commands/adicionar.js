@@ -12,14 +12,22 @@ module.exports = {
             .setDescription("Escolhe o produto que queres adicionar:")
             .setColor("#8b0000");
 
+        const selectOptions = menus.map(menu => {
+            // Limpa emojis de forma segura
+            let nomeLimpo = menu.title.replace(/[\uD83C-\uDBFF\uDC00-\uDFFF]/g, '').trim();
+            if (nomeLimpo.length > 100) nomeLimpo = nomeLimpo.slice(0, 97) + "...";
+
+            return {
+                label: nomeLimpo || "Produto",
+                description: menu.options[0]?.description || "Ver opções",
+                value: menu.id
+            };
+        });
+
         const select = new StringSelectMenuBuilder()
             .setCustomId("adicionar_produto")
             .setPlaceholder("Seleciona um produto")
-            .addOptions(menus.map(menu => ({
-                label: menu.title.replace(/[^\w\s]/gi, '').trim().slice(0, 100), // limpa emojis de forma segura
-                description: menu.options[0]?.description || "Ver opções",
-                value: menu.id
-            })));
+            .addOptions(selectOptions);
 
         const row = new ActionRowBuilder().addComponents(select);
 
