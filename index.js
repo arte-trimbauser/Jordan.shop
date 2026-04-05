@@ -90,15 +90,9 @@ app.get("/api/list-transcripts", async (req, res) => {
 });
 
 // --- SERVIR TRANSCRIPTS DO SUPABASE ---
-app.get("/transcripts/:id", async (req, res) => {
-    const fileName = `${req.params.id}.html`;
-    const { data, error } = await supabase.storage
-        .from("transcripts")
-        .download(`transcripts/transcripts/${fileName}`);
-    if (error || !data) return res.status(404).send("Transcript não encontrado.");
-    const text = await data.text();
-    res.setHeader("Content-Type", "text/html");
-    res.send(text);
+app.get("/transcripts/:id", (req, res) => {
+    const id = req.params.id.replace('.html', '');
+    res.redirect(`https://fdbmhgcfhdnnpwuodxzh.supabase.co/storage/v1/object/public/transcripts/transcripts/${id}.html`);
 });
 
 app.post("/api/login-manual", async (req, res) => {
