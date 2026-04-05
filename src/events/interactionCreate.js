@@ -61,55 +61,83 @@ module.exports = (client) => {
                 return interaction.reply({ embeds: [embed], components: [row], flags: [64] });
             }
 
-            /* ================= BOTÃO RECUSAR ================= */
-            if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
-                const tipoRec = cid.replace("recusar_termos_", "");
-                const canalLogs = guild.channels.cache.get(config.STAFF_LOGS_CHANNEL_ID);
+/* ================= BOTÃO RECUSAR ================= */
+if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
+    const tipoRec = cid.replace("recusar_termos_", "");
+    const canalLogs = guild.channels.cache.get(config.STAFF_LOGS_CHANNEL_ID);
 
-                if (canalLogs) {
-                    await canalLogs.send({
-                        content: `❌ **${user.tag}** (ID: ${user.id}) **não aceitou** os termos para abrir ticket de: \`${tipoRec}\``
-                    }).catch(() => {});
-                }
+    if (canalLogs) {
+        await canalLogs.send({
+            content: `❌ @${user.username} **não aceitou** os termos para abrir ticket de: \`${tipoRec}\`   # 🔵 vpn-service`
+        }).catch(() => {});
+    }
 
-                return interaction.update({
-                    content: "⚠️ Tens de aceitar os termos para abrir o teu ticket/pedido.",
-                    embeds: [],
-                    components: []
-                });
-            }
+    return interaction.update({
+        content: "⚠️ Tens de aceitar os termos para abrir o teu ticket/pedido.",
+        embeds: [],
+        components: []
+    });
+}
 
-            /* ================= BOTÃO ACEITAR (MOSTRAR PAGAMENTO) ================= */
-            if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
-                const tipoAceito = cid.replace("aceitar_termos_", "");
-                const canalLogs = guild.channels.cache.get(config.STAFF_LOGS_CHANNEL_ID);
+/* ================= BOTÃO ACEITAR ================= */
+if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
+    const tipoAceito = cid.replace("aceitar_termos_", "");
+    const canalLogs = guild.channels.cache.get(config.STAFF_LOGS_CHANNEL_ID);
 
-                if (canalLogs) {
-                    await canalLogs.send({
-                        content: `✅ **${user.tag}** (ID: ${user.id}) **aceitou** os termos para abrir ticket de: \`${tipoAceito}\``
-                    }).catch(() => {});
-                }
+    let tagFinal = "# ⭐ produto";
 
-                const menuPagamento = new StringSelectMenuBuilder()
-                    .setCustomId(`pagamento_${tipoAceito}`)
-                    .setPlaceholder("💳 Escolha o método de pagamento")
-                    .addOptions([
-                        { label: "MBWay", value: "MBWay", emoji: "1464608251516813446" },
-                        { label: "PayPal", value: "PayPal", emoji: "1464608396383883314" },
-                        { label: "Revolut", value: "Revolut", emoji: "1464608485617565726" },
-                        { label: "Cartão de Crédito", value: "CartaoCredito", emoji: "1464608966826004676" },
-                        { label: "Google Pay", value: "GooglePay", emoji: "1464609044315508797" },
-                        { label: "Apple Pay", value: "ApplePay", emoji: "1464609102906003588" },
-                        { label: "Multibanco", value: "ReferenciaMultibanco", emoji: "1464609317926735902" }
-                    ]);
+    const tipoLower = tipoAceito.toLowerCase();
 
-                return interaction.update({
-                    content: "✅ **Termos aceites!** Agora seleciona o método de pagamento:",
-                    embeds: [],
-                    components: [new ActionRowBuilder().addComponents(menuPagamento)]
-                });
-            }
+    if (tipoLower.includes("steam")) {
+        tagFinal = "# ⭐ steam-account";
+    } else if (tipoLower.includes("vpn") || tipoLower.includes("cyberghost")) {
+        tagFinal = "# 🔵 vpn-service";
+    } else if (tipoLower.includes("spoofer") || tipoLower.includes("sp00fer")) {
+        tagFinal = "# 🛡️ spoofer";
+    } else if (tipoLower.includes("shark")) {
+        tagFinal = "# 🦈 shark-menu";
+    } else if (tipoLower.includes("stan")) {
+        tagFinal = "# 🦍 stan-menu";
+    } else if (tipoLower.includes("stellar")) {
+        tagFinal = "# ⭐ stellar-menu";
+    } else if (tipoLower.includes("lunax")) {
+        tagFinal = "# 🌙 lunax-menu";
+    } else if (tipoLower.includes("flyside")) {
+        tagFinal = "# 🟣 flyside-menu";
+    } else if (tipoLower.includes("discord")) {
+        tagFinal = "# 💬 discord-account";
+    } else if (tipoLower.includes("rockstar")) {
+        tagFinal = "# 🎮 rockstar-account";
+    } else if (tipoLower.includes("duck")) {
+        tagFinal = "# 🦆 duck-cleaner";
+    }
 
+    if (canalLogs) {
+        await canalLogs.send({
+            content: `✅ @${user.username} **aceitou** os termos para abrir ticket de: \`${tipoAceito}\`   ${tagFinal}`
+        }).catch(() => {});
+    }
+
+    // Continua com o menu de pagamento
+    const menuPagamento = new StringSelectMenuBuilder()
+        .setCustomId(`pagamento_${tipoAceito}`)
+        .setPlaceholder("💳 Escolha o método de pagamento")
+        .addOptions([
+            { label: "MBWay", value: "MBWay", emoji: "1464608251516813446" },
+            { label: "PayPal", value: "PayPal", emoji: "1464608396383883314" },
+            { label: "Revolut", value: "Revolut", emoji: "1464608485617565726" },
+            { label: "Cartão de Crédito", value: "CartaoCredito", emoji: "1464608966826004676" },
+            { label: "Google Pay", value: "GooglePay", emoji: "1464609044315508797" },
+            { label: "Apple Pay", value: "ApplePay", emoji: "1464609102906003588" },
+            { label: "Multibanco", value: "ReferenciaMultibanco", emoji: "1464609317926735902" }
+        ]);
+
+    return interaction.update({
+        content: "✅ **Termos aceites!** Agora seleciona o método de pagamento:",
+        embeds: [],
+        components: [new ActionRowBuilder().addComponents(menuPagamento)]
+    });
+}
             /* ================= CRIAR TICKET FINAL ================= */
             if (interaction.isStringSelectMenu() && cid?.startsWith("pagamento_")) {
                 await interaction.deferReply({ flags: [64] });
