@@ -8,7 +8,30 @@ module.exports = async (client) => {
     console.log(`🕒 Hora de Portugal: ${new Date().toLocaleString('pt-PT', { timeZone: 'Europe/Lisbon' })}`);
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
 
-    // Status rotativo
+    // ==================== REGISTAR SLASH COMMANDS ====================
+    console.log("🔄 A registar slash commands...");
+
+    const commands = [
+        require("../commands/adicionar"),
+        require("../commands/carrinho")
+    ].filter(Boolean);
+
+    try {
+        // Registo global
+        await client.application.commands.set(commands.map(cmd => cmd.data.toJSON()));
+        console.log(`✅ ${commands.length} comandos slash registados globalmente!`);
+
+        // Registo rápido no teu servidor (para aparecer imediatamente)
+        const testGuild = client.guilds.cache.get("1393629457599828040"); // ID do teu servidor
+        if (testGuild) {
+            await testGuild.commands.set(commands.map(cmd => cmd.data.toJSON()));
+            console.log(`✅ Comandos registados rapidamente no servidor! (deve aparecer em poucos segundos)`);
+        }
+    } catch (err) {
+        console.error("❌ Erro ao registar slash commands:", err);
+    }
+
+    // ==================== STATUS ROTATIVO ====================
     const statusList = [
         { name: "Jordan Shop | discord.gg/6hhZeqb7Qk", type: ActivityType.Competing },
         { name: "Os melhores preços!", type: ActivityType.Watching },
@@ -28,13 +51,13 @@ module.exports = async (client) => {
     updateStatus();
     setInterval(updateStatus, 5000);
 
-    // Log de inicialização com hora correta
+    // ==================== LOG DE INICIALIZAÇÃO ====================
     const LOG_ID = process.env.LOG_CHANNEL_ID || "1437076921627181228";
-   
-try {
+  
+    try {
         const logChannel = await client.channels.fetch(LOG_ID).catch(() => null);
         if (logChannel) {
-            const agora = new Date().toLocaleTimeString('pt-PT', { 
+            const agora = new Date().toLocaleTimeString('pt-PT', {
                 timeZone: 'Europe/Lisbon',
                 hour: '2-digit',
                 minute: '2-digit',
@@ -43,9 +66,7 @@ try {
 
             const embedLog = new EmbedBuilder()
                 .setTitle("✅ Bot está online!")
-                .setDescription(`O bot foi iniciado com sucesso e está pronto para uso.\n\n🕒 **Hora de Portugal:** ${agora}`)
-                .setImage("https://i.postimg.cc/YCmc9zyY/sucesso-no-neg-cio-61850034.webp")
-                .setThumbnail(client.user.displayAvatarURL())
+                .setDescription(`O bot foi iniciado com sucesso e está pronto para uso.\n\n🕒 **Hora:** ${agora}`)
                 .setColor("#00ff00")
                 .setFooter({ text: "Jordan Shop System", iconURL: client.user.displayAvatarURL() });
 
