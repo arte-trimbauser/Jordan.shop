@@ -83,7 +83,7 @@ app.get("/", (req, res) => {
 app.get("/api/list-transcripts", async (req, res) => {
     const { data, error } = await supabase.storage
         .from("transcripts")
-        .list("transcripts", { sortBy: { column: "created_at", order: "desc" } });
+        .list("transcripts/transcripts", { sortBy: { column: "created_at", order: "desc" } });
 
     if (error) return res.status(500).json([]);
     res.json(data || []);
@@ -94,10 +94,8 @@ app.get("/transcripts/:id", async (req, res) => {
     const fileName = `${req.params.id}.html`;
     const { data, error } = await supabase.storage
         .from("transcripts")
-        .download(`transcripts/${fileName}`);
-
+        .download(`transcripts/transcripts/${fileName}`);
     if (error || !data) return res.status(404).send("Transcript não encontrado.");
-
     const text = await data.text();
     res.setHeader("Content-Type", "text/html");
     res.send(text);
