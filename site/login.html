@@ -142,7 +142,8 @@
             });
             const data = await response.json();
             if (data.success) {
-                window.location.href = `loja.html?user=${encodeURIComponent(data.user)}&token=${data.token}`;
+    sessionStorage.setItem('_mostrar_splash', '1');
+    window.location.href = `loja.html?user=${encodeURIComponent(data.user)}&token=${data.token}`;
             } else {
                 mostrarErro('❌ Dados incorretos!');
                 btn.innerText = "ENTRAR";
