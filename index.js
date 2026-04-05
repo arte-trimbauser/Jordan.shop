@@ -42,6 +42,13 @@ const staffAutorizado = {
 
 let tokensAtivos = new Set();
 
+// --- CONFIGURAÇÃO SUPABASE ---
+const { createClient } = require("@supabase/supabase-js");
+const supabase = createClient(
+    "https://fdbmhgcfhdnnpwuodxzh.supabase.co",
+    process.env.SUPABASE_KEY
+);
+
 const app = express();
 const port = process.env.PORT || 10000;
 
@@ -70,6 +77,20 @@ app.use(express.static(path.join(__dirname, "site"), { index: false }));
 // Rotas Login
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "site", "login.html"));
+});
+
+// --- SERVIR TRANSCRIPTS DO SUPABASE ---
+app.get("/transcripts/:id", async (req, res) => {
+    const fileName = `${req.params.id}.html`;
+    const { data, error } = await supabase.storage
+        .from("transcripts")
+        .download(`transcripts/${fileName}`);
+
+    if (error || !data) return res.status(404).send("Transcript não encontrado.");
+
+    const text = await data.text();
+    res.setHeader("Content-Type", "text/html");
+    res.send(text);
 });
 
 app.post("/api/login-manual", async (req, res) => {
