@@ -79,6 +79,16 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "site", "login.html"));
 });
 
+// --- LISTAR TRANSCRIPTS DO SUPABASE ---
+app.get("/api/list-transcripts", async (req, res) => {
+    const { data, error } = await supabase.storage
+        .from("transcripts")
+        .list("transcripts", { sortBy: { column: "created_at", order: "desc" } });
+
+    if (error) return res.status(500).json([]);
+    res.json(data || []);
+});
+
 // --- SERVIR TRANSCRIPTS DO SUPABASE ---
 app.get("/transcripts/:id", async (req, res) => {
     const fileName = `${req.params.id}.html`;
