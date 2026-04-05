@@ -49,6 +49,11 @@
     window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('nav-username').innerText = utilizadorLogado;
         document.getElementById('main-welcome').innerText = "Bem-Vindo, " + utilizadorLogado;
+        const irPara = sessionStorage.getItem('ir_para_secao');
+if (irPara) {
+    sessionStorage.removeItem('ir_para_secao');
+    showSection(irPara);
+}
     });
 </script>
 
