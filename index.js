@@ -166,31 +166,32 @@ app.post("/api/enviar-embed", async (req, res) => {
     try {
         const canal = await client.channels.fetch(canalId);
         if (!canal) return res.status(404).send("Canal não encontrado.");
+        
+    const embed = new EmbedBuilder()
+    .setTitle(titulo)
+    .setDescription(desc)
+    .setColor(cor || "#8b0000");
 
-        const embed = new EmbedBuilder()
-            .setTitle(titulo)
-            .setDescription(desc)
-            .setColor(cor || "#8b0000");
+const components = [];
+if (produtos?.length) {
+    const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId("menu_produtos")
+        .setPlaceholder("Escolhe uma opção")
+        .addOptions(produtos.map((p, i) => ({
+            label: p.nome,
+            description: `Preço: ${p.preco}`,
+            value: `prod_${p.nome.replace(/\s+/g, "_").toLowerCase()}_${i}`
+        })));
+    components.push(new ActionRowBuilder().addComponents(selectMenu));
+}
 
-        const components = [];
-        if (produtos?.length) {
-            const selectMenu = new StringSelectMenuBuilder()
-                .setCustomId("menu_produtos")
-                .setPlaceholder("Escolhe uma opção")
-                .addOptions(produtos.map(p => ({
-                    label: p.nome,
-                    description: `Preço: ${p.preco}`,
-                    value: `prod_${p.nome.replace(/\s+/g, "_").toLowerCase()}`
-                })));
-            components.push(new ActionRowBuilder().addComponents(selectMenu));
-        }
+await canal.send({ embeds: [embed], components });
+res.send("✅ Enviado!");
+} catch (error) {
+    console.error(error);
+    res.status(500).send("Erro ao comunicar com o Discord.");
+}
 
-        await canal.send({ embeds: [embed], components });
-        res.send("✅ Enviado!");
-    } catch (error) {
-        console.error(error);
-        res.status(500).send("Erro ao comunicar com o Discord.");
-    }
 });
 
 // Inicialização
