@@ -5,8 +5,9 @@ const {
 const config = require("../config");
 const isStaff = require("../helpers/isStaff");
 const sendTranscript = require("../helpers/sendTranscript");
-const carrinhos = new Map(); // Carrinho de cada utilizador
+const menus = require("../menus"); // ✅ CORRIGIDO: menus agora está importado
 const cooldowns = new Map();
+
 const emojisPagamento = {
     "MBWay": "<:mbway:1464608251516813446>",
     "PayPal": "<:paypal:1464608396383883314>",
@@ -16,11 +17,103 @@ const emojisPagamento = {
     "ApplePay": "<:applepay:1464609102906003588>",
     "ReferenciaMultibanco": "<:multibanco:1464609317926735902>"
 };
+
 module.exports = (client) => {
+    // ✅ CORRIGIDO: carrinho guardado no client para ser partilhado entre ficheiros
+    if (!client.carrinhos) client.carrinhos = new Map();
+
     client.on("interactionCreate", async (interaction) => {
         if (!interaction.guild) return;
         const { guild, channel, user, member, customId: cid } = interaction;
+
         try {
+
+            /* ================= SLASH COMMANDS ================= */
+            if (interaction.isChatInputCommand()) {
+
+                // /adicionar
+                if (interaction.commandName === "adicionar") {
+                    const embed = new EmbedBuilder()
+                        .setTitle("🛒 Adicionar ao Carrinho - Jordan Shop")
+                        .setDescription("Escolhe o produto que queres adicionar:")
+                        .setColor("#8b0000");
+
+                    const selectOptions = menus.map(menu => {
+                        let nomeLimpo = menu.title.replace(/[\uD83C-\uDBFF\uDC00-\uDFFF]/g, '').trim();
+                        if (nomeLimpo.length > 100) nomeLimpo = nomeLimpo.slice(0, 97) + "...";
+                        return {
+                            label: nomeLimpo || "Produto",
+                            description: menu.options[0]?.description || "Ver opções",
+                            value: menu.id
+                        };
+                    });
+
+                    const select = new StringSelectMenuBuilder()
+                        .setCustomId("adicionar_produto")
+                        .setPlaceholder("Seleciona um produto")
+                        .addOptions(selectOptions);
+
+                    return interaction.reply({
+                        embeds: [embed],
+                        components: [new ActionRowBuilder().addComponents(select)],
+                        flags: [64]
+                    });
+                }
+
+                // /carrinho
+                if (interaction.commandName === "carrinho") {
+                    const carrinho = client.carrinhos.get(user.id) || [];
+
+                    if (carrinho.length === 0) {
+                        return interaction.reply({
+                            content: "🛒 O teu carrinho está vazio!\n\nUsa `/adicionar` para adicionar produtos.",
+                            flags: [64]
+                        });
+                    }
+
+                    let descricao = "";
+                    let total = 0;
+
+                    carrinho.forEach((item, index) => {
+                        let precoUnit = 0;
+                        if (item.options && item.options.length > 0) {
+                            const desc = item.options[0].description || "";
+                            const match = desc.match(/\d+([.,]\d+)?/);
+                            if (match) precoUnit = parseFloat(match[0].replace(',', '.'));
+                        }
+                        const subtotal = precoUnit * (item.quantidade || 1);
+                        total += subtotal;
+                        descricao += `**${index + 1}.** ${item.titulo}\n`;
+                        descricao += ` Quantidade: **${item.quantidade || 1}**\n`;
+                        descricao += ` Preço unitário: €${precoUnit.toFixed(2)}\n`;
+                        descricao += ` Subtotal: €${subtotal.toFixed(2)}\n\n`;
+                    });
+
+                    const embed = new EmbedBuilder()
+                        .setTitle("🛒 Teu Carrinho - Jordan Shop")
+                        .setDescription(descricao)
+                        .addFields(
+                            { name: "Total Aproximado", value: `**€${total.toFixed(2)}**`, inline: true },
+                            { name: "Itens no carrinho", value: `${carrinho.length}`, inline: true }
+                        )
+                        .setColor("#8b0000")
+                        .setFooter({ text: "Podes adicionar mais com /adicionar" });
+
+                    const row = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder()
+                            .setCustomId("finalizar_carrinho")
+                            .setLabel("✅ Finalizar Compra")
+                            .setStyle(ButtonStyle.Success),
+                        new ButtonBuilder()
+                            .setCustomId("limpar_carrinho")
+                            .setLabel("🗑️ Limpar Carrinho")
+                            .setStyle(ButtonStyle.Danger)
+                    );
+
+                    return interaction.reply({ embeds: [embed], components: [row], flags: [64] });
+                }
+            }
+
             /* ================= MENU DE SELECÇÃO ================= */
             if (interaction.isStringSelectMenu() && (cid === "menu_ticket" || cid === "menu_produtos")) {
                 const tipo = interaction.values[0];
@@ -62,12 +155,12 @@ module.exports = (client) => {
                     return interaction.reply({ content: "❌ Produto não encontrado.", ephemeral: true });
                 }
 
-                // Guardar no carrinho do utilizador
-                if (!carrinhos.has(user.id)) {
-                    carrinhos.set(user.id, []);
+                // ✅ CORRIGIDO: usa client.carrinhos em vez do Map local
+                if (!client.carrinhos.has(user.id)) {
+                    client.carrinhos.set(user.id, []);
                 }
 
-                const carrinhoUser = carrinhos.get(user.id);
+                const carrinhoUser = client.carrinhos.get(user.id);
 
                 // Adiciona o menu inteiro (para depois escolher duração)
                 carrinhoUser.push({
@@ -83,9 +176,9 @@ module.exports = (client) => {
                     .setDescription(`**${menuSelecionado.title}** foi adicionado.\n\nAgora podes:\n• Usar \`/adicionar\` para mais produtos\n• Usar \`/carrinho\` para ver o teu carrinho`)
                     .setColor("#00ff00");
 
-                await interaction.update({ 
-                    embeds: [embed], 
-                    components: [] 
+                await interaction.update({
+                    embeds: [embed],
+                    components: []
                 });
             }
 
@@ -286,15 +379,18 @@ module.exports = (client) => {
                     return await interaction.reply({ embeds: [embedAviso], components: [rowEscolha], flags: [64] });
                 }
             }
+
             if (cid === "confirm_close_save") {
                 await interaction.update({ content: "🔒 A guardar log e a eliminar...", embeds: [], components: [] });
                 await sendTranscript(channel, user.tag);
                 return setTimeout(() => channel.delete().catch(() => {}), 3000);
             }
+
             if (cid === "confirm_close_silent") {
                 await interaction.update({ content: "❌ Ticket eliminado sem registo.", embeds: [], components: [] });
                 return setTimeout(() => channel.delete().catch(() => {}), 3000);
             }
+
         } catch (err) {
             console.error("❌ Erro Geral no InteractionCreate:", err);
         }
