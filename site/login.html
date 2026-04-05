@@ -157,9 +157,10 @@
     }
 
     function loginDiscordAnimado() {
-        const urlAutorizacao = "https://discord.com/oauth2/authorize?client_id=1424479855466123284&response_type=code&redirect_uri=https%3A%2F%2Fjordan-shop.onrender.com%2Fcallback&scope=identify+guilds+guilds.members.read";
-        window.location.href = urlAutorizacao;
-    }
+    sessionStorage.setItem('_mostrar_splash', '1'); // ✅ adiciona esta linha
+    const urlAutorizacao = "https://discord.com/oauth2/authorize?client_id=1424479855466123284&response_type=code&redirect_uri=https%3A%2F%2Fjordan-shop.onrender.com%2Fcallback&scope=identify+guilds+guilds.members.read";
+    window.location.href = urlAutorizacao;
+}
 
     function togglePass() {
         const input = document.getElementById('pass');
