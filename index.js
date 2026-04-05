@@ -34,7 +34,21 @@ const carrinhos = new Map();
 const app = express();
 const port = process.env.PORT || 10000;
 
-app.use(helmet());
+// ✅ CORRIGIDO: Helmet configurado para permitir o site funcionar
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
+            scriptSrcAttr: ["'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "fonts.gstatic.com"],
+            fontSrc: ["'self'", "fonts.googleapis.com", "fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:", "https://i.postimg.cc"],
+            connectSrc: ["'self'"]
+        }
+    }
+}));
+
 app.use(express.json({ limit: "1mb" }));
 
 const limiter = rateLimit({ windowMs: 60 * 1000, max: 120 });
