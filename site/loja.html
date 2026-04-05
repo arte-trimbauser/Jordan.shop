@@ -295,13 +295,24 @@ main {
             });
         }
 
-        // Relógio em Tempo Real
-        function atualizarRelogio() {
-            const relogio = document.getElementById('relogio-realtime');
-            if(relogio) relogio.innerText = new Date().toLocaleTimeString('pt-PT');
-        }
-        setInterval(atualizarRelogio, 1000);
-        atualizarRelogio();
+// Relógio em Tempo Real - Hora de Verão de Portugal
+function atualizarRelogio() {
+    const relogio = document.getElementById('relogio-realtime');
+    if (!relogio) return;
+
+    const agora = new Date();
+    const horaPortugal = agora.toLocaleTimeString('pt-PT', {
+        timeZone: 'Europe/Lisbon',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+
+    relogio.innerText = horaPortugal;
+}
+
+setInterval(atualizarRelogio, 1000);
+atualizarRelogio();   // Mostra logo ao abrir
 
         // Buscar Logs do GitHub
         async function fetchLogs() {
