@@ -31,16 +31,14 @@ module.exports = async (client) => {
     // Log de inicialização com hora correta
     const LOG_ID = process.env.LOG_CHANNEL_ID || "1437076921627181228";
    
-    try {
+try {
         const logChannel = await client.channels.fetch(LOG_ID).catch(() => null);
         if (logChannel) {
-            const agora = new Date().toLocaleString('pt-PT', { 
+            const agora = new Date().toLocaleTimeString('pt-PT', { 
                 timeZone: 'Europe/Lisbon',
-                day: '2-digit', 
-                month: '2-digit', 
-                year: 'numeric',
-                hour: '2-digit', 
-                minute: '2-digit'
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
             });
 
             const embedLog = new EmbedBuilder()
