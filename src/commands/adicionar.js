@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
-const menus = require("../menus");   // ← aqui vamos usar o teu ficheiro menus.js
+const menus = require("../menus");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -16,13 +16,17 @@ module.exports = {
             .setCustomId("adicionar_produto")
             .setPlaceholder("Seleciona um produto")
             .addOptions(menus.map(menu => ({
-                label: menu.title.replace(/[\*\uD83D\uDE00-\uD83D\uDE4F\uD83D\uDE80-\uD83D\uDEF6]/g, '').trim(), // limpa emojis
+                label: menu.title.replace(/[^\w\s]/gi, '').trim().slice(0, 100), // limpa emojis de forma segura
                 description: menu.options[0]?.description || "Ver opções",
                 value: menu.id
             })));
 
         const row = new ActionRowBuilder().addComponents(select);
 
-        await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+        await interaction.reply({ 
+            embeds: [embed], 
+            components: [row], 
+            ephemeral: true 
+        });
     }
 };
