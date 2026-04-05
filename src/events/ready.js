@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActivityType } = require("discord.js");
+const { EmbedBuilder, ActivityType, REST, Routes } = require("discord.js");
 
 module.exports = async (client) => {
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
@@ -11,22 +11,23 @@ module.exports = async (client) => {
     // ==================== REGISTAR SLASH COMMANDS ====================
     console.log("🔄 A registar slash commands...");
 
-    const commands = [
-        require("../commands/adicionar"),
-        require("../commands/carrinho")
-    ].filter(Boolean);
+    const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
     try {
-        const testGuild = client.guilds.cache.get("1393629457599828040");
+        const adicionar = require("../commands/adicionar");
+        const carrinho = require("../commands/carrinho");
+        const commands = [adicionar, carrinho].filter(Boolean).map(cmd => cmd.data.toJSON());
 
-        if (testGuild) {
-            // Registo apenas no teu servidor (mais rápido e sem duplicados)
-            await testGuild.commands.set(commands.map(cmd => cmd.data.toJSON()));
-            console.log(`✅ ${commands.length} comandos registados no servidor com sucesso!`);
-        } else {
-            console.log("⚠️ Servidor não encontrado. A registar globalmente...");
-            await client.application.commands.set(commands.map(cmd => cmd.data.toJSON()));
-        }
+        // Limpa globais primeiro (evita duplicados)
+        await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
+
+        // Regista só no servidor (mais rápido e sem duplicados)
+        await rest.put(
+            Routes.applicationGuildCommands(client.user.id, "1393629457599828040"),
+            { body: commands }
+        );
+
+        console.log(`✅ ${commands.length} comandos registados no servidor com sucesso!`);
     } catch (err) {
         console.error("❌ Erro ao registar slash commands:", err);
     }
@@ -47,13 +48,12 @@ module.exports = async (client) => {
         });
         i = (i + 1) % statusList.length;
     };
-
     updateStatus();
     setInterval(updateStatus, 5000);
 
     // ==================== LOG DE INICIALIZAÇÃO ====================
     const LOG_ID = process.env.LOG_CHANNEL_ID || "1437076921627181228";
- 
+
     try {
         const logChannel = await client.channels.fetch(LOG_ID).catch(() => null);
         if (logChannel) {
@@ -63,7 +63,6 @@ module.exports = async (client) => {
                 minute: '2-digit',
                 second: '2-digit'
             });
-
             const embedLog = new EmbedBuilder()
                 .setTitle("✅ Bot está online!")
                 .setDescription(`O bot foi iniciado com sucesso e está pronto para uso.\n\n🕒 **Hora:** ${agora}`)
@@ -71,7 +70,6 @@ module.exports = async (client) => {
                 .setThumbnail(client.user.displayAvatarURL())
                 .setColor("#00ff00")
                 .setFooter({ text: "Jordan Shop System", iconURL: client.user.displayAvatarURL() });
-
             await logChannel.send({ embeds: [embedLog] });
         }
     } catch (err) {
