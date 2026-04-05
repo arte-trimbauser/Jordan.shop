@@ -17,15 +17,15 @@ module.exports = async (client) => {
     ].filter(Boolean);
 
     try {
-        // Registo global
-        await client.application.commands.set(commands.map(cmd => cmd.data.toJSON()));
-        console.log(`✅ ${commands.length} comandos slash registados globalmente!`);
+        // Registo apenas no teu servidor (evita duplicados)
+        const testGuild = client.guilds.cache.get("1393629457599828040");
 
-        // Registo rápido no teu servidor (para aparecer imediatamente)
-        const testGuild = client.guilds.cache.get("1393629457599828040"); // ID do teu servidor
         if (testGuild) {
             await testGuild.commands.set(commands.map(cmd => cmd.data.toJSON()));
-            console.log(`✅ Comandos registados rapidamente no servidor! (deve aparecer em poucos segundos)`);
+            console.log(`✅ ${commands.length} comandos registados no servidor com sucesso!`);
+        } else {
+            console.log("⚠️ Servidor não encontrado, a registar globalmente...");
+            await client.application.commands.set(commands.map(cmd => cmd.data.toJSON()));
         }
     } catch (err) {
         console.error("❌ Erro ao registar slash commands:", err);
@@ -67,6 +67,8 @@ module.exports = async (client) => {
             const embedLog = new EmbedBuilder()
                 .setTitle("✅ Bot está online!")
                 .setDescription(`O bot foi iniciado com sucesso e está pronto para uso.\n\n🕒 **Hora:** ${agora}`)
+                .setImage("https://i.postimg.cc/YCmc9zyY/sucesso-no-neg-cio-61850034.webp")
+                .setThumbnail(client.user.displayAvatarURL())
                 .setColor("#00ff00")
                 .setFooter({ text: "Jordan Shop System", iconURL: client.user.displayAvatarURL() });
 
