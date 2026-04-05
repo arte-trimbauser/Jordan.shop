@@ -31,6 +31,17 @@ const client = new Client({
 // Carrinho global (necessário)
 const carrinhos = new Map();
 
+// ✅ ADICIONA ISTO AQUI
+const staffAutorizado = {
+    "924344854232834068": "Jordan Costa",
+    "996454465555136675": "Arteex26",
+    "1476260824669618307": "lucasvieira",
+    "1138795786507919410": "migueldodrip",
+    "886007990942052362": "pincher11"
+};
+
+let tokensAtivos = new Set();
+
 const app = express();
 const port = process.env.PORT || 10000;
 
