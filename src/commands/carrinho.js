@@ -20,25 +20,32 @@ module.exports = {
         let total = 0;
 
         carrinho.forEach((item, index) => {
-            // Pega o preço da primeira opção (podes melhorar depois)
-            const precoBase = item.options[0]?.description ? 
-                parseFloat(item.options[0].description.match(/\d+([.,]\d+)?/)?.[0].replace(',', '.') || 0) : 0;
+            // Tenta pegar o preço da primeira opção
+            let precoUnit = 0;
+            if (item.options && item.options.length > 0) {
+                const desc = item.options[0].description || "";
+                const match = desc.match(/\d+([.,]\d+)?/);
+                if (match) precoUnit = parseFloat(match[0].replace(',', '.'));
+            }
 
-            const subtotal = precoBase * item.quantidade;
+            const subtotal = precoUnit * (item.quantidade || 1);
             total += subtotal;
 
-            descricao += `• **${item.titulo}**\n`;
-            descricao += `  Quantidade: **${item.quantidade}**\n`;
-            descricao += `  Preço unitário: €${precoBase.toFixed(2)}\n`;
-            descricao += `  Subtotal: €${subtotal.toFixed(2)}\n\n`;
+            descricao += `**${index + 1}.** ${item.titulo}\n`;
+            descricao += `   Quantidade: **${item.quantidade || 1}**\n`;
+            descricao += `   Preço unitário: €${precoUnit.toFixed(2)}\n`;
+            descricao += `   Subtotal: €${subtotal.toFixed(2)}\n\n`;
         });
 
         const embed = new EmbedBuilder()
             .setTitle("🛒 Teu Carrinho - Jordan Shop")
-            .setDescription(descricao || "Carrinho vazio")
-            .addFields({ name: "Total Aproximado", value: `**€${total.toFixed(2)}**`, inline: true })
+            .setDescription(descricao)
+            .addFields(
+                { name: "Total Aproximado", value: `**€${total.toFixed(2)}**`, inline: true },
+                { name: "Itens no carrinho", value: `${carrinho.length}`, inline: true }
+            )
             .setColor("#8b0000")
-            .setFooter({ text: "Podes editar a quantidade ou finalizar o pedido" });
+            .setFooter({ text: "Podes adicionar mais com /adicionar" });
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
@@ -51,6 +58,10 @@ module.exports = {
                 .setStyle(ButtonStyle.Danger)
         );
 
-        await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+        await interaction.reply({ 
+            embeds: [embed], 
+            components: [row], 
+            ephemeral: true 
+        });
     }
 };
