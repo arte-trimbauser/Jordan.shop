@@ -7,127 +7,91 @@
     <link rel="icon" type="image/png" href="logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        body, html { 
-            margin: 0; padding: 0; width: 100%; height: 100%; 
-            font-family: 'Open Sans', sans-serif; 
-            background: #000; overflow: hidden; 
-        }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Open Sans', sans-serif; background: #000; overflow: hidden; }
        
         .site-container {
             width: 100%; height: 100%;
-            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.6)), url('login.jpg');
+            background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('login.jpg');
             background-size: cover; background-position: center;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             position: relative;
         }
-
         #error-message {
-            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
-            background: rgba(220, 0, 0, 0.95);
+            position: absolute; top: 20px;
+            background: rgba(220, 0, 0, 0.9);
             color: white; padding: 12px 25px;
-            border-radius: 12px; font-weight: bold;
+            border-radius: 10px; font-weight: bold;
             display: none; z-index: 1000;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border: 1px solid #ff4444;
+            animation: fadeIn 0.5s ease-in-out;
             max-width: 90%;
-            text-align: center;
         }
-
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
         .login-box {
-            background: rgba(15, 5, 5, 0.95);
-            padding: 35px 25px;
+            background: rgba(15, 5, 5, 0.92);
+            padding: 40px 25px;
             border-radius: 20px;
-            width: 90%; max-width: 340px;
+            width: 90%; 
+            max-width: 340px;
             text-align: center;
-            border: 1px solid rgba(139, 0, 0, 0.4);
+            border: 1px solid rgba(139, 0, 0, 0.3);
             box-shadow: 0 15px 45px rgba(0,0,0,0.8);
         }
-
         .welcome-title {
-            background: rgba(139, 0, 0, 0.9);
-            padding: 12px;
-            border-radius: 10px;
-            margin-bottom: 25px;
-            font-weight: bold;
-            font-size: 0.95rem;
-            color: white;
-            text-transform: uppercase;
+            background: rgba(139, 0, 0, 0.8);
+            padding: 10px; border-radius: 8px;
+            margin-bottom: 25px; font-weight: bold; font-size: 0.85rem;
+            color: white; text-transform: uppercase;
         }
-
         .input-group {
-            background: rgba(255, 255, 255, 0.08);
-            margin: 15px 0;
-            padding: 14px 12px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.05); margin: 15px 0; padding: 12px;
+            border-radius: 8px; display: flex; align-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.1); transition: 0.3s;
         }
-
-        .input-group:focus-within {
-            border-color: #8b0000;
-            background: rgba(255, 255, 255, 0.12);
-        }
-
-        input {
-            background: transparent;
-            border: none;
-            color: white;
-            width: 100%;
-            outline: none;
-            font-size: 16px; /* maior para telemóvel */
-        }
-
+        .input-group:focus-within { border-color: #8b0000; background: rgba(255, 255, 255, 0.1); }
+        input { background: transparent; border: none; color: white; width: 100%; outline: none; font-size: 15px; }
+       
         .toggle-btn {
-            width: 26px; height: 26px; cursor: pointer;
+            width: 24px; height: 24px; cursor: pointer;
+            margin-left: 10px; border-radius: 4px; transition: 0.2s;
         }
-
+        .toggle-btn:hover { transform: scale(1.1); }
         .btn-entrar {
-            width: 100%; padding: 16px;
-            background: #8b0000; color: white;
-            border: none; border-radius: 10px;
-            cursor: pointer; font-weight: 800;
-            margin-top: 10px; font-size: 1.05rem;
+            width: 100%; padding: 15px; background: #8b0000; color: white;
+            border: none; border-radius: 8px; cursor: pointer;
+            font-weight: 800; margin-top: 10px; transition: 0.3s;
+            text-transform: uppercase; letter-spacing: 1px;
         }
-
-        .btn-entrar:hover {
-            background: #ff0000;
-            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
-        }
-
-        .divider {
-            color: #777; font-size: 13px; margin: 20px 0;
-        }
-
+        .btn-entrar:hover { background: #ff0000; box-shadow: 0 0 20px rgba(255, 0, 0, 0.4); }
+        .divider { color: #666; font-size: 11px; margin: 20px 0; font-weight: bold; }
         .btn-discord {
-            background: #ffffff; color: #5865F2;
-            padding: 15px; border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: bold; text-decoration: none;
-            border: 1px solid #5865F2;
-            font-size: 1rem;
+            background: #ffffff; color: #5865F2; text-decoration: none;
+            padding: 14px; border-radius: 8px; display: flex;
+            align-items: center; justify-content: center;
+            font-weight: bold; transition: 0.3s;
+            border: 1px solid #5865F2; font-size: 0.9rem;
         }
-
-        .btn-discord:hover {
-            background: #f0f0f0;
-        }
-
-        .discord-logo { width: 24px; margin-right: 10px; }
+        .btn-discord:hover { background: #f0f0f0; transform: translateY(-2px); }
+        .discord-logo { width: 20px; margin-right: 12px; }
     </style>
 </head>
 <body>
     <div class="site-container">
         <div id="error-message">Acesso Negado!</div>
-        
         <div class="login-box">
-            <div class="welcome-title">Login Jordan Shop</div>
+            <div class="welcome-title">Login Jordan Shop Site</div>
            
             <div class="input-group">
-                <input type="text" id="user" placeholder="Nome do Utilizador" autocomplete="off">
-                <span style="opacity: 0.6; font-size: 22px;">👤</span>
+                <input type="text" id="user" placeholder="Nome do Utilizador">
+                <span style="opacity: 0.6;">👤</span>
             </div>
            
             <div class="input-group">
-                <input type="password" id="pass" placeholder="Password" autocomplete="off">
+                <input type="password" id="pass" placeholder="Password">
                 <img src="olho_fechado.jpg" class="toggle-btn" id="eye-icon" onclick="togglePass()">
             </div>
            
@@ -137,7 +101,7 @@
            
             <a href="javascript:void(0);" onclick="loginDiscordAnimado()" class="btn-discord">
                 <img src="Discord-logo-icon.jpg" class="discord-logo">
-                Entrar com Discord
+                Login Discord
             </a>
         </div>
     </div>
@@ -147,53 +111,45 @@
         const erroDiv = document.getElementById('error-message');
         erroDiv.innerText = texto;
         erroDiv.style.display = 'block';
-        setTimeout(() => erroDiv.style.display = 'none', 7000);
+        setTimeout(() => { erroDiv.style.display = 'none'; }, 5000);
     }
 
     async function validarLogin() {
-        const u = document.getElementById('user').value.trim();
-        const p = document.getElementById('pass').value.trim();
+        const u = document.getElementById('user').value;
+        const p = document.getElementById('pass').value;
         const btn = document.getElementById('loginBtn');
-
-        if (!u || !p) {
-            return mostrarErro('❌ Preenche todos os campos!');
-        }
-
+        if (!u || !p) return mostrarErro('❌ Preenche todos os campos!');
         btn.innerText = "A VALIDAR...";
         btn.disabled = true;
-
         try {
             const response = await fetch('/api/login-manual', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: u, password: p })
             });
-
             const data = await response.json();
-
             if (data.success) {
                 window.location.href = `loja.html?user=${encodeURIComponent(data.user)}&token=${data.token}`;
             } else {
-                mostrarErro('❌ Utilizador ou password incorretos!');
+                mostrarErro('❌ ' + (data.message || 'Dados incorretos!'));
                 btn.innerText = "ENTRAR";
                 btn.disabled = false;
             }
         } catch (err) {
-            mostrarErro('❌ Erro ao ligar ao servidor. Tenta novamente.');
+            mostrarErro('❌ Erro ao ligar ao servidor!');
             btn.innerText = "ENTRAR";
             btn.disabled = false;
         }
     }
 
     function loginDiscordAnimado() {
-        const url = "https://discord.com/oauth2/authorize?client_id=1424479855466123284&response_type=code&redirect_uri=https%3A%2F%2Fjordan-shop.onrender.com%2Fcallback&scope=identify+guilds+guilds.members.read";
-        window.location.href = url;
+        const urlAutorizacao = "https://discord.com/oauth2/authorize?client_id=1424479855466123284&response_type=code&redirect_uri=https%3A%2F%2Fjordan-shop.onrender.com%2Fcallback&scope=identify+guilds+guilds.members.read";
+        window.location.href = urlAutorizacao;
     }
 
     function togglePass() {
         const input = document.getElementById('pass');
         const icon = document.getElementById('eye-icon');
-        
         if (input.type === "password") {
             input.type = "text";
             icon.src = "olho_aberto.jpg";
@@ -203,12 +159,11 @@
         }
     }
 
-    // Mensagem de erro vinda do Discord
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('error')) {
             if (urlParams.get('error') === 'nao_autorizado') {
-                mostrarErro('❌ Não tens permissão de Staff no Discord.');
+                mostrarErro('❌ Erro: Não tens permissão de Staff no Discord.');
             } else {
                 mostrarErro('❌ Erro na autenticação do Discord.');
             }
