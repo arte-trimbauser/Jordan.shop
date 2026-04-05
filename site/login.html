@@ -24,7 +24,7 @@
         #error-message {
             position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
             background: rgba(220, 0, 0, 0.95);
-            color: white; padding: 12px 20px;
+            color: white; padding: 12px 25px;
             border-radius: 12px; font-weight: bold;
             display: none; z-index: 1000;
             box-shadow: 0 4px 15px rgba(0,0,0,0.6);
@@ -51,7 +51,6 @@
             font-size: 0.95rem;
             color: white;
             text-transform: uppercase;
-            letter-spacing: 1px;
         }
 
         .input-group {
@@ -75,11 +74,11 @@
             color: white;
             width: 100%;
             outline: none;
-            font-size: 15px;
+            font-size: 16px; /* maior para telemóvel */
         }
 
         .toggle-btn {
-            width: 24px; height: 24px; cursor: pointer;
+            width: 26px; height: 26px; cursor: pointer;
         }
 
         .btn-entrar {
@@ -87,8 +86,7 @@
             background: #8b0000; color: white;
             border: none; border-radius: 10px;
             cursor: pointer; font-weight: 800;
-            margin-top: 10px; font-size: 1rem;
-            text-transform: uppercase;
+            margin-top: 10px; font-size: 1.05rem;
         }
 
         .btn-entrar:hover {
@@ -97,23 +95,23 @@
         }
 
         .divider {
-            color: #777; font-size: 12px; margin: 20px 0;
+            color: #777; font-size: 13px; margin: 20px 0;
         }
 
         .btn-discord {
             background: #ffffff; color: #5865F2;
-            padding: 14px; border-radius: 10px;
+            padding: 15px; border-radius: 10px;
             display: flex; align-items: center; justify-content: center;
             font-weight: bold; text-decoration: none;
             border: 1px solid #5865F2;
+            font-size: 1rem;
         }
 
         .btn-discord:hover {
             background: #f0f0f0;
-            transform: translateY(-2px);
         }
 
-        .discord-logo { width: 22px; margin-right: 10px; }
+        .discord-logo { width: 24px; margin-right: 10px; }
     </style>
 </head>
 <body>
@@ -124,12 +122,12 @@
             <div class="welcome-title">Login Jordan Shop</div>
            
             <div class="input-group">
-                <input type="text" id="user" placeholder="Nome do Utilizador">
-                <span style="opacity: 0.6; font-size: 20px;">👤</span>
+                <input type="text" id="user" placeholder="Nome do Utilizador" autocomplete="off">
+                <span style="opacity: 0.6; font-size: 22px;">👤</span>
             </div>
            
             <div class="input-group">
-                <input type="password" id="pass" placeholder="Password">
+                <input type="password" id="pass" placeholder="Password" autocomplete="off">
                 <img src="olho_fechado.jpg" class="toggle-btn" id="eye-icon" onclick="togglePass()">
             </div>
            
@@ -157,7 +155,9 @@
         const p = document.getElementById('pass').value.trim();
         const btn = document.getElementById('loginBtn');
 
-        if (!u || !p) return mostrarErro('❌ Preenche todos os campos!');
+        if (!u || !p) {
+            return mostrarErro('❌ Preenche todos os campos!');
+        }
 
         btn.innerText = "A VALIDAR...";
         btn.disabled = true;
@@ -174,12 +174,12 @@
             if (data.success) {
                 window.location.href = `loja.html?user=${encodeURIComponent(data.user)}&token=${data.token}`;
             } else {
-                mostrarErro('❌ ' + (data.message || 'Utilizador ou password incorretos!'));
+                mostrarErro('❌ Utilizador ou password incorretos!');
                 btn.innerText = "ENTRAR";
                 btn.disabled = false;
             }
         } catch (err) {
-            mostrarErro('❌ Erro de ligação ao servidor. Tenta novamente.');
+            mostrarErro('❌ Erro ao ligar ao servidor. Tenta novamente.');
             btn.innerText = "ENTRAR";
             btn.disabled = false;
         }
@@ -193,6 +193,7 @@
     function togglePass() {
         const input = document.getElementById('pass');
         const icon = document.getElementById('eye-icon');
+        
         if (input.type === "password") {
             input.type = "text";
             icon.src = "olho_aberto.jpg";
@@ -202,13 +203,14 @@
         }
     }
 
+    // Mensagem de erro vinda do Discord
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('error')) {
             if (urlParams.get('error') === 'nao_autorizado') {
-                mostrarErro('❌ Não tens permissão de Staff.');
+                mostrarErro('❌ Não tens permissão de Staff no Discord.');
             } else {
-                mostrarErro('❌ Erro na autenticação Discord.');
+                mostrarErro('❌ Erro na autenticação do Discord.');
             }
         }
     }
