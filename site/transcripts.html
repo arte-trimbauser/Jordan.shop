@@ -20,63 +20,72 @@
     </script>
 
     <style>
-        :root { --primary-red: #8b0000; --overlay-dark: rgba(0, 0, 0, 0.8); --transition-speed: 0.4s; }
+        :root { --primary-red: #8b0000; --overlay-dark: rgba(0,0,0,0.85); --transition-speed: 0.4s; }
         * { box-sizing: border-box; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Open Sans', sans-serif; color: white; overflow: hidden; }
 
         .bg-full { position: fixed; top:0; left:0; width:100%; height:100%; background: url('menu.png') no-repeat center center; background-size: cover; z-index:-2; }
         .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--overlay-dark); z-index:-1; }
 
-        header { background: var(--primary-red); height:60px; display:flex; justify-content:space-between; align-items:center; padding:0 30px; box-shadow:0 4px 15px rgba(0,0,0,0.5); z-index: 10; position: relative; }
-        .logo-link { color: white; text-decoration: none; font-weight: 800; font-size: 1.3rem; cursor: pointer; }
-        .user-tag { background: rgba(0,0,0,0.4); padding:8px 15px; border-radius:5px; font-weight:600; display: flex; align-items: center; gap: 10px; }
-        .user-avatar { width: 25px; height: 25px; border-radius: 50%; border: 1px solid white; }
+        header { background: var(--primary-red); height:60px; display:flex; justify-content:space-between; align-items:center; padding:0 30px; box-shadow:0 4px 15px rgba(0,0,0,0.5); z-index:10; position:relative; }
+        .logo-link { color:white; text-decoration:none; font-weight:800; font-size:1.3rem; cursor:pointer; }
+        .user-tag { background:rgba(0,0,0,0.4); padding:8px 15px; border-radius:5px; font-weight:600; display:flex; align-items:center; gap:10px; }
+        .user-avatar { width:25px; height:25px; border-radius:50%; border:1px solid white; }
 
-        .container { display:flex; height: calc(100vh - 60px); }
+        .container { display:flex; height:calc(100vh - 60px); }
 
-        aside { width:260px; background: rgba(40,40,40,0.6); backdrop-filter: blur(10px); padding:20px; display:flex; flex-direction:column; border-right:1px solid rgba(255,255,255,0.1); }
-        .search-box { width:100%; padding:12px; border-radius:5px; border:none; background: rgba(255,255,255,0.1); color:white; outline:none; border-bottom:2px solid transparent; transition:0.3s; margin-bottom: 20px; }
+        /* Sidebar */
+        aside { width:220px; background:rgba(0,0,0,0.5); backdrop-filter:blur(15px); padding:20px; display:flex; flex-direction:column; border-right:1px solid rgba(255,255,255,0.1); }
+        .search-box { width:100%; padding:10px; border-radius:5px; border:none; background:rgba(255,255,255,0.1); color:white; outline:none; border-bottom:2px solid transparent; transition:0.3s; margin-bottom:15px; font-size:0.85rem; }
         .search-box:focus { border-bottom:2px solid var(--primary-red); }
-        .nav-links { display: flex; flex-direction: column; gap: 12px; flex-grow: 1; }
-        .nav-btn { background: var(--primary-red); color:white; border:none; padding:14px; border-radius:6px; font-weight:600; cursor:pointer; transition: var(--transition-speed); text-align:center; text-decoration:none; display: block; }
-        .nav-btn:hover { transform: translateX(10px); filter: brightness(1.3); }
-        .nav-btn.active { background: #ff0000; box-shadow: 0 0 15px rgba(255,0,0,0.4); }
-        .logout-btn { background: #b30000; color: white; padding: 12px; border-radius: 6px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; margin-top: auto; border: none; cursor: pointer; }
-        .logout-btn:hover { background: #ff0000; transform: scale(1.02); }
+        .nav-links { display:flex; flex-direction:column; gap:10px; flex-grow:1; }
+        .nav-btn { background:var(--primary-red); color:white; border:none; padding:12px; border-radius:6px; font-weight:600; cursor:pointer; transition:var(--transition-speed); text-align:center; text-decoration:none; display:block; font-size:0.9rem; }
+        .nav-btn:hover { transform:translateX(8px); filter:brightness(1.3); }
+        .nav-btn.active { background:#ff0000; box-shadow:0 0 15px rgba(255,0,0,0.4); }
+        .logout-btn { background:#b30000; color:white; padding:12px; border-radius:6px; text-decoration:none; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:10px; transition:0.3s; margin-top:auto; border:none; cursor:pointer; font-size:0.9rem; }
+        .logout-btn:hover { background:#ff0000; transform:scale(1.02); }
 
-        main { flex:1; padding:40px; overflow-y:auto; display: flex; flex-direction: column; align-items: center; }
-        h1 { font-size:2.2rem; font-weight:800; text-shadow:2px 2px 8px rgba(0,0,0,0.8); margin-bottom: 10px; }
+        /* Main */
+        main { flex:1; padding:30px; overflow-y:auto; display:flex; flex-direction:column; align-items:center; }
+        h1 { font-size:2rem; font-weight:800; text-shadow:2px 2px 8px rgba(0,0,0,0.8); margin-bottom:5px; }
+        .subtitulo { color:#aaa; font-size:0.9rem; margin-bottom:20px; }
 
-        /* GRELHA DE TRANSCRIPTS */
-        .logs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; width: 100%; max-width: 1200px; margin-top: 20px; }
+        /* Barra de pesquisa de transcripts */
+        .search-transcripts { width:100%; max-width:900px; padding:12px 15px; border-radius:8px; border:none; background:rgba(255,255,255,0.08); color:white; outline:none; border:1px solid rgba(255,255,255,0.1); font-size:0.95rem; margin-bottom:20px; transition:0.3s; }
+        .search-transcripts:focus { border-color:var(--primary-red); background:rgba(255,255,255,0.12); }
+        .search-transcripts::placeholder { color:#666; }
 
-        .log-card {
-            background: rgba(20, 20, 20, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-left: 5px solid var(--primary-red);
-            padding: 20px;
-            border-radius: 12px;
-            text-align: left;
-            transition: 0.3s;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-        }
-        .log-card:hover { transform: translateY(-5px); border-left-color: #ff0000; box-shadow: 0 8px 25px rgba(139,0,0,0.3); }
+        /* Lista de transcripts */
+        .transcripts-lista { width:100%; max-width:900px; display:flex; flex-direction:column; gap:10px; }
 
-        .log-card strong { display: block; font-size: 1rem; color: #fff; margin-bottom: 5px; }
-        .log-card .data { color: #aaa; font-size: 0.8rem; margin-bottom: 5px; }
-        .log-card .canal { color: #888; font-size: 0.75rem; font-style: italic; }
+        .transcript-item { background:rgba(20,20,20,0.92); border:1px solid rgba(255,255,255,0.08); border-left:5px solid var(--primary-red); border-radius:10px; overflow:hidden; transition:0.3s; }
+        .transcript-item:hover { border-left-color:#ff0000; box-shadow:0 4px 20px rgba(139,0,0,0.3); }
 
-        .btn-open {
-            display: block; margin-top: 15px; background: var(--primary-red); color: white;
-            text-align: center; padding: 10px; border-radius: 6px;
-            font-weight: 800; text-decoration: none; font-size: 0.85rem;
-            transition: 0.3s;
-        }
-        .btn-open:hover { background: #ff0000; box-shadow: 0 0 15px rgba(255,0,0,0.4); }
+        .transcript-header { display:flex; justify-content:space-between; align-items:center; padding:15px 20px; cursor:pointer; gap:10px; }
+        .transcript-header:hover { background:rgba(255,255,255,0.03); }
 
-        .loading { color: #aaa; font-style: italic; }
-        .sem-resultados { color: #aaa; text-align: center; padding: 40px; }
+        .transcript-info { flex:1; }
+        .transcript-nome { font-weight:700; font-size:0.95rem; color:#fff; }
+        .transcript-meta { font-size:0.78rem; color:#888; margin-top:3px; }
+
+        .transcript-btns { display:flex; gap:8px; align-items:center; flex-shrink:0; }
+        .btn-html { background:var(--primary-red); color:white; border:none; padding:7px 14px; border-radius:5px; font-weight:700; font-size:0.78rem; cursor:pointer; text-decoration:none; transition:0.3s; }
+        .btn-html:hover { background:#ff0000; }
+        .btn-expandir { background:rgba(255,255,255,0.1); color:white; border:none; padding:7px 12px; border-radius:5px; font-weight:700; font-size:0.85rem; cursor:pointer; transition:0.3s; }
+        .btn-expandir:hover { background:rgba(255,255,255,0.2); }
+        .btn-expandir.aberto { transform:rotate(180deg); }
+
+        /* Área expandida com iframe */
+        .transcript-preview { display:none; border-top:1px solid rgba(255,255,255,0.08); background:#313338; }
+        .transcript-preview.aberto { display:block; }
+        .transcript-preview iframe { width:100%; height:400px; border:none; display:block; }
+        .preview-loading { padding:30px; text-align:center; color:#aaa; font-size:0.9rem; }
+
+        /* Estado vazio */
+        .sem-resultados { color:#666; text-align:center; padding:60px 20px; font-size:1rem; }
+
+        @keyframes fadeIn { from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);} }
+        .transcript-item { animation:fadeIn 0.3s ease; }
     </style>
 </head>
 <body>
@@ -95,11 +104,11 @@
         <aside>
             <input type="text" class="search-box" placeholder="Procurar função..." onkeyup="filtrarMenu(this)">
             <div class="nav-links">
-                <a href="loja.html" class="nav-btn">INÍCIO</a>
+                <a href="loja.html" class="nav-btn" onclick="irPara('welcome-section')">INÍCIO</a>
                 <a href="transcripts.html" class="nav-btn active">TRANSCRIPTS</a>
-                <a href="loja.html#vendas-section" class="nav-btn" onclick="irPara('vendas-section')">VENDAS</a>
-                <a href="loja.html#embed-section" class="nav-btn" onclick="irPara('embed-section')">CRIAR EMBED</a>
-                <a href="loja.html#bot-status-section" class="nav-btn" onclick="irPara('bot-status-section')">SITE ONLINE</a>
+                <a href="loja.html" class="nav-btn" onclick="irPara('vendas-section')">VENDAS</a>
+                <a href="loja.html" class="nav-btn" onclick="irPara('embed-section')">CRIAR EMBED</a>
+                <a href="loja.html" class="nav-btn" onclick="irPara('bot-status-section')">SITE ONLINE</a>
             </div>
             <button class="logout-btn" onclick="sessionStorage.clear(); window.location.href='login.html'">
                 SAIR 🚪
@@ -108,3 +117,115 @@
 
         <main>
             <h1>📄 Histórico de Transcripts</h1>
+            <p class="subtitulo" id="subtitulo">A carregar...</p>
+
+            <input type="text" class="search-transcripts" placeholder="🔍 Pesquisar por nome ou produto..." oninput="pesquisarTranscripts(this.value)">
+
+            <div class="transcripts-lista" id="lista">
+                <p class="sem-resultados">A procurar registos...</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let todosTranscripts = [];
+
+        function filtrarMenu(input) {
+            const valor = input.value.toLowerCase();
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.style.display = btn.innerText.toLowerCase().includes(valor) ? 'block' : 'none';
+            });
+        }
+
+        function irPara(secao) {
+            sessionStorage.setItem('ir_para_secao', secao);
+        }
+
+        function pesquisarTranscripts(valor) {
+            const filtrados = todosTranscripts.filter(f =>
+                f.name.toLowerCase().includes(valor.toLowerCase())
+            );
+            renderTranscripts(filtrados);
+        }
+
+        function togglePreview(id, nome) {
+            const preview = document.getElementById(`preview-${id}`);
+            const btn = document.getElementById(`btn-exp-${id}`);
+            const aberto = preview.classList.contains('aberto');
+
+            if (aberto) {
+                preview.classList.remove('aberto');
+                btn.classList.remove('aberto');
+                btn.innerText = '▼';
+            } else {
+                preview.classList.add('aberto');
+                btn.classList.add('aberto');
+                btn.innerText = '▲';
+
+                // Só carrega o iframe se ainda não tiver carregado
+                if (!preview.querySelector('iframe')) {
+                    preview.innerHTML = '<div class="preview-loading">⏳ A carregar transcript...</div>';
+                    const iframe = document.createElement('iframe');
+                    const transcriptId = nome.replace('.html', '');
+                    iframe.src = `/transcripts/${transcriptId}`;
+                    iframe.onload = () => { preview.innerHTML = ''; preview.appendChild(iframe); };
+                    iframe.onerror = () => { preview.innerHTML = '<div class="preview-loading">❌ Erro ao carregar.</div>'; };
+                    setTimeout(() => { if (preview.querySelector('.preview-loading')) { preview.innerHTML = ''; preview.appendChild(iframe); }}, 500);
+                }
+            }
+        }
+
+        function renderTranscripts(lista) {
+            const container = document.getElementById('lista');
+
+            if (!lista || lista.length === 0) {
+                container.innerHTML = "<p class='sem-resultados'>📭 Nenhum transcript encontrado.</p>";
+                return;
+            }
+
+            container.innerHTML = '';
+            lista.forEach((file, index) => {
+                const nomeCompleto = file.name.replace('.html', '');
+                const partes = nomeCompleto.split('-');
+                const cliente = partes[partes.length - 1]?.toUpperCase() || 'CLIENTE';
+                const produto = partes.slice(1, partes.length - 1).join(' ') || 'Produto';
+                const data = file.created_at ? new Date(file.created_at).toLocaleString('pt-PT') : 'Data desconhecida';
+                const id = `transcript-${index}`;
+
+                const item = document.createElement('div');
+                item.className = 'transcript-item';
+                item.innerHTML = `
+                    <div class="transcript-header" onclick="togglePreview('${id}', '${file.name}')">
+                        <div class="transcript-info">
+                            <div class="transcript-nome">👤 ${cliente} — ${produto}</div>
+                            <div class="transcript-meta">🕒 ${data}</div>
+                        </div>
+                        <div class="transcript-btns">
+                            <a href="/transcripts/${nomeCompleto}" target="_blank" class="btn-html" onclick="event.stopPropagation()">
+                                🔗 ABRIR
+                            </a>
+                            <button class="btn-expandir" id="btn-exp-${id}">▼</button>
+                        </div>
+                    </div>
+                    <div class="transcript-preview" id="preview-${id}"></div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        async function fetchLogs() {
+            const subtitulo = document.getElementById('subtitulo');
+            try {
+                const response = await fetch('/api/list-transcripts');
+                const logs = await response.json();
+                todosTranscripts = logs;
+                subtitulo.innerText = `${logs.length} transcript(s) encontrado(s)`;
+                renderTranscripts(logs);
+            } catch (e) {
+                subtitulo.innerText = 'Erro ao carregar';
+                document.getElementById('lista').innerHTML = "<p class='sem-resultados'>❌ Erro ao ligar à API.</p>";
+            }
+        }
+    </script>
+</body>
+</html>
