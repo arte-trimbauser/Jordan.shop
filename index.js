@@ -250,25 +250,43 @@ console.log("🔐 A tentar login no Discord...");
 console.log("Token existe?", TOKEN ? "SIM" : "NÃO");
 console.log("Primeiros 20 chars:", TOKEN ? TOKEN.substring(0, 20) + "..." : "VAZIO");
 
+console.log("🔍 DEBUG: Vou tentar login...");
+
 client.login(TOKEN)
-    .then(() => {
-        console.log("✅ Pedido de login enviado ao Discord");
-        console.log("Bot user:", client.user ? client.user.tag : "ainda sem user");
+    .then((token) => {
+        console.log("✅ Login promise resolvida!");
+        console.log("Token retornado:", token ? "SIM" : "NÃO");
     })
     .catch(err => {
-        console.error("❌ ERRO NO LOGIN:", err.message);
-        console.error("Código do erro:", err.code);
-        console.error("Erro completo:", err);
+        console.error("❌ ERRO CAPTURADO NO CATCH:");
+        console.error("Mensagem:", err.message);
+        console.error("Código:", err.code);
+        console.error("Status:", err.status);
+        console.error("Método:", err.method);
+        console.error("URL:", err.url);
     });
 
-// Timeout de segurança - se em 10s não ligar, avisa
-setTimeout(() => {
-    if (!client.user) {
-        console.warn("⚠️ Atenção: Bot ainda não ligado após 10 segundos");
-        console.warn("Verifica se o token está correto no Discord Developer Portal");
-    }
-}, 10000);
+// Eventos do client para debug
+client.on("debug", (info) => {
+    console.log("🐛 DISCORD DEBUG:", info);
+});
+
+client.on("warn", (info) => {
+    console.log("⚠️ DISCORD WARN:", info);
+});
+
+client.on("error", (err) => {
+    console.error("💥 DISCORD ERROR:", err.message);
+});
 
 client.once(Events.ClientReady, () => {
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
 });
+
+// Timeout
+setTimeout(() => {
+    if (!client.user) {
+        console.warn("⚠️ Bot não ligado após 10s");
+        console.warn("Estado da conexão:", client.ws.status);
+    }
+}, 10000);
