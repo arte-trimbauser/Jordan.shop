@@ -100,6 +100,8 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "site", "login.html"));
 });
 
+app.get("/api/list-transcripts", async (req, res) => {
+
 // --- LISTAR TRANSCRIPTS DO SUPABASE ---
 app.get("/transcripts/:id", async (req, res) => {
     const id = req.params.id.replace('.html', '');
