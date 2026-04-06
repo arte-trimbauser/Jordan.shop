@@ -12,6 +12,7 @@ const rateLimit = require("express-rate-limit");
 const {
     Client,
     GatewayIntentBits,
+    ActivityType,
     EmbedBuilder,
     ActionRowBuilder,
     StringSelectMenuBuilder,
@@ -29,8 +30,10 @@ const client = new Client({
     ]
 });
 
+// Carrinho global (necessário)
 const carrinhos = new Map();
 
+// ✅ ADICIONA ISTO AQUI
 const staffAutorizado = {
     "924344854232834068": "Jordan Costa",
     "996454465555136675": "Arteex26",
@@ -41,6 +44,7 @@ const staffAutorizado = {
 
 let tokensAtivos = new Set();
 
+// --- CONFIGURAÇÃO SUPABASE ---
 const supabase = createClient(
     "https://fdbmhgcfhdnnpwuodxzh.supabase.co",
     process.env.SUPABASE_KEY
