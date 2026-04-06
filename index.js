@@ -52,6 +52,8 @@ const supabase = createClient(
 const app = express();
 const port = process.env.PORT || 10000;
 
+app.get("/api/list-transcripts", async (req, res) => {
+
 // ✅ CORRIGIDO: Helmet configurado para permitir o site funcionar
 app.use(helmet({
     contentSecurityPolicy: {
@@ -100,7 +102,7 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "site", "login.html"));
 });
 
-app.get("/api/list-transcripts", async (req, res) => {
+    app.get("/api/list-transcripts", async (req, res) => {
 
 // --- LISTAR TRANSCRIPTS DO SUPABASE ---
 app.get("/transcripts/:id", async (req, res) => {
