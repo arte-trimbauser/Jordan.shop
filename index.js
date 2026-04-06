@@ -240,12 +240,6 @@ if (!TOKEN) {
     process.exit(1);
 }
 
-const TOKEN = process.env.DISCORD_TOKEN;
-if (!TOKEN) {
-    console.error("❌ Token não encontrado!");
-    process.exit(1);
-}
-
 // ✅ EXPRESS LIGA PRIMEIRO
 app.listen(port, () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
