@@ -19,8 +19,6 @@ const {
     Events
 } = require("discord.js");
 
-const { createClient } = require("@supabase/supabase-js");
-
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -33,7 +31,7 @@ const client = new Client({
 // Carrinho global (necessário)
 const carrinhos = new Map();
 
-// ✅ STAFF AUTORIZADO
+// ✅ ADICIONA ISTO AQUI
 const staffAutorizado = {
     "924344854232834068": "Jordan Costa",
     "996454465555136675": "Arteex26",
@@ -45,6 +43,7 @@ const staffAutorizado = {
 let tokensAtivos = new Set();
 
 // --- CONFIGURAÇÃO SUPABASE ---
+const { createClient } = require("@supabase/supabase-js");
 const supabase = createClient(
     "https://fdbmhgcfhdnnpwuodxzh.supabase.co",
     process.env.SUPABASE_KEY
@@ -53,7 +52,21 @@ const supabase = createClient(
 const app = express();
 const port = process.env.PORT || 10000;
 
-// ✅ HELMET - SÓ UM, O MAIS COMPLETO
+// ✅ CORRIGIDO: Helmet configurado para permitir o site funcionar
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
+            scriptSrcAttr: ["'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "fonts.gstatic.com"],
+            fontSrc: ["'self'", "fonts.googleapis.com", "fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:", "https://i.postimg.cc"],
+            connectSrc: ["'self'"]
+        }
+    }
+}));
+
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -70,7 +83,7 @@ app.use(helmet({
             fontSrc: ["'self'", "fonts.googleapis.com", "fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "https://i.postimg.cc", "https://cdn.discordapp.com", "https://cdnjs.cloudflare.com"],
             connectSrc: ["'self'"],
-            frameSrc: ["'self'"]
+            frameSrc: ["'none'"]
         }
     }
 }));
@@ -82,31 +95,29 @@ app.use(limiter);
 
 app.use(express.static(path.join(__dirname, "site"), { index: false }));
 
-// --- ROTAS ---
-
+// Rotas Login
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "site", "login.html"));
 });
 
-// ✅ LISTAR TRANSCRIPTS (FALTAVA!)
-app.get("/api/list-transcripts", async (req, res) => {
-    const { data, error } = await supabase.storage
-        .from("transcripts")
-        .list("transcripts", { sortBy: { column: "created_at", order: "desc" } });
-    
-    if (error) {
-        console.error("Erro Supabase list:", error.message);
-        return res.status(500).json([]);
-    }
-    res.json(data || []);
-});
-
-// ✅ SERVIR TRANSCRIPTS - SÓ UMA ROTA!
+// --- LISTAR TRANSCRIPTS DO SUPABASE ---
 app.get("/transcripts/:id", async (req, res) => {
     const id = req.params.id.replace('.html', '');
     const { data, error } = await supabase.storage
         .from("transcripts")
         .download(`transcripts/${id}.html`);
+    if (error || !data) return res.status(404).send("Transcript não encontrado.");
+    const text = await data.text();
+    res.setHeader("Content-Type", "text/html");
+    res.send(text);
+});
+
+// --- SERVIR TRANSCRIPTS DO SUPABASE ---
+app.get("/transcripts/:id", async (req, res) => {
+    const id = req.params.id.replace('.html', '');
+    const { data, error } = await supabase.storage
+        .from("transcripts")
+        .download(`transcripts/transcripts/${id}.html`);
 
     if (error || !data) return res.status(404).send("Transcript não encontrado.");
 
@@ -115,10 +126,10 @@ app.get("/transcripts/:id", async (req, res) => {
     res.send(text);
 });
 
-// --- LOGIN MANUAL ---
 app.post("/api/login-manual", async (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ success: false });
+    if (!username || !password)
+        return res.status(400).json({ success: false });
 
     const loginValido =
         (username === "Jordan Costa" && password === "Jordan26Costa") ||
@@ -127,7 +138,8 @@ app.post("/api/login-manual", async (req, res) => {
         (username === "migueldodrip_09110" && password === "migueldodrip") ||
         (username === "pincher11" && password === "pincher11");
 
-    if (!loginValido) return res.status(401).json({ success: false });
+    if (!loginValido)
+        return res.status(401).json({ success: false });
 
     const tokenSessao = Math.random().toString(36).substring(2);
     tokensAtivos.add(tokenSessao);
@@ -142,7 +154,7 @@ app.post("/api/login-manual", async (req, res) => {
     res.json({ success: true, user: username, token: tokenSessao });
 });
 
-// --- CALLBACK DISCORD ---
+// Callback Discord (mantido igual)
 app.get("/callback", async (req, res) => {
     const code = req.query.code;
     if (!code) return res.redirect("/login.html?error=no_code");
@@ -164,7 +176,8 @@ app.get("/callback", async (req, res) => {
         const discordID = userRes.data.id;
         const discordUser = userRes.data.username;
 
-        if (!staffAutorizado[discordID]) return res.redirect("/login.html?error=nao_autorizado");
+        if (!staffAutorizado[discordID])
+            return res.redirect("/login.html?error=nao_autorizado");
 
         const tokenSessao = Math.random().toString(36).substring(2);
         tokensAtivos.add(tokenSessao);
@@ -175,42 +188,44 @@ app.get("/callback", async (req, res) => {
     }
 });
 
-// --- ENVIAR EMBED ---
+// Enviar Embed (mantido igual)
 app.post("/api/enviar-embed", async (req, res) => {
     const { titulo, desc, cor, canalId, produtos } = req.body;
-    if (!titulo || !desc || !canalId) return res.status(400).send("Faltam campos.");
+    if (!titulo || !desc || !canalId)
+        return res.status(400).send("Faltam campos.");
 
     try {
         const canal = await client.channels.fetch(canalId);
         if (!canal) return res.status(404).send("Canal não encontrado.");
 
-        const embed = new EmbedBuilder()
-            .setTitle(titulo)
-            .setDescription(desc)
-            .setColor(cor || "#8b0000");
+    const embed = new EmbedBuilder()
+    .setTitle(titulo)
+    .setDescription(desc)
+    .setColor(cor || "#8b0000");
 
-        const components = [];
-        if (produtos?.length) {
-            const selectMenu = new StringSelectMenuBuilder()
-                .setCustomId("menu_produtos")
-                .setPlaceholder("Escolhe uma opção")
-                .addOptions(produtos.map((p, i) => ({
-                    label: p.nome,
-                    description: `Preço: ${p.preco}`,
-                    value: `prod_${p.nome.replace(/\s+/g, "_").toLowerCase()}_${i}`
-                })));
-            components.push(new ActionRowBuilder().addComponents(selectMenu));
-        }
+const components = [];
+if (produtos?.length) {
+    const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId("menu_produtos")
+        .setPlaceholder("Escolhe uma opção")
+        .addOptions(produtos.map((p, i) => ({
+            label: p.nome,
+            description: `Preço: ${p.preco}`,
+            value: `prod_${p.nome.replace(/\s+/g, "_").toLowerCase()}_${i}`
+        })));
+    components.push(new ActionRowBuilder().addComponents(selectMenu));
+}
 
-        await canal.send({ embeds: [embed], components });
-        res.send("✅ Enviado!");
-    } catch (error) {
-        console.error(error);
-        res.status(500).send("Erro ao comunicar com o Discord.");
-    }
+await canal.send({ embeds: [embed], components });
+res.send("✅ Enviado!");
+} catch (error) {
+    console.error(error);
+    res.status(500).send("Erro ao comunicar com o Discord.");
+}
+
 });
 
-// --- INICIALIZAÇÃO BOT ---
+// Inicialização
 const inicializarBot = () => {
     try {
         const interactionPath = path.join(__dirname, "src/events/interactionCreate.js");
@@ -240,53 +255,13 @@ if (!TOKEN) {
     process.exit(1);
 }
 
-// ✅ EXPRESS LIGA PRIMEIRO
-app.listen(port, () => {
-    console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
-});
-
-// ✅ DEPOIS O BOT LIGA - COM LOGS DETALHADOS
-console.log("🔐 A tentar login no Discord...");
-console.log("Token existe?", TOKEN ? "SIM" : "NÃO");
-console.log("Primeiros 20 chars:", TOKEN ? TOKEN.substring(0, 20) + "..." : "VAZIO");
-
-console.log("🔍 DEBUG: Vou tentar login...");
-
 client.login(TOKEN)
-    .then((token) => {
-        console.log("✅ Login promise resolvida!");
-        console.log("Token retornado:", token ? "SIM" : "NÃO");
-    })
-    .catch(err => {
-        console.error("❌ ERRO CAPTURADO NO CATCH:");
-        console.error("Mensagem:", err.message);
-        console.error("Código:", err.code);
-        console.error("Status:", err.status);
-        console.error("Método:", err.method);
-        console.error("URL:", err.url);
-    });
-
-// Eventos do client para debug
-client.on("debug", (info) => {
-    console.log("🐛 DISCORD DEBUG:", info);
-});
-
-client.on("warn", (info) => {
-    console.log("⚠️ DISCORD WARN:", info);
-});
-
-client.on("error", (err) => {
-    console.error("💥 DISCORD ERROR:", err.message);
-});
+    .then(() => console.log("✅ Pedido de login enviado ao Discord"))
+    .catch(err => console.error("❌ ERRO NO LOGIN:", err));
 
 client.once(Events.ClientReady, () => {
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
+    app.listen(port, () => {
+        console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
+    });
 });
-
-// Timeout
-setTimeout(() => {
-    if (!client.user) {
-        console.warn("⚠️ Bot não ligado após 10s");
-        console.warn("Estado da conexão:", client.ws.status);
-    }
-}, 10000);
