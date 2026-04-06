@@ -33,7 +33,7 @@ const client = new Client({
 // Carrinho global (necessário)
 const carrinhos = new Map();
 
-// Staff autorizado
+// ✅ STAFF AUTORIZADO (MANTIDO)
 const staffAutorizado = {
     "924344854232834068": "Jordan Costa",
     "996454465555136675": "Arteex26",
@@ -53,12 +53,18 @@ const supabase = createClient(
 const app = express();
 const port = process.env.PORT || 10000;
 
-// --- HELMET ---
+// ✅ HELMET CONFIGURADO PARA NÃO BLOQUEAR O SITE
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "cdn.jsdelivr.net", "cdnjs.cloudflare.com"],
+            scriptSrc: [
+                "'self'",
+                "'unsafe-inline'",
+                "fonts.googleapis.com",
+                "cdn.jsdelivr.net",
+                "cdnjs.cloudflare.com"
+            ],
             scriptSrcAttr: ["'unsafe-inline'"],
             styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "fonts.gstatic.com"],
             fontSrc: ["'self'", "fonts.googleapis.com", "fonts.gstatic.com"],
@@ -76,7 +82,8 @@ app.use(limiter);
 
 app.use(express.static(path.join(__dirname, "site"), { index: false }));
 
-// --- ROTA PRINCIPAL ---
+// --- ROTAS ---
+
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "site", "login.html"));
 });
@@ -86,11 +93,11 @@ app.get("/api/list-transcripts", async (req, res) => {
     const { data, error } = await supabase.storage
         .from("transcripts")
         .list("transcripts", { sortBy: { column: "created_at", order: "desc" } });
+    
     if (error) {
         console.error("Erro Supabase list:", error.message);
         return res.status(500).json([]);
     }
-    console.log("📄 Ficheiros encontrados:", data?.length);
     res.json(data || []);
 });
 
@@ -100,7 +107,9 @@ app.get("/transcripts/:id", async (req, res) => {
     const { data, error } = await supabase.storage
         .from("transcripts")
         .download(`transcripts/${id}.html`);
+
     if (error || !data) return res.status(404).send("Transcript não encontrado.");
+
     const text = await data.text();
     res.setHeader("Content-Type", "text/html");
     res.send(text);
@@ -109,8 +118,7 @@ app.get("/transcripts/:id", async (req, res) => {
 // --- LOGIN MANUAL ---
 app.post("/api/login-manual", async (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password)
-        return res.status(400).json({ success: false });
+    if (!username || !password) return res.status(400).json({ success: false });
 
     const loginValido =
         (username === "Jordan Costa" && password === "Jordan26Costa") ||
@@ -119,8 +127,7 @@ app.post("/api/login-manual", async (req, res) => {
         (username === "migueldodrip_09110" && password === "migueldodrip") ||
         (username === "pincher11" && password === "pincher11");
 
-    if (!loginValido)
-        return res.status(401).json({ success: false });
+    if (!loginValido) return res.status(401).json({ success: false });
 
     const tokenSessao = Math.random().toString(36).substring(2);
     tokensAtivos.add(tokenSessao);
@@ -128,7 +135,7 @@ app.post("/api/login-manual", async (req, res) => {
     try {
         const canalLogsLogin = await client.channels.fetch("1437076921627181228").catch(() => null);
         if (canalLogsLogin) {
-            canalLogsLogin.send(`🔐 **[SISTEMA]** O utilizador **${username}** acabou de entrar no painel de controlo da Jordan Shop.`);
+            canalLogsLogin.send(`🔐 **[SISTEMA]** O utilizador **${username}** entrou no painel.`);
         }
     } catch {}
 
@@ -157,8 +164,7 @@ app.get("/callback", async (req, res) => {
         const discordID = userRes.data.id;
         const discordUser = userRes.data.username;
 
-        if (!staffAutorizado[discordID])
-            return res.redirect("/login.html?error=nao_autorizado");
+        if (!staffAutorizado[discordID]) return res.redirect("/login.html?error=nao_autorizado");
 
         const tokenSessao = Math.random().toString(36).substring(2);
         tokensAtivos.add(tokenSessao);
@@ -172,8 +178,7 @@ app.get("/callback", async (req, res) => {
 // --- ENVIAR EMBED ---
 app.post("/api/enviar-embed", async (req, res) => {
     const { titulo, desc, cor, canalId, produtos } = req.body;
-    if (!titulo || !desc || !canalId)
-        return res.status(400).send("Faltam campos.");
+    if (!titulo || !desc || !canalId) return res.status(400).send("Faltam campos.");
 
     try {
         const canal = await client.channels.fetch(canalId);
@@ -235,9 +240,16 @@ if (!TOKEN) {
     process.exit(1);
 }
 
+// ✅ LOGIN DISCORD
+client.login(TOKEN)
+    .then(() => console.log("✅ Pedido de login enviado ao Discord"))
+    .catch(err => console.error("❌ ERRO NO LOGIN:", err));
+
+// ✅ EXPRESS LIGA SEMPRE PARA O RENDER NÃO DAR ERRO DE PORTA
+app.listen(port, () => {
+    console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
+});
+
 client.once(Events.ClientReady, () => {
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
-    app.listen(port, () => {
-        console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
-    });
 });
