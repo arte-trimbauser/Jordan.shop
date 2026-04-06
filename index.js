@@ -101,12 +101,15 @@ app.get("/", (req, res) => {
 });
 
 // --- LISTAR TRANSCRIPTS DO SUPABASE ---
-app.get("/api/list-transcripts", async (req, res) => {
+app.get("/transcripts/:id", async (req, res) => {
+    const id = req.params.id.replace('.html', '');
     const { data, error } = await supabase.storage
         .from("transcripts")
-        .list("transcripts", { sortBy: { column: "created_at", order: "desc" } });
-    if (error) return res.status(500).json([]);
-    res.json(data || []);
+        .download(`transcripts/${id}.html`);
+    if (error || !data) return res.status(404).send("Transcript não encontrado.");
+    const text = await data.text();
+    res.setHeader("Content-Type", "text/html");
+    res.send(text);
 });
 
 // --- SERVIR TRANSCRIPTS DO SUPABASE ---
