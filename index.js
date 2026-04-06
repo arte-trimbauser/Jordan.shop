@@ -19,8 +19,6 @@ const {
     Events
 } = require("discord.js");
 
-const { createClient } = require("@supabase/supabase-js");
-
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -45,6 +43,7 @@ const staffAutorizado = {
 let tokensAtivos = new Set();
 
 // --- CONFIGURAÇÃO SUPABASE ---
+const { createClient } = require("@supabase/supabase-js");
 const supabase = createClient(
     "https://fdbmhgcfhdnnpwuodxzh.supabase.co",
     process.env.SUPABASE_KEY
@@ -53,18 +52,38 @@ const supabase = createClient(
 const app = express();
 const port = process.env.PORT || 10000;
 
-// ✅ Helmet - apenas um, correto
+// ✅ CORRIGIDO: Helmet configurado para permitir o site funcionar
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "cdn.jsdelivr.net", "cdnjs.cloudflare.com"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
+            scriptSrcAttr: ["'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "fonts.gstatic.com"],
+            fontSrc: ["'self'", "fonts.googleapis.com", "fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:", "https://i.postimg.cc"],
+            connectSrc: ["'self'"]
+        }
+    }
+}));
+
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: [
+                "'self'",
+                "'unsafe-inline'",
+                "fonts.googleapis.com",
+                "cdn.jsdelivr.net",
+                "cdnjs.cloudflare.com"
+            ],
             scriptSrcAttr: ["'unsafe-inline'"],
             styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "fonts.gstatic.com"],
             fontSrc: ["'self'", "fonts.googleapis.com", "fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "https://i.postimg.cc", "https://cdn.discordapp.com", "https://cdnjs.cloudflare.com"],
             connectSrc: ["'self'"],
-            frameSrc: ["'self'"]
+            frameSrc: ["'none'"]
         }
     }
 }));
@@ -76,26 +95,13 @@ app.use(limiter);
 
 app.use(express.static(path.join(__dirname, "site"), { index: false }));
 
-// --- ROTA PRINCIPAL ---
+// Rotas Login
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "site", "login.html"));
 });
 
 // --- LISTAR TRANSCRIPTS DO SUPABASE ---
 app.get("/api/list-transcripts", async (req, res) => {
-    const { data, error } = await supabase.storage
-        .from("transcripts")
-        .list("transcripts", { sortBy: { column: "created_at", order: "desc" } });
-    if (error) {
-        console.error("Erro Supabase list:", error.message);
-        return res.status(500).json([]);
-    }
-    console.log("📄 Ficheiros encontrados:", data?.length);
-    res.json(data || []);
-});
-
-// --- SERVIR TRANSCRIPTS DO SUPABASE ---
-app.get("/transcripts/:id", async (req, res) => {
     const id = req.params.id.replace('.html', '');
     const { data, error } = await supabase.storage
         .from("transcripts")
@@ -106,7 +112,20 @@ app.get("/transcripts/:id", async (req, res) => {
     res.send(text);
 });
 
-// --- LOGIN MANUAL ---
+// --- SERVIR TRANSCRIPTS DO SUPABASE ---
+app.get("/transcripts/:id", async (req, res) => {
+    const id = req.params.id.replace('.html', '');
+    const { data, error } = await supabase.storage
+        .from("transcripts")
+        .download(`transcripts/transcripts/${id}.html`);
+
+    if (error || !data) return res.status(404).send("Transcript não encontrado.");
+
+    const text = await data.text();
+    res.setHeader("Content-Type", "text/html");
+    res.send(text);
+});
+
 app.post("/api/login-manual", async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password)
@@ -135,7 +154,7 @@ app.post("/api/login-manual", async (req, res) => {
     res.json({ success: true, user: username, token: tokenSessao });
 });
 
-// --- CALLBACK DISCORD ---
+// Callback Discord (mantido igual)
 app.get("/callback", async (req, res) => {
     const code = req.query.code;
     if (!code) return res.redirect("/login.html?error=no_code");
@@ -169,7 +188,7 @@ app.get("/callback", async (req, res) => {
     }
 });
 
-// --- ENVIAR EMBED ---
+// Enviar Embed (mantido igual)
 app.post("/api/enviar-embed", async (req, res) => {
     const { titulo, desc, cor, canalId, produtos } = req.body;
     if (!titulo || !desc || !canalId)
@@ -179,33 +198,34 @@ app.post("/api/enviar-embed", async (req, res) => {
         const canal = await client.channels.fetch(canalId);
         if (!canal) return res.status(404).send("Canal não encontrado.");
 
-        const embed = new EmbedBuilder()
-            .setTitle(titulo)
-            .setDescription(desc)
-            .setColor(cor || "#8b0000");
+    const embed = new EmbedBuilder()
+    .setTitle(titulo)
+    .setDescription(desc)
+    .setColor(cor || "#8b0000");
 
-        const components = [];
-        if (produtos?.length) {
-            const selectMenu = new StringSelectMenuBuilder()
-                .setCustomId("menu_produtos")
-                .setPlaceholder("Escolhe uma opção")
-                .addOptions(produtos.map((p, i) => ({
-                    label: p.nome,
-                    description: `Preço: ${p.preco}`,
-                    value: `prod_${p.nome.replace(/\s+/g, "_").toLowerCase()}_${i}`
-                })));
-            components.push(new ActionRowBuilder().addComponents(selectMenu));
-        }
+const components = [];
+if (produtos?.length) {
+    const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId("menu_produtos")
+        .setPlaceholder("Escolhe uma opção")
+        .addOptions(produtos.map((p, i) => ({
+            label: p.nome,
+            description: `Preço: ${p.preco}`,
+            value: `prod_${p.nome.replace(/\s+/g, "_").toLowerCase()}_${i}`
+        })));
+    components.push(new ActionRowBuilder().addComponents(selectMenu));
+}
 
-        await canal.send({ embeds: [embed], components });
-        res.send("✅ Enviado!");
-    } catch (error) {
-        console.error(error);
-        res.status(500).send("Erro ao comunicar com o Discord.");
-    }
+await canal.send({ embeds: [embed], components });
+res.send("✅ Enviado!");
+} catch (error) {
+    console.error(error);
+    res.status(500).send("Erro ao comunicar com o Discord.");
+}
+
 });
 
-// --- INICIALIZAÇÃO BOT ---
+// Inicialização
 const inicializarBot = () => {
     try {
         const interactionPath = path.join(__dirname, "src/events/interactionCreate.js");
