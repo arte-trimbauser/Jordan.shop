@@ -33,7 +33,7 @@ const client = new Client({
 // Carrinho global (necessário)
 const carrinhos = new Map();
 
-// ✅ STAFF AUTORIZADO (MANTIDO)
+// ✅ STAFF AUTORIZADO
 const staffAutorizado = {
     "924344854232834068": "Jordan Costa",
     "996454465555136675": "Arteex26",
@@ -53,7 +53,7 @@ const supabase = createClient(
 const app = express();
 const port = process.env.PORT || 10000;
 
-// ✅ HELMET CONFIGURADO PARA NÃO BLOQUEAR O SITE
+// ✅ HELMET - SÓ UM, O MAIS COMPLETO
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -88,7 +88,7 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "site", "login.html"));
 });
 
-// --- LISTAR TRANSCRIPTS DO SUPABASE ---
+// ✅ LISTAR TRANSCRIPTS (FALTAVA!)
 app.get("/api/list-transcripts", async (req, res) => {
     const { data, error } = await supabase.storage
         .from("transcripts")
@@ -101,7 +101,7 @@ app.get("/api/list-transcripts", async (req, res) => {
     res.json(data || []);
 });
 
-// --- SERVIR TRANSCRIPTS DO SUPABASE ---
+// ✅ SERVIR TRANSCRIPTS - SÓ UMA ROTA!
 app.get("/transcripts/:id", async (req, res) => {
     const id = req.params.id.replace('.html', '');
     const { data, error } = await supabase.storage
@@ -135,7 +135,7 @@ app.post("/api/login-manual", async (req, res) => {
     try {
         const canalLogsLogin = await client.channels.fetch("1437076921627181228").catch(() => null);
         if (canalLogsLogin) {
-            canalLogsLogin.send(`🔐 **[SISTEMA]** O utilizador **${username}** entrou no painel.`);
+            canalLogsLogin.send(`🔐 **[SISTEMA]** O utilizador **${username}** acabou de entrar no painel de controlo da Jordan Shop.`);
         }
     } catch {}
 
@@ -240,18 +240,15 @@ if (!TOKEN) {
     process.exit(1);
 }
 
-// ✅ LOGIN DISCORD
-client.login(TOKEN)
-    .then(() => console.log("✅ Pedido de login enviado ao Discord"))
-    .catch(err => {
-        console.error("❌ ERRO NO LOGIN:", err.message);
-        console.error("Token usado:", TOKEN ? TOKEN.substring(0, 20) + "..." : "VAZIO");
-    });
-
-// ✅ EXPRESS LIGA SEMPRE PARA O RENDER NÃO DAR ERRO DE PORTA
+// ✅ EXPRESS LIGA PRIMEIRO (ANTES DO BOT!)
 app.listen(port, () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
 });
+
+// ✅ DEPOIS O BOT LIGA
+client.login(TOKEN)
+    .then(() => console.log("✅ Pedido de login enviado ao Discord"))
+    .catch(err => console.error("❌ ERRO NO LOGIN:", err));
 
 client.once(Events.ClientReady, () => {
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
