@@ -251,11 +251,23 @@ console.log("Token existe?", TOKEN ? "SIM" : "NÃO");
 console.log("Primeiros 20 chars:", TOKEN ? TOKEN.substring(0, 20) + "..." : "VAZIO");
 
 client.login(TOKEN)
-    .then(() => console.log("✅ Pedido de login enviado ao Discord"))
+    .then(() => {
+        console.log("✅ Pedido de login enviado ao Discord");
+        console.log("Bot user:", client.user ? client.user.tag : "ainda sem user");
+    })
     .catch(err => {
         console.error("❌ ERRO NO LOGIN:", err.message);
         console.error("Código do erro:", err.code);
+        console.error("Erro completo:", err);
     });
+
+// Timeout de segurança - se em 10s não ligar, avisa
+setTimeout(() => {
+    if (!client.user) {
+        console.warn("⚠️ Atenção: Bot ainda não ligado após 10 segundos");
+        console.warn("Verifica se o token está correto no Discord Developer Portal");
+    }
+}, 10000);
 
 client.once(Events.ClientReady, () => {
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
