@@ -104,8 +104,7 @@ app.get("/", (req, res) => {
 app.get("/api/list-transcripts", async (req, res) => {
     const { data, error } = await supabase.storage
         .from("transcripts")
-        .list("transcripts/transcripts", { sortBy: { column: "created_at", order: "desc" } });
-
+        .list("transcripts", { sortBy: { column: "created_at", order: "desc" } });
     if (error) return res.status(500).json([]);
     res.json(data || []);
 });
