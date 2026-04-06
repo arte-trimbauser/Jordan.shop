@@ -235,10 +235,6 @@ if (!TOKEN) {
     process.exit(1);
 }
 
-client.login(TOKEN)
-    .then(() => console.log("✅ Pedido de login enviado ao Discord"))
-    .catch(err => console.error("❌ ERRO NO LOGIN:", err));
-
 client.once(Events.ClientReady, () => {
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
     app.listen(port, () => {
