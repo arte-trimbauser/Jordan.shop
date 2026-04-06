@@ -240,15 +240,28 @@ if (!TOKEN) {
     process.exit(1);
 }
 
-// ✅ EXPRESS LIGA PRIMEIRO (ANTES DO BOT!)
+const TOKEN = process.env.DISCORD_TOKEN;
+if (!TOKEN) {
+    console.error("❌ Token não encontrado!");
+    process.exit(1);
+}
+
+// ✅ EXPRESS LIGA PRIMEIRO
 app.listen(port, () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
 });
 
-// ✅ DEPOIS O BOT LIGA
+// ✅ DEPOIS O BOT LIGA - COM LOGS DETALHADOS
+console.log("🔐 A tentar login no Discord...");
+console.log("Token existe?", TOKEN ? "SIM" : "NÃO");
+console.log("Primeiros 20 chars:", TOKEN ? TOKEN.substring(0, 20) + "..." : "VAZIO");
+
 client.login(TOKEN)
     .then(() => console.log("✅ Pedido de login enviado ao Discord"))
-    .catch(err => console.error("❌ ERRO NO LOGIN:", err));
+    .catch(err => {
+        console.error("❌ ERRO NO LOGIN:", err.message);
+        console.error("Código do erro:", err.code);
+    });
 
 client.once(Events.ClientReady, () => {
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
