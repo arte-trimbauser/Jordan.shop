@@ -243,7 +243,10 @@ if (!TOKEN) {
 // ✅ LOGIN DISCORD
 client.login(TOKEN)
     .then(() => console.log("✅ Pedido de login enviado ao Discord"))
-    .catch(err => console.error("❌ ERRO NO LOGIN:", err));
+    .catch(err => {
+        console.error("❌ ERRO NO LOGIN:", err.message);
+        console.error("Token usado:", TOKEN ? TOKEN.substring(0, 20) + "..." : "VAZIO");
+    });
 
 // ✅ EXPRESS LIGA SEMPRE PARA O RENDER NÃO DAR ERRO DE PORTA
 app.listen(port, () => {
