@@ -37,7 +37,7 @@ module.exports = async (client) => {
         { name: "Jordan Shop | discord.gg/6hhZeqb7Qk", type: ActivityType.Competing },
         { name: "Os melhores preços!", type: ActivityType.Watching },
         { name: "Jordan Shop #100", type: ActivityType.Listening },
-        { name: "MELHOR LOJA DE CHEATS DE PORTUGAL!!!", type: ActivityType.Playing }
+        { name: "MELHOR LOJA DE CHE4TS DE PORTUGAL!!!", type: ActivityType.Playing }
     ];
 
     let i = 0;
@@ -65,7 +65,8 @@ module.exports = async (client) => {
             });
             const embedLog = new EmbedBuilder()
                 .setTitle("✅ Bot está online!")
-                .setDescription(`O bot foi iniciado com sucesso e está pronto para uso.\n\n🕒 **Hora:** ${agora}`)
+                .setDescription(`O bot foi iniciado com sucesso e está pronto para uso.\n\n🕒 **Hora:** ${agora}
+                🌐 Site da Jordan Shop | Logs: https://jordan-shop.onrender.com/`)
                 .setImage("https://i.postimg.cc/YCmc9zyY/sucesso-no-neg-cio-61850034.webp")
                 .setThumbnail(client.user.displayAvatarURL())
                 .setColor("#00ff00")
