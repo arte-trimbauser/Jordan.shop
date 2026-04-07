@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jordan Shop | Painel Logs Staff</title>
+    <title>Jordan Shop | Painel Staff Logs</title>
     <link rel="icon" type="image/png" href="logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;800&display=swap" rel="stylesheet">
 
@@ -447,6 +447,7 @@
         }
     </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
     <div id="welcome-screen" style="display:none;">
@@ -495,7 +496,6 @@
             <div id="embed-section" class="content-div" style="display:none; width:100%;">
                 <h1>🎫 Criar Painel de Tickets</h1>
                 <div class="embed-creator-card">
-                    <!-- ✅ CORREÇÃO: ID do Canal em vez de Webhook -->
                     <div style="margin-bottom: 15px;">
                         <label class="form-label">🆔 ID do Canal de Destino</label>
                         <input type="text" id="emb-canal" class="form-input" placeholder="Ex: 1234567890123456789">
@@ -661,7 +661,6 @@
             container.appendChild(div);
         }
 
-        // ✅ CORREÇÃO: Enviar via API interna /api/enviar-embed (bot) em vez de webhook
         async function enviarEmbed() {
             const canalId = document.getElementById('emb-canal').value.trim();
             const titulo = document.getElementById('emb-titulo').value.trim();
@@ -695,7 +694,6 @@
             btn.disabled = true;
 
             try {
-                // ✅ CORREÇÃO: Usar a API interna do bot em vez de webhook do Discord
                 const response = await fetch('/api/enviar-embed', {
                     method: 'POST',
                     headers: { 
@@ -713,7 +711,6 @@
                 if (response.ok) {
                     const msg = await response.text();
                     alert("✅ " + msg);
-                    // Limpar formulário
                     document.getElementById('emb-canal').value = '';
                     document.getElementById('emb-titulo').value = '';
                     document.getElementById('emb-desc').value = '';
@@ -725,12 +722,7 @@
                 }
             } catch (e) {
                 console.error(e);
-                alert("❌ Erro ao enviar: " + e.message + "
-
-Verifica se:
-1. O bot está online
-2. O ID do canal está correto
-3. O bot tem permissões no canal");
+                alert("❌ Erro ao enviar: " + e.message + " | Verifica se: 1. O bot está online | 2. O ID do canal está correto | 3. O bot tem permissões no canal");
             } finally {
                 btn.innerText = "🚀 ENVIAR VIA BOT";
                 btn.disabled = false;
