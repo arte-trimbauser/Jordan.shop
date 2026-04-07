@@ -38,65 +38,433 @@
         .bg-full { position: fixed; top:0; left:0; width:100%; height:100%; background: url('menu.png') no-repeat center center; background-size: cover; z-index:-2; }
         .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--overlay-dark); z-index:-1; }
 
-        /* ✅ Splash screen - só aparece no login, não quando vens do transcripts */
+        /* Splash screen */
         #welcome-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: #000; display:flex; justify-content:center; align-items:center; z-index:9999; transition: opacity 0.8s ease; }
         .welcome-content { text-align:center; animation: pulse 2s infinite; }
 
-        header { background: var(--primary-red); height:60px; display:flex; justify-content:space-between; align-items:center; padding:0 30px; box-shadow:0 4px 15px rgba(0,0,0,0.5); z-index: 10; position: relative; }
-        .logo-link { color: white; text-decoration: none; font-weight: 800; font-size: 1.3rem; cursor: pointer; }
-        .user-tag { background: rgba(0,0,0,0.4); padding:8px 15px; border-radius:5px; font-weight:600; display: flex; align-items: center; gap: 10px; }
+        /* HEADER - IDÊNTICO */
+        header { 
+            background: var(--primary-red); 
+            height:60px; 
+            display:flex; 
+            justify-content:space-between; 
+            align-items:center; 
+            padding:0 30px; 
+            box-shadow:0 4px 15px rgba(0,0,0,0.5); 
+            z-index: 10; 
+            position: relative; 
+        }
+        .logo-link { 
+            color: white; 
+            text-decoration: none; 
+            font-weight: 800; 
+            font-size: 1.3rem; 
+            cursor: pointer; 
+            transition: all 0.3s ease;
+        }
+        .logo-link:hover {
+            transform: scale(1.05);
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+
+        /* BOTÃO ATUALIZAR - IDÊNTICO */
+        .refresh-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .refresh-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .refresh-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        .refresh-btn.spinning {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .user-tag { 
+            background: rgba(0,0,0,0.4); 
+            padding:8px 15px; 
+            border-radius:5px; 
+            font-weight:600; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
         .user-avatar { width: 25px; height: 25px; border-radius: 50%; border: 1px solid white; }
 
-        .container { display:flex; height: calc(100vh - 60px); }
+        /* CONTAINER - LAYOUT HORIZONTAL IDÊNTICO */
+        .container { 
+            display:flex; 
+            flex-direction: row; /* HORIZONTAL */
+            height: calc(100vh - 60px); 
+        }
 
-        /* ✅ Sidebar com estilos do transcripts.html */
-        aside { width:260px; background: rgba(0,0,0,0.5); backdrop-filter: blur(15px); padding:20px; display:flex; flex-direction:column; border-right:1px solid rgba(255,255,255,0.1); }
+        /* SIDEBAR - IDÊNTICA: 260px */
+        aside { 
+            width:260px; /* IDÊNTICO AO TRANSCRIPTS */
+            background: rgba(0,0,0,0.5); 
+            backdrop-filter: blur(15px); 
+            padding:20px; 
+            display:flex; 
+            flex-direction:column; 
+            border-right:1px solid rgba(255,255,255,0.1); 
+        }
         .nav-links { display: flex; flex-direction: column; gap: 12px; flex-grow: 1; }
-        .search-box { width:100%; padding:12px; border-radius:5px; border:none; background: rgba(255,255,255,0.1); color:white; outline:none; border-bottom:2px solid transparent; transition:0.3s; margin-bottom: 20px; }
+        .search-box { 
+            width:100%; 
+            padding:12px; 
+            border-radius:5px; 
+            border:none; 
+            background: rgba(255,255,255,0.1); 
+            color:white; 
+            outline:none; 
+            border-bottom:2px solid transparent; 
+            transition:0.3s; 
+            margin-bottom: 20px; 
+            font-size: 0.9rem;
+        }
         .search-box:focus { border-bottom:2px solid var(--primary-red); }
+        .search-box::placeholder { color: #888; }
 
-        .nav-btn { background: var(--primary-red); color:white; border:none; padding:14px; border-radius:6px; font-weight:600; cursor:pointer; transition: var(--transition-speed); text-align:center; text-decoration:none; display: block; }
-        .nav-btn:hover { transform: translateX(10px); filter: brightness(1.3); }
+        .nav-btn { 
+            background: var(--primary-red); 
+            color:white; 
+            border:none; 
+            padding:14px; 
+            border-radius:6px; 
+            font-weight:600; 
+            cursor:pointer; 
+            transition: var(--transition-speed); 
+            text-align:center; 
+            text-decoration:none; 
+            display: block; 
+            font-size: 0.9rem;
+        }
+        .nav-btn:hover { 
+            transform: translateX(10px); 
+            filter: brightness(1.3); 
+        }
+        .nav-btn.active { 
+            background:#ff0000; 
+            box-shadow:0 0 15px rgba(255,0,0,0.4); 
+        }
 
-        .logout-btn { background: #b30000; color: white; padding: 12px; border-radius: 6px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; margin-top: auto; border: none; cursor: pointer; }
-        .logout-btn:hover { background: #ff0000; transform: scale(1.02); }
+        .logout-btn { 
+            background: #b30000; 
+            color: white; 
+            padding: 12px; 
+            border-radius: 6px; 
+            text-decoration: none; 
+            font-weight: bold; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 10px; 
+            transition: 0.3s; 
+            margin-top: auto; 
+            border: none; 
+            cursor: pointer; 
+            font-size: 0.9rem;
+        }
+        .logout-btn:hover { 
+            background: #ff0000; 
+            transform: scale(1.02); 
+        }
 
-        /* ✅ Main - textos centrados */
-        main { flex:1; display:flex; flex-direction:column; align-items:center; padding:40px; text-align:center; overflow-y:auto; }
-        h1 { font-size:2.5rem; margin-bottom: 20px; font-weight:800; text-shadow:2px 2px 8px rgba(0,0,0,0.8); }
+        /* MAIN - IDÊNTICO */
+        main { 
+            flex:1; 
+            display:flex; 
+            flex-direction:column; 
+            align-items:center; 
+            padding:40px; 
+            text-align:center; 
+            overflow-y:auto; 
+        }
+        h1 { 
+            font-size:2rem; 
+            margin-bottom: 20px; 
+            font-weight:800; 
+            text-shadow:2px 2px 8px rgba(0,0,0,0.8); 
+        }
 
-        /* Estilos dos Itens e Cards */
-        .log-item { background: rgba(20, 20, 20, 0.9); padding:15px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid #333; transition:0.3s; margin-bottom:10px; width: 100%; max-width: 850px; text-align: left; }
-        .log-item:hover { border-color: var(--primary-red); }
-        .log-info strong { display: block; font-size: 1rem; color: #fff; }
-        .log-info span { color:#bbb; font-size:0.85rem; line-height: 1.6; }
-        .status-badge { padding: 5px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+        /* Cards - Estilos consistentes */
+        .card {
+            background: rgba(20, 20, 20, 0.95); 
+            padding: 30px; 
+            border-radius: 15px; 
+            border-left: 5px solid var(--primary-red);
+            text-align: left; 
+            width: 100%; 
+            max-width: 800px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            animation: fadeIn 0.5s ease;
+        }
+        .card h2 {
+            color: white;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
 
-        /* ✅ Site Online - mais à esquerda */
-        .status-card { background: rgba(20, 20, 20, 0.95); padding: 30px; border-radius: 15px; border-left: 8px solid #00ff00; text-align: left; width: 100%; max-width: 500px; margin-right: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .success-img { width: 100%; border-radius: 10px; margin-top: 20px; border: 1px solid #444; }
+        /* Itens de log/venda */
+        .log-item { 
+            background: rgba(30, 30, 30, 0.9); 
+            padding:15px; 
+            border-radius:10px; 
+            display:flex; 
+            justify-content:space-between; 
+            align-items:center; 
+            border:1px solid #333; 
+            transition:0.3s; 
+            margin-bottom:10px; 
+            width: 100%; 
+            max-width: 850px; 
+            text-align: left; 
+        }
+        .log-item:hover { 
+            border-color: var(--primary-red); 
+            transform: translateX(5px);
+        }
+        .log-info strong { 
+            display: block; 
+            font-size: 1rem; 
+            color: #fff; 
+        }
+        .log-info span { 
+            color:#bbb; 
+            font-size:0.85rem; 
+            line-height: 1.6; 
+        }
+        .status-badge { 
+            padding: 5px 10px; 
+            border-radius: 4px; 
+            font-size: 0.75rem; 
+            font-weight: bold; 
+        }
 
-        /* Estilos Criador de Embed */
-        .embed-creator-card { background: rgba(20, 20, 20, 0.95); padding: 30px; border-radius: 15px; border-top: 5px solid var(--primary-red); text-align: left; width: 100%; max-width: 800px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .form-label { display: block; color: #bbb; margin-bottom: 5px; font-size: 0.9rem; font-weight: bold; }
+        /* Status Online */
+        .status-card { 
+            background: rgba(20, 20, 20, 0.95); 
+            padding: 30px; 
+            border-radius: 15px; 
+            border-left: 8px solid #00ff00; 
+            text-align: left; 
+            width: 100%; 
+            max-width: 500px; 
+            margin-right: auto; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+        }
+        .success-img { 
+            width: 100%; 
+            border-radius: 10px; 
+            margin-top: 20px; 
+            border: 1px solid #444; 
+        }
 
-        /* ✅ Cards dos transcripts dentro da loja */
-        .logs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; width: 100%; max-width: 1100px; margin-top: 20px; }
-        .log-card { background: rgba(20, 20, 20, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); border-left: 5px solid var(--primary-red); padding: 20px; border-radius: 12px; text-align: left; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
-        .log-card:hover { transform: translateY(-5px); border-left-color: #ff0000; box-shadow: 0 8px 25px rgba(139,0,0,0.3); }
-        .log-card strong { display: block; font-size: 1rem; color: #fff; margin-bottom: 5px; }
-        .log-card .data { color: #aaa; font-size: 0.8rem; margin-bottom: 5px; display: block; }
-        .log-card .canal { color: #888; font-size: 0.75rem; font-style: italic; display: block; }
-        .btn-open { display: block; margin-top: 15px; background: var(--primary-red); color: white; text-align: center; padding: 10px; border-radius: 6px; font-weight: 800; text-decoration: none; font-size: 0.85rem; transition: 0.3s; }
-        .btn-open:hover { background: #ff0000; box-shadow: 0 0 15px rgba(255,0,0,0.4); }
+        /* CRIADOR DE EMBED */
+        .embed-creator-card { 
+            background: rgba(20, 20, 20, 0.95); 
+            padding: 30px; 
+            border-radius: 15px; 
+            border-top: 5px solid var(--primary-red); 
+            text-align: left; 
+            width: 100%; 
+            max-width: 800px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+        }
+        .form-label { 
+            display: block; 
+            color: #bbb; 
+            margin-bottom: 5px; 
+            font-size: 0.9rem; 
+            font-weight: bold; 
+        }
+        .form-input, .form-textarea {
+            width:100%; 
+            padding:12px; 
+            border-radius:5px; 
+            border:none; 
+            background: rgba(255,255,255,0.1); 
+            color:white; 
+            outline:none; 
+            border-bottom:2px solid transparent; 
+            transition:0.3s; 
+            margin-bottom: 15px;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 0.9rem;
+        }
+        .form-input:focus, .form-textarea:focus {
+            border-bottom:2px solid var(--primary-red);
+            background: rgba(255,255,255,0.15);
+        }
+        .form-input::placeholder, .form-textarea::placeholder {
+            color: #666;
+        }
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
 
-        @keyframes pulse { 0%{transform:scale(1);opacity:0.8;} 50%{transform:scale(1.05);opacity:1;} 100%{transform:scale(1);opacity:0.8;} }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Produtos no embed */
+        .produto-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .produto-row input {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        .produto-row button {
+            background: #ff4444;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .produto-row button:hover {
+            background: #ff0000;
+            transform: scale(1.1);
+        }
+
+        .btn-add {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.3s;
+            margin-top: 10px;
+        }
+        .btn-add:hover {
+            background: #444;
+        }
+
+        .btn-enviar {
+            width:100%; 
+            padding:15px; 
+            background: var(--primary-red);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 20px;
+        }
+        .btn-enviar:hover:not(:disabled) {
+            background: #ff0000;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255,0,0,0.4);
+        }
+        .btn-enviar:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .info-text {
+            color: #ff9999; 
+            font-size: 0.8rem; 
+            margin: 15px 0;
+        }
+
+        @keyframes pulse { 
+            0%{transform:scale(1);opacity:0.8;} 
+            50%{transform:scale(1.05);opacity:1;} 
+            100%{transform:scale(1);opacity:0.8;} 
+        }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(-10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+
+        /* RESPONSIVIDADE - IDÊNTICA AO TRANSCRIPTS */
+        @media (max-width: 768px) {
+            header { height: 50px; padding: 0 15px; }
+            .logo-link { font-size: 1rem; }
+            .user-tag { padding: 5px 10px; font-size: 0.85rem; }
+            .user-avatar { width: 20px; height: 20px; }
+            .refresh-btn { padding: 6px 12px; font-size: 0.8rem; }
+
+            /* MUDA PARA VERTICAL EM MOBILE */
+            .container { 
+                flex-direction: column; 
+                height: calc(100vh - 50px); 
+            }
+
+            aside { 
+                width: 100%; 
+                height: auto; 
+                padding: 10px; 
+                flex-direction: row; 
+                flex-wrap: wrap;
+                border-right: none; 
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+            .search-box { 
+                width: 100%; 
+                margin-bottom: 10px; 
+                padding: 8px;
+                font-size: 0.8rem;
+            }
+            .nav-links { 
+                flex-direction: row; 
+                gap: 5px; 
+                flex-grow: 1;
+                overflow-x: auto;
+            }
+            .nav-btn { 
+                padding: 8px 12px; 
+                font-size: 0.75rem; 
+                white-space: nowrap;
+                min-width: fit-content;
+            }
+            .nav-btn:hover { transform: translateY(-2px); }
+            .logout-btn { 
+                padding: 8px 12px; 
+                font-size: 0.75rem; 
+                margin-top: 0;
+                margin-left: auto;
+            }
+
+            main { padding: 15px; }
+            h1 { font-size: 1.5rem; }
+            .card { padding: 20px; }
+            .embed-creator-card { padding: 20px; }
+            .log-item { flex-direction: column; align-items: flex-start; gap: 10px; }
+        }
     </style>
+<base target="_blank">
 </head>
 <body>
-
-    <!-- ✅ Splash screen - só aparece quando vens do login -->
+    <!-- Splash screen -->
     <div id="welcome-screen" style="display:none;">
         <div class="welcome-content">
             <h2 style="font-size: 2.5rem;">Jordan Shop | Painel de Administração</h2>
@@ -107,19 +475,24 @@
     <div class="overlay"></div>
 
     <header>
-        <a href="javascript:location.reload()" class="logo-link">Jordan Shop Site | 🔃 Atualizar</a>
-        <div class="user-tag">
-            <img src="logo.png" class="user-avatar">
-            Olá, <span id="nav-username">Staff</span>
+        <a href="javascript:location.reload()" class="logo-link">Jordan Shop | Atualizar</a>
+        <div class="refresh-container">
+            <button class="refresh-btn" onclick="atualizarPagina()" title="Atualizar página">
+                <span id="refreshIcon">🔃</span> Atualizar
+            </button>
+            <div class="user-tag">
+                <img src="logo.png" class="user-avatar" alt="Logo">
+                Olá, <span id="nav-username">Staff</span>
+            </div>
         </div>
     </header>
 
+    <!-- LAYOUT HORIZONTAL: Sidebar à esquerda, Main à direita -->
     <div class="container">
         <aside>
             <input type="text" id="search" class="search-box" placeholder="Procurar função..." onkeyup="filtrarMenu()">
             <div class="nav-links">
                 <button class="nav-btn" onclick="showSection('welcome-section')">INÍCIO</button>
-                <!-- ✅ Transcripts leva para transcripts.html -->
                 <button class="nav-btn" onclick="window.location.href='transcripts.html'">TRANSCRIPTS</button>
                 <button class="nav-btn" onclick="showSection('vendas-section')">VENDAS</button>
                 <button class="nav-btn" onclick="showSection('embed-section')">CRIAR EMBED</button>
@@ -131,47 +504,51 @@
         </aside>
 
         <main>
-            <!-- ✅ Textos centrados -->
+            <!-- INÍCIO -->
             <div id="welcome-section" class="content-div" style="animation: fadeIn 0.5s ease;">
                 <h1 id="main-welcome">Bem-Vindo</h1>
                 <p style="font-size: 1.2rem; opacity: 0.8;">Bem-Vindo ao painel de Administração e Gestão da Jordan Shop</p>
             </div>
 
+            <!-- CRIAR EMBED - CORRIGIDO -->
             <div id="embed-section" class="content-div" style="display:none; width:100%;">
                 <h1>🎫 Criar Painel de Tickets</h1>
-                <div class="embed-creator-card" style="margin: 0 auto; border-top: 5px solid #FF0000;">
+                <div class="embed-creator-card">
                     <div style="margin-bottom: 15px;">
-                        <label class="form-label">🆔 ID do Canal de Destino</label>
-                        <input type="text" id="emb-canal" class="search-box" style="width:100%;" placeholder="Copia o ID do canal aqui">
+                        <label class="form-label">🔗 Webhook URL do Discord</label>
+                        <input type="text" id="emb-webhook" class="form-input" placeholder="https://discord.com/api/webhooks/...">
+                        <small style="color: #888; font-size: 0.75rem;">Cria um webhook nas configurações do canal Discord → Integrações → Webhooks</small>
                     </div>
                     <div style="margin-bottom: 15px;">
-                        <label class="form-label">🖊️ Título (Opcional)</label>
-                        <input type="text" id="emb-titulo" class="search-box" style="width:100%;" placeholder="Ex: Atendimento Jordan Shop">
+                        <label class="form-label">🖊️ Título do Embed</label>
+                        <input type="text" id="emb-titulo" class="form-input" placeholder="Ex: Atendimento Jordan Shop">
                     </div>
                     <div style="margin-bottom: 15px;">
-                        <label class="form-label">📝 Mensagem e Preços (O que vai aparecer no Ticket)</label>
-                        <textarea id="emb-desc" class="search-box" style="width:100%; height:180px; resize:vertical;" placeholder="Ex: Cyber Ghost - €3.00&#10;Clica no botão abaixo para comprar!"></textarea>
+                        <label class="form-label">📝 Descrição / Mensagem</label>
+                        <textarea id="emb-desc" class="form-textarea" placeholder="Ex: Bem-vindo à Jordan Shop!&#10;Clica no menu abaixo para abrir um ticket."></textarea>
                     </div>
                     <div style="margin-bottom: 20px;">
-                        <label class="form-label">📦 Produtos do Menu de Seleção</label>
+                        <label class="form-label">📦 Produtos / Opções do Menu</label>
                         <div id="container-produtos"></div>
-                        <button onclick="addInputProduto()" class="nav-btn" style="background: #333; margin-top: 10px; font-size: 0.8rem; width: auto; padding: 10px 20px;">
-                            + Adicionar Opção ao Menu
+                        <button onclick="addInputProduto()" class="btn-add">
+                            + Adicionar Opção
                         </button>
                     </div>
                     <div style="margin-bottom: 20px;">
-                        <label class="form-label">🌈 Cor do Embed (Padrão: #FF0000)</label>
-                        <input type="text" id="emb-cor" class="search-box" style="width:150px;" value="#FF0000">
+                        <label class="form-label">🌈 Cor do Embed (Hex)</label>
+                        <input type="text" id="emb-cor" class="form-input" style="width:150px;" value="#FF0000">
                     </div>
-                    <p style="color: #ff9999; font-size: 0.8rem; margin-bottom: 15px;">
-                        ℹ️ O menu de seleção aparecerá logo abaixo do seu texto.
+                    <p class="info-text">
+                        ℹ️ O menu de seleção aparecerá logo abaixo do embed.
                     </p>
-                    <button id="btn-env-emb" onclick="enviarEmbed()" class="nav-btn" style="width:100%; padding:18px; background: #FF0000;">
-                        🚀 ENVIAR PAINEL DE TICKETS
+
+                    <button id="btn-env-emb" onclick="enviarEmbed()" class="btn-enviar">
+                        🚀 ENVIAR PARA O DISCORD
                     </button>
                 </div>
             </div>
 
+            <!-- VENDAS -->
             <div id="vendas-section" class="content-div" style="display:none; width:100%;">
                 <h1>Histórico de Vendas</h1>
                 <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
@@ -206,7 +583,7 @@
                 </div>
             </div>
 
-            <!-- ✅ Site Online mais à esquerda -->
+            <!-- SITE ONLINE -->
             <div id="bot-status-section" class="content-div" style="display:none; width:100%;">
                 <div class="status-card">
                     <h2 style="margin: 0; color: #00ff00;">✅ Site está online!</h2>
@@ -219,11 +596,11 @@
     </div>
 
     <script>
-        // ✅ Nome correto do utilizador
+        // Nome correto do utilizador
         document.getElementById('nav-username').innerText = utilizadorLogado || 'Staff';
         document.getElementById('main-welcome').innerText = "Bem-Vindo, " + (utilizadorLogado || 'Staff');
 
-        // ✅ Splash screen só aparece quando vens do login (tem token no link)
+        // Splash screen só aparece quando vens do login
         const veioDoLogin = new URLSearchParams(window.location.search).get('_login');
         if (sessionStorage.getItem('_mostrar_splash')) {
             sessionStorage.removeItem('_mostrar_splash');
@@ -235,12 +612,17 @@
             }, 1500);
         }
 
-        // ✅ Ir para secção certa quando vens do transcripts.html
+        // Ir para secção certa quando vens do transcripts.html
         window.addEventListener('DOMContentLoaded', () => {
             const irPara = sessionStorage.getItem('ir_para_secao');
             if (irPara) {
                 sessionStorage.removeItem('ir_para_secao');
                 showSection(irPara);
+            }
+
+            // Adicionar um produto por defeito
+            if (document.getElementById('container-produtos').children.length === 0) {
+                addInputProduto();
             }
         });
 
@@ -248,6 +630,27 @@
         function showSection(id) {
             document.querySelectorAll('.content-div').forEach(s => s.style.display = 'none');
             document.getElementById(id).style.display = 'block';
+
+            // Atualizar botão ativo
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(id)) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        // Botão atualizar - IDÊNTICO AO TRANSCRIPTS
+        function atualizarPagina() {
+            const btn = document.querySelector('.refresh-btn');
+            const icon = document.getElementById('refreshIcon');
+
+            btn.classList.add('spinning');
+            btn.disabled = true;
+
+            setTimeout(() => {
+                window.location.reload();
+            }, 800);
         }
 
         // Filtro de pesquisa lateral
@@ -271,58 +674,117 @@
         function addInputProduto() {
             const container = document.getElementById('container-produtos');
             const div = document.createElement('div');
-            div.style = "display: flex; gap: 10px; margin-top: 10px; align-items: center;";
+            div.className = 'produto-row';
             div.innerHTML = `
-                <input type="text" class="search-box p-nome" style="margin-bottom:0;" placeholder="Nome do Produto">
-                <input type="text" class="search-box p-preco" style="margin-bottom:0; width: 120px;" placeholder="Preço (Ex: 3€)">
-                <button onclick="this.parentElement.remove()" style="background:none; border:none; color:#ff4444; cursor:pointer; font-weight:bold; font-size: 1.2rem;">×</button>
+                <input type="text" class="form-input p-nome" placeholder="Nome do Produto" style="flex: 2;">
+                <input type="text" class="form-input p-preco" placeholder="Preço" style="flex: 1;">
+                <button onclick="this.parentElement.remove()" title="Remover">×</button>
             `;
             container.appendChild(div);
         }
 
-        // Enviar Embed
+        // Função para converter hex para decimal
+        function hexToDecimal(hex) {
+            return parseInt(hex.replace('#', ''), 16);
+        }
+
+        // ENVIAR EMBED - CORRIGIDO E FUNCIONAL
         async function enviarEmbed() {
-            const canalId = document.getElementById('emb-canal').value;
-            const titulo = document.getElementById('emb-titulo').value;
-            const desc = document.getElementById('emb-desc').value;
+            const webhookUrl = document.getElementById('emb-webhook').value.trim();
+            const titulo = document.getElementById('emb-titulo').value.trim();
+            const desc = document.getElementById('emb-desc').value.trim();
             const cor = document.getElementById('emb-cor').value;
             const btn = document.getElementById('btn-env-emb');
 
+            // Validar webhook URL
+            if (!webhookUrl) {
+                alert("⚠️ Por favor, insere o URL do webhook do Discord!");
+                return;
+            }
+
+            if (!webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
+                alert("⚠️ O URL do webhook parece inválido! Deve começar com https://discord.com/api/webhooks/");
+                return;
+            }
+
+            if (!titulo || !desc) {
+                alert("⚠️ Por favor, preenche o título e a descrição!");
+                return;
+            }
+
+            // Coletar produtos
             const nomes = document.querySelectorAll('.p-nome');
             const precos = document.querySelectorAll('.p-preco');
             let produtos = [];
             nomes.forEach((n, i) => {
-                if (n.value) produtos.push({ nome: n.value, preco: precos[i].value || "N/A" });
+                if (n.value.trim()) {
+                    produtos.push({ 
+                        nome: n.value.trim(), 
+                        preco: precos[i].value.trim() || "N/A" 
+                    });
+                }
             });
-
-            if (!canalId || !titulo || !desc) {
-                alert("⚠️ Por favor, preenche todos os campos obrigatórios!");
-                return;
-            }
 
             btn.innerText = "⏳ A ENVIAR...";
             btn.disabled = true;
 
             try {
-                const res = await fetch('/api/enviar-embed', {
+                // Criar o embed
+                const embed = {
+                    title: titulo,
+                    description: desc,
+                    color: hexToDecimal(cor),
+                    timestamp: new Date().toISOString(),
+                    footer: {
+                        text: "Jordan Shop",
+                        icon_url: "https://cdn.discordapp.com/embed/avatars/0.png"
+                    }
+                };
+
+                // Adicionar campos se houver produtos
+                if (produtos.length > 0) {
+                    embed.fields = produtos.map(p => ({
+                        name: p.nome,
+                        value: p.preco,
+                        inline: true
+                    }));
+                }
+
+                // Enviar para o Discord via webhook
+                const response = await fetch(webhookUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ titulo, desc, cor, canalId, produtos })
+                    headers: { 
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        embeds: [embed],
+                        username: "Jordan Shop",
+                        avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png"
+                    })
                 });
 
-                if (res.ok) {
-                    alert("✅ Sucesso! O embed foi enviado para o Discord.");
+                if (response.ok) {
+                    alert("✅ Embed enviado com sucesso para o Discord!");
+                    // Limpar formulário
+                    document.getElementById('emb-webhook').value = '';
                     document.getElementById('emb-titulo').value = '';
                     document.getElementById('emb-desc').value = '';
                     document.getElementById('container-produtos').innerHTML = '';
+                    addInputProduto();
                 } else {
-                    const errorMsg = await res.text();
-                    alert("❌ Erro ao enviar: " + errorMsg);
+                    const errorText = await response.text();
+                    throw new Error(`Erro ${response.status}: ${errorText}`);
                 }
             } catch (e) {
-                alert("❌ Erro de ligação! Certifica-te que o bot está online.");
+                console.error(e);
+                alert("❌ Erro ao enviar: " + e.message + "
+
+Verifica se:
+1. O URL do webhook está correto
+2. O webhook não foi apagado
+3. Tens ligação à internet");
             } finally {
-                btn.innerText = "🚀 ENVIAR PAINEL DE TICKETS";
+                btn.innerText = "🚀 ENVIAR PARA O DISCORD";
                 btn.disabled = false;
             }
         }
