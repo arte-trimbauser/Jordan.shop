@@ -77,7 +77,10 @@ app.use(helmet({
 
 app.use(express.json({ limit: "1mb" }));
 
-const limiter = rateLimit({ windowMs: 60 * 1000, max: 120 });
+const limiter = rateLimit({ 
+    windowMs: 60 * 1000, 
+    max: 1000  // ← Aumentar de 120 para 1000
+});
 app.use(limiter);
 
 app.use(express.static(path.join(__dirname, "site"), { index: false }));
