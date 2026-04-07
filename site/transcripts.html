@@ -8,7 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;800&display=swap" rel="stylesheet">
 
     <script>
-        const utilizadorLogado = sessionStorage.getItem('staff_sessao') || null;
+        // ✅ CORREÇÃO: Usar localStorage em vez de sessionStorage para persistir entre tabs
+        const utilizadorLogado = localStorage.getItem('staff_sessao') || null;
         if (!utilizadorLogado) {
             alert("⚠️ Sessão Inválida!");
             window.location.href = "login.html";
@@ -27,7 +28,7 @@
         .bg-full { position: fixed; top:0; left:0; width:100%; height:100%; background: url('menu.png') no-repeat center center; background-size: cover; z-index:-2; }
         .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--overlay-dark); z-index:-1; }
 
-        /* HEADER - IDÊNTICO AO LOJA.HTML */
+        /* HEADER - IDÊNTICO */
         header { 
             background: var(--primary-red); 
             height:60px; 
@@ -52,7 +53,6 @@
             text-shadow: 0 0 10px rgba(255,255,255,0.5);
         }
 
-        /* BOTÃO ATUALIZAR NO HEADER - IGUAL AO LOJA */
         .refresh-container {
             display: flex;
             align-items: center;
@@ -95,16 +95,15 @@
         }
         .user-avatar { width:25px; height:25px; border-radius:50%; border:1px solid white; }
 
-        /* CONTAINER - LAYOUT HORIZONTAL (flex row) */
         .container { 
             display:flex; 
-            flex-direction: row; /* HORIZONTAL: sidebar à esquerda, main à direita */
+            flex-direction: row;
             height:calc(100vh - 60px); 
         }
 
         /* SIDEBAR - IDÊNTICA */
         aside { 
-            width:260px; /* MESMA LARGURA QUE LOJA.HTML */
+            width:260px;
             background:rgba(0,0,0,0.5); 
             backdrop-filter:blur(15px); 
             padding:20px; 
@@ -194,7 +193,6 @@
             margin-bottom:20px; 
         }
 
-        /* Barra de pesquisa */
         .search-transcripts { 
             width:100%; 
             max-width:900px; 
@@ -302,7 +300,7 @@
             transform:rotate(180deg); 
         }
 
-        /* Área expandida com iframe - CORRIGIDO */
+        /* ✅ CORREÇÃO: Área de preview com tratamento de erro melhorado */
         .transcript-preview { 
             display:none; 
             border-top:1px solid rgba(255,255,255,0.08); 
@@ -319,6 +317,21 @@
             display:block; 
             background: white;
         }
+
+        /* ✅ NOVO: Conteúdo alternativo quando iframe falha */
+        .transcript-content-alt {
+            padding: 20px;
+            background: #2a2a2a;
+            color: #ddd;
+            font-family: monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
         .preview-loading { 
             padding:30px; 
             text-align:center; 
@@ -340,8 +353,16 @@
             color: #ff6666;
             font-size: 0.9rem;
         }
+        .preview-error button {
+            margin-top: 10px;
+            background: var(--primary-red);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
 
-        /* Estado vazio */
         .sem-resultados { 
             color:#666; 
             text-align:center; 
@@ -358,7 +379,7 @@
             50% { opacity: 0.5; transform: scale(1.1); }
         }
 
-        /* RESPONSIVIDADE - MANTÉM HORIZONTAL EM DESKTOP, VERTICAL EM MOBILE */
+        /* RESPONSIVIDADE */
         @media (max-width: 768px) {
             header { height: 50px; padding: 0 15px; }
             .logo-link { font-size: 1rem; }
@@ -366,7 +387,6 @@
             .user-avatar { width: 20px; height: 20px; }
             .refresh-btn { padding: 6px 12px; font-size: 0.8rem; }
 
-            /* EM MOBILE: MUDA PARA VERTICAL */
             .container { 
                 flex-direction: column; 
                 height: calc(100vh - 50px); 
@@ -451,7 +471,6 @@
         </div>
     </header>
 
-    <!-- LAYOUT HORIZONTAL: Sidebar à esquerda, Main à direita -->
     <div class="container">
         <aside>
             <input type="text" class="search-box" placeholder="Procurar função..." onkeyup="filtrarMenu(this)">
@@ -462,7 +481,7 @@
                 <a href="loja.html" class="nav-btn" onclick="irPara('embed-section')">CRIAR EMBED</a>
                 <a href="loja.html" class="nav-btn" onclick="irPara('bot-status-section')">SITE ONLINE</a>
             </div>
-            <button class="logout-btn" onclick="sessionStorage.clear(); window.location.href='login.html'">
+            <button class="logout-btn" onclick="localStorage.clear(); window.location.href='login.html'">
                 SAIR 🚪
             </button>
         </aside>
@@ -476,8 +495,6 @@
             <div class="transcripts-lista" id="lista">
                 <div class="sem-resultados">A procurar registos...</div>
             </div>
-
-            <!-- REMOVIDO: Link no final para voltar à loja -->
         </main>
     </div>
 
@@ -493,7 +510,7 @@
         }
 
         function irPara(secao) {
-            sessionStorage.setItem('ir_para_secao', secao);
+            localStorage.setItem('ir_para_secao', secao); // ✅ CORREÇÃO: localStorage
         }
 
         function pesquisarTranscripts(valor) {
@@ -518,7 +535,8 @@
             }, 1000);
         }
 
-        function togglePreview(id, nome) {
+        // ✅ CORREÇÃO: Função melhorada para carregar transcript com fallback
+        async function togglePreview(id, nome) {
             const preview = document.getElementById(`preview-${id}`);
             const btn = document.getElementById(`btn-exp-${id}`);
             const aberto = preview.classList.contains('aberto');
@@ -527,48 +545,65 @@
                 preview.classList.remove('aberto');
                 btn.classList.remove('aberto');
                 btn.innerText = '▼';
-            } else {
-                preview.classList.add('aberto');
-                btn.classList.add('aberto');
-                btn.innerText = '▲';
+                return;
+            }
 
-                const transcriptId = nome.replace('.html', '');
+            preview.classList.add('aberto');
+            btn.classList.add('aberto');
+            btn.innerText = '▲';
 
-                if (!transcriptsCarregados[transcriptId]) {
-                    preview.innerHTML = '<div class="preview-loading">A carregar transcript...</div>';
+            const transcriptId = nome.replace('.html', '');
 
-                    const iframe = document.createElement('iframe');
-                    iframe.style.width = '100%';
-                    iframe.style.height = '400px';
-                    iframe.style.border = 'none';
-                    iframe.style.background = 'white';
+            // Só carrega se ainda não tiver carregado
+            if (transcriptsCarregados[transcriptId]) return;
 
-                    const timeout = setTimeout(() => {
-                        if (!transcriptsCarregados[transcriptId]) {
-                            preview.innerHTML = `
-                                <div class="preview-error">
-                                    ❌ Erro ao carregar transcript.<br>
-                                    <small>O arquivo pode não existir ou o servidor está offline.</small><br><br>
-                                    <a href="/transcripts/${transcriptId}" target="_blank" class="btn-html">Tentar abrir em nova aba</a>
-                                </div>
-                            `;
-                        }
-                    }, 5000);
+            preview.innerHTML = '<div class="preview-loading">A carregar transcript...</div>';
 
-                    iframe.onload = () => {
-                        clearTimeout(timeout);
-                        transcriptsCarregados[transcriptId] = true;
-                        preview.innerHTML = '';
-                        preview.appendChild(iframe);
-                    };
+            try {
+                // ✅ Tenta primeiro carregar via fetch (mais fiável que iframe)
+                const response = await fetch(`/transcripts/${transcriptId}`);
 
-                    iframe.onerror = () => {
-                        clearTimeout(timeout);
-                        preview.innerHTML = '<div class="preview-error">❌ Erro ao carregar.</div>';
-                    };
-
-                    iframe.src = `/transcripts/${transcriptId}?t=${Date.now()}`;
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
                 }
+
+                const html = await response.text();
+
+                // Se conseguiu carregar, mostra num iframe sandboxed ou extrai conteúdo
+                const iframe = document.createElement('iframe');
+                iframe.style.width = '100%';
+                iframe.style.height = '400px';
+                iframe.style.border = 'none';
+                iframe.style.background = 'white';
+
+                // ✅ CORREÇÃO: Usar sandbox com allow-same-origin para permitir carregar conteúdo local
+                iframe.sandbox = 'allow-same-origin allow-scripts allow-popups';
+
+                iframe.onload = () => {
+                    transcriptsCarregados[transcriptId] = true;
+                };
+
+                preview.innerHTML = '';
+                preview.appendChild(iframe);
+
+                // Escrever conteúdo no iframe
+                iframe.srcdoc = html;
+
+            } catch (error) {
+                console.error('Erro ao carregar:', error);
+
+                // ✅ CORREÇÃO: Se falhar, mostra mensagem de erro com opção de download/abrir
+                preview.innerHTML = `
+                    <div class="preview-error">
+                        ❌ Erro ao carregar transcript.<br>
+                        <small>${error.message}</small><br><br>
+                        <a href="/transcripts/${transcriptId}" target="_blank" class="btn-html" style="display:inline-block;">
+                            🔗 Abrir em Nova Aba
+                        </a>
+                        <br><br>
+                        <small style="color:#888;">Se o problema persistir, verifica se o arquivo existe em:<br>/transcripts/${transcriptId}</small>
+                    </div>
+                `;
             }
         }
 
