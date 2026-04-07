@@ -115,6 +115,9 @@
             </button>
         </aside>
 
+        <header>
+        <a href="javascript:location.reload()" class="logo-link">Jordan Shop Site | 🔃 Atualizar</a>
+            
         <main>
             <h1>📄 Histórico de Transcripts</h1>
             <p class="subtitulo" id="subtitulo">A carregar...</p>
@@ -148,32 +151,86 @@
             renderTranscripts(filtrados);
         }
 
-        function togglePreview(id, nome) {
-            const preview = document.getElementById(`preview-${id}`);
-            const btn = document.getElementById(`btn-exp-${id}`);
-            const aberto = preview.classList.contains('aberto');
+        // Guarda os transcripts já carregados para não repetir
+const transcriptsCarregados = {};
 
-            if (aberto) {
-                preview.classList.remove('aberto');
-                btn.classList.remove('aberto');
-                btn.innerText = '▼';
-            } else {
-                preview.classList.add('aberto');
-                btn.classList.add('aberto');
-                btn.innerText = '▲';
+function togglePreview(id, nome) {
+    const preview = document.getElementById(`preview-${id}`);
+    const btn = document.getElementById(`btn-exp-${id}`);
+    const aberto = preview.classList.contains('aberto');
 
-                // Só carrega o iframe se ainda não tiver carregado
-                if (!preview.querySelector('iframe')) {
-                    preview.innerHTML = '<div class="preview-loading">⏳ A carregar transcript...</div>';
-                    const iframe = document.createElement('iframe');
-                    const transcriptId = nome.replace('.html', '');
-                    iframe.src = `/transcripts/${transcriptId}`;
-                    iframe.onload = () => { preview.innerHTML = ''; preview.appendChild(iframe); };
-                    iframe.onerror = () => { preview.innerHTML = '<div class="preview-loading">❌ Erro ao carregar.</div>'; };
-                    setTimeout(() => { if (preview.querySelector('.preview-loading')) { preview.innerHTML = ''; preview.appendChild(iframe); }}, 500);
-                }
-            }
+    if (aberto) {
+        // Fecha
+        preview.classList.remove('aberto');
+        btn.classList.remove('aberto');
+        btn.innerText = '▼';
+    } else {
+        // Abre
+        preview.classList.add('aberto');
+        btn.classList.add('aberto');
+        btn.innerText = '▲';
+
+        // Só carrega se ainda não tiver carregado
+        const transcriptId = nome.replace('.html', '');
+        if (!transcriptsCarregados[transcriptId]) {
+            transcriptsCarregados[transcriptId] = true;
+            
+            preview.innerHTML = '<div class="preview-loading">⏳ A carregar transcript...</div>';
+            
+            const iframe = document.createElement('iframe');
+            iframe.src = `/transcripts/${transcriptId}`;
+            
+            iframe.onload = () => {
+                preview.innerHTML = '';
+                preview.appendChild(iframe);
+            };
+            
+            iframe.onerror = () => {
+                preview.innerHTML = '<div class="preview-loading">❌ Erro ao carregar.</div>';
+            };
         }
+    }
+}
+        // Guarda os transcripts já carregados para não repetir
+const transcriptsCarregados = {};
+
+function togglePreview(id, nome) {
+    const preview = document.getElementById(`preview-${id}`);
+    const btn = document.getElementById(`btn-exp-${id}`);
+    const aberto = preview.classList.contains('aberto');
+
+    if (aberto) {
+        // Fecha
+        preview.classList.remove('aberto');
+        btn.classList.remove('aberto');
+        btn.innerText = '▼';
+    } else {
+        // Abre
+        preview.classList.add('aberto');
+        btn.classList.add('aberto');
+        btn.innerText = '▲';
+
+        // Só carrega se ainda não tiver carregado
+        const transcriptId = nome.replace('.html', '');
+        if (!transcriptsCarregados[transcriptId]) {
+            transcriptsCarregados[transcriptId] = true;
+            
+            preview.innerHTML = '<div class="preview-loading">⏳ A carregar transcript...</div>';
+            
+            const iframe = document.createElement('iframe');
+            iframe.src = `/transcripts/${transcriptId}`;
+            
+            iframe.onload = () => {
+                preview.innerHTML = '';
+                preview.appendChild(iframe);
+            };
+            
+            iframe.onerror = () => {
+                preview.innerHTML = '<div class="preview-loading">❌ Erro ao carregar.</div>';
+            };
+        }
+    }
+}
 
         function renderTranscripts(lista) {
             const container = document.getElementById('lista');
@@ -183,6 +240,14 @@
                 return;
             }
 
+            // Adiciona no início do script
+let transcriptsCarregados = {};
+
+function carregarTranscript(id) {
+    // Se já carregou, não repete
+    if (transcriptsCarregados[id]) return;
+    transcriptsCarregados[id] = true;
+    
             container.innerHTML = '';
             lista.forEach((file, index) => {
                 const nomeCompleto = file.name.replace('.html', '');
