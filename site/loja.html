@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jordan Shop | Painel Staff</title>
+    <title>Jordan Shop | Painel Logs Staff</title>
     <link rel="icon" type="image/png" href="logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;800&display=swap" rel="stylesheet">
 
@@ -12,7 +12,6 @@
         const userNoLink = params.get('user');
         const tokenNoLink = params.get('token');
 
-        // ✅ CORREÇÃO: Usar localStorage em vez de sessionStorage
         if (userNoLink && tokenNoLink) {
             localStorage.setItem('staff_sessao', userNoLink);
             window.history.replaceState({}, document.title, "loja.html");
@@ -460,7 +459,7 @@
     <div class="overlay"></div>
 
     <header>
-        <a href="javascript:location.reload()" class="logo-link">Jordan Shop | Atualizar</a>
+        <a href="javascript:location.reload()" class="logo-link">Jordan Shop | Logs</a>
         <div class="refresh-container">
             <button class="refresh-btn" onclick="atualizarPagina()" title="Atualizar página">
                 <span id="refreshIcon">🔃</span> Atualizar
@@ -496,10 +495,11 @@
             <div id="embed-section" class="content-div" style="display:none; width:100%;">
                 <h1>🎫 Criar Painel de Tickets</h1>
                 <div class="embed-creator-card">
+                    <!-- ✅ CORREÇÃO: ID do Canal em vez de Webhook -->
                     <div style="margin-bottom: 15px;">
-                        <label class="form-label">🔗 Webhook URL do Discord</label>
-                        <input type="text" id="emb-webhook" class="form-input" placeholder="https://discord.com/api/webhooks/...">
-                        <small style="color: #888; font-size: 0.75rem;">Cria um webhook nas configurações do canal Discord → Integrações → Webhooks</small>
+                        <label class="form-label">🆔 ID do Canal de Destino</label>
+                        <input type="text" id="emb-canal" class="form-input" placeholder="Ex: 1234567890123456789">
+                        <small style="color: #888; font-size: 0.75rem;">Clica com o botão direito no canal Discord → Copiar ID do Canal</small>
                     </div>
                     <div style="margin-bottom: 15px;">
                         <label class="form-label">🖊️ Título do Embed</label>
@@ -521,11 +521,11 @@
                         <input type="text" id="emb-cor" class="form-input" style="width:150px;" value="#FF0000">
                     </div>
                     <p class="info-text">
-                        ℹ️ O menu de seleção aparecerá logo abaixo do embed.
+                        ℹ️ O bot vai enviar o embed diretamente para o canal que iras escrever no ID do Canal de Destino.
                     </p>
 
                     <button id="btn-env-emb" onclick="enviarEmbed()" class="btn-enviar">
-                        🚀 ENVIAR PARA O DISCORD
+                        🚀 ENVIAR VIA BOT
                     </button>
                 </div>
             </div>
@@ -535,28 +535,36 @@
                 <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
                     <div class="log-item">
                         <div class="log-info">
-                            <strong>Comprador: @silvexxx | 27/09/2025</strong>
+                            <strong>Comprador: @silvexxx/leo._.1330 | Data📅: 27/09/2025</strong>
                             <span>Produto: 🔥・sp00fer-1click<br>Staff: @! Jordan @migueldodrip</span>
                         </div>
                         <span class="status-badge" style="background: #00ff00; color: #000;">LIFETIME</span>
                     </div>
                     <div class="log-item">
                         <div class="log-info">
-                            <strong>Comprador: @Tonethegoat | 27/09/2025</strong>
+                            <strong>Comprador: @Tonethegoat/tonezz1_ | Data📅: 27/09/2025</strong>
                             <span>Produto: 🦈・shark-menu<br>Staff: @! Jordan @migueldodrip</span>
                         </div>
                         <span class="status-badge" style="background: #ffcc00; color: #000;">SEMANAL</span>
                     </div>
                     <div class="log-item">
                         <div class="log-info">
-                            <strong>Comprador: @silvexxx | 28/09/2025</strong>
+                            <strong>Comprador: @silvexxx/leo._.1330 | Data📅: 28/09/2025</strong>
                             <span>Produto: ⭐・rockstar-unban<br>Staff: @! Jordan</span>
                         </div>
                         <span class="status-badge" style="background: #00ff00; color: #000;">INFINITO</span>
+                        </div>
+                    <div class="log-item">
+                         <div class="log-info">
+                            <strong>Comprador: @silvexxx/leo._.1330 | Data📅: 28/09/2025</strong>
+                            <span>Produto: ⁠🌎・vpn-service <br>Staff: @! Jordan</span>
+                        </div>
+                        <span class="status-badge" style="background: #00ff00; color: #000;">INFINITO</span>
+                        </div>
                     </div>
                     <div class="log-item">
                         <div class="log-info">
-                            <strong>Comprador: @silvexxx | 19/10/2025</strong>
+                            <strong>Comprador: @silvexxx/leo._.1330 | Data📅: 19/10/2025</strong>
                             <span>Produto: 🦈・shark-menu<br>Staff: @! Jordan</span>
                         </div>
                         <span class="status-badge" style="background: #00ff00; color: #000;">LIFETIME</span>
@@ -577,7 +585,7 @@
 
     <script>
         document.getElementById('nav-username').innerText = utilizadorLogado || 'Staff';
-        document.getElementById('main-welcome').innerText = "Bem-Vindo, " + (utilizadorLogado || 'Staff');
+        document.getElementById('main-welcome').innerText = "Bem-Vindo," + (utilizadorLogado || 'Staff');
 
         const veioDoLogin = new URLSearchParams(window.location.search).get('_login');
         if (localStorage.getItem('_mostrar_splash')) {
@@ -653,24 +661,16 @@
             container.appendChild(div);
         }
 
-        function hexToDecimal(hex) {
-            return parseInt(hex.replace('#', ''), 16);
-        }
-
+        // ✅ CORREÇÃO: Enviar via API interna /api/enviar-embed (bot) em vez de webhook
         async function enviarEmbed() {
-            const webhookUrl = document.getElementById('emb-webhook').value.trim();
+            const canalId = document.getElementById('emb-canal').value.trim();
             const titulo = document.getElementById('emb-titulo').value.trim();
             const desc = document.getElementById('emb-desc').value.trim();
             const cor = document.getElementById('emb-cor').value;
             const btn = document.getElementById('btn-env-emb');
 
-            if (!webhookUrl) {
-                alert("⚠️ Por favor, insere o URL do webhook do Discord!");
-                return;
-            }
-
-            if (!webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
-                alert("⚠️ O URL do webhook parece inválido!");
+            if (!canalId) {
+                alert("⚠️ Por favor, insere o ID do canal ou verifica se esta correto!");
                 return;
             }
 
@@ -695,53 +695,44 @@
             btn.disabled = true;
 
             try {
-                const embed = {
-                    title: titulo,
-                    description: desc,
-                    color: hexToDecimal(cor),
-                    timestamp: new Date().toISOString(),
-                    footer: {
-                        text: "Jordan Shop",
-                        icon_url: "https://cdn.discordapp.com/embed/avatars/0.png"
-                    }
-                };
-
-                if (produtos.length > 0) {
-                    embed.fields = produtos.map(p => ({
-                        name: p.nome,
-                        value: p.preco,
-                        inline: true
-                    }));
-                }
-
-                const response = await fetch(webhookUrl, {
+                // ✅ CORREÇÃO: Usar a API interna do bot em vez de webhook do Discord
+                const response = await fetch('/api/enviar-embed', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ 
-                        embeds: [embed],
-                        username: "Jordan Shop",
-                        avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png"
+                        titulo: titulo,
+                        desc: desc,
+                        cor: cor,
+                        canalId: canalId,
+                        produtos: produtos
                     })
                 });
 
                 if (response.ok) {
-                    alert("✅ Embed enviado com sucesso para o Discord!");
-                    document.getElementById('emb-webhook').value = '';
+                    const msg = await response.text();
+                    alert("✅ " + msg);
+                    // Limpar formulário
+                    document.getElementById('emb-canal').value = '';
                     document.getElementById('emb-titulo').value = '';
                     document.getElementById('emb-desc').value = '';
                     document.getElementById('container-produtos').innerHTML = '';
                     addInputProduto();
                 } else {
-                    const errorText = await response.text();
-                    throw new Error(`Erro ${response.status}: ${errorText}`);
+                    const errorMsg = await response.text();
+                    throw new Error(errorMsg);
                 }
             } catch (e) {
                 console.error(e);
-                alert("❌ Erro ao enviar: " + e.message);
+                alert("❌ Erro ao enviar: " + e.message + "
+
+Verifica se:
+1. O bot está online
+2. O ID do canal está correto
+3. O bot tem permissões no canal");
             } finally {
-                btn.innerText = "🚀 ENVIAR PARA O DISCORD";
+                btn.innerText = "🚀 ENVIAR VIA BOT";
                 btn.disabled = false;
             }
         }
