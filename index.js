@@ -87,6 +87,20 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "site", "login.html"));
 });
 
+// ✅ ADICIONAR ISTO — Listar transcripts do Supabase
+app.get("/api/list-transcripts", async (req, res) => {
+    const { data, error } = await supabase.storage
+        .from("transcripts")
+        .list("transcripts", { sortBy: { column: "created_at", order: "desc" } });
+    
+    if (error) {
+        console.error("Erro Supabase list:", error.message);
+        return res.status(500).json({ error: error.message });
+    }
+    res.json(data || []);
+});
+
+
 // ✅ MUDANÇA 2: Removida primeira rota /transcripts/:id duplicada (linhas 95-103)
 // ✅ MUDANÇA 3: Corrigido caminho — era transcripts/transcripts/, agora é transcripts/
 app.get("/transcripts/:id", async (req, res) => {
