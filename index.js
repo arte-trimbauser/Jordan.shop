@@ -70,7 +70,7 @@ app.use(helmet({
             fontSrc: ["'self'", "fonts.googleapis.com", "fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "https://i.postimg.cc", "https://cdn.discordapp.com", "https://cdnjs.cloudflare.com"],
             connectSrc: ["'self'"],
-            frameSrc: ["'none'"]
+            frameSrc: ["'self'"]  // ← CORRIGIDO: permitir iframes do mesmo site
         }
     }
 }));
