@@ -86,6 +86,83 @@
 
         @keyframes fadeIn { from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);} }
         .transcript-item { animation:fadeIn 0.3s ease; }
+
+        /* ✅ RESPONSIVIDADE MOBILE - NOVO */
+        @media (max-width: 768px) {
+            /* Header menor */
+            header { height: 50px; padding: 0 15px; }
+            .logo-link { font-size: 1rem; }
+            .user-tag { padding: 5px 10px; font-size: 0.85rem; }
+            .user-avatar { width: 20px; height: 20px; }
+
+            /* Layout vertical */
+            .container { flex-direction: column; height: calc(100vh - 50px); }
+
+            /* Sidebar como menu horizontal no topo */
+            aside { 
+                width: 100%; 
+                height: auto; 
+                padding: 10px; 
+                flex-direction: row; 
+                flex-wrap: wrap;
+                border-right: none; 
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+            .search-box { 
+                width: 100%; 
+                margin-bottom: 10px; 
+                padding: 8px;
+                font-size: 0.8rem;
+            }
+            .nav-links { 
+                flex-direction: row; 
+                gap: 5px; 
+                flex-grow: 1;
+                overflow-x: auto;
+            }
+            .nav-btn { 
+                padding: 8px 12px; 
+                font-size: 0.75rem; 
+                white-space: nowrap;
+                min-width: fit-content;
+            }
+            .nav-btn:hover { transform: translateY(-2px); }
+            .logout-btn { 
+                padding: 8px 12px; 
+                font-size: 0.75rem; 
+                margin-top: 0;
+                margin-left: auto;
+            }
+
+            /* Main ajustado */
+            main { padding: 15px; }
+            h1 { font-size: 1.5rem; }
+            .subtitulo { font-size: 0.8rem; margin-bottom: 15px; }
+            .search-transcripts { padding: 10px; font-size: 0.9rem; margin-bottom: 15px; }
+
+            /* Transcripts mais compactos */
+            .transcript-header { padding: 12px 15px; }
+            .transcript-nome { font-size: 0.85rem; }
+            .transcript-meta { font-size: 0.7rem; }
+            .btn-html { padding: 6px 10px; font-size: 0.7rem; }
+            .btn-expandir { padding: 6px 10px; font-size: 0.75rem; }
+            .transcript-preview iframe { height: 300px; }
+        }
+
+        /* ✅ MOBILE PEQUENO (até 480px) */
+        @media (max-width: 480px) {
+            .logo-link { font-size: 0.9rem; }
+            .user-tag { font-size: 0.75rem; padding: 4px 8px; }
+            
+            .nav-links { gap: 3px; }
+            .nav-btn { padding: 6px 8px; font-size: 0.7rem; }
+            .logout-btn { padding: 6px 8px; font-size: 0.7rem; }
+            
+            h1 { font-size: 1.3rem; }
+            .transcript-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .transcript-btns { width: 100%; justify-content: flex-end; }
+            .transcript-preview iframe { height: 250px; }
+        }
     </style>
 </head>
 <body>
@@ -115,9 +192,6 @@
             </button>
         </aside>
 
-        <header>
-        <a href="javascript:location.reload()" class="logo-link">Jordan Shop Site | 🔃 Atualizar</a>
-            
         <main>
             <h1>📄 Histórico de Transcripts</h1>
             <p class="subtitulo" id="subtitulo">A carregar...</p>
@@ -152,85 +226,45 @@
         }
 
         // Guarda os transcripts já carregados para não repetir
-const transcriptsCarregados = {};
+        const transcriptsCarregados = {};
 
-function togglePreview(id, nome) {
-    const preview = document.getElementById(`preview-${id}`);
-    const btn = document.getElementById(`btn-exp-${id}`);
-    const aberto = preview.classList.contains('aberto');
+        function togglePreview(id, nome) {
+            const preview = document.getElementById(`preview-${id}`);
+            const btn = document.getElementById(`btn-exp-${id}`);
+            const aberto = preview.classList.contains('aberto');
 
-    if (aberto) {
-        // Fecha
-        preview.classList.remove('aberto');
-        btn.classList.remove('aberto');
-        btn.innerText = '▼';
-    } else {
-        // Abre
-        preview.classList.add('aberto');
-        btn.classList.add('aberto');
-        btn.innerText = '▲';
+            if (aberto) {
+                // Fecha
+                preview.classList.remove('aberto');
+                btn.classList.remove('aberto');
+                btn.innerText = '▼';
+            } else {
+                // Abre
+                preview.classList.add('aberto');
+                btn.classList.add('aberto');
+                btn.innerText = '▲';
 
-        // Só carrega se ainda não tiver carregado
-        const transcriptId = nome.replace('.html', '');
-        if (!transcriptsCarregados[transcriptId]) {
-            transcriptsCarregados[transcriptId] = true;
-            
-            preview.innerHTML = '<div class="preview-loading">⏳ A carregar transcript...</div>';
-            
-            const iframe = document.createElement('iframe');
-            iframe.src = `/transcripts/${transcriptId}`;
-            
-            iframe.onload = () => {
-                preview.innerHTML = '';
-                preview.appendChild(iframe);
-            };
-            
-            iframe.onerror = () => {
-                preview.innerHTML = '<div class="preview-loading">❌ Erro ao carregar.</div>';
-            };
+                // Só carrega se ainda não tiver carregado
+                const transcriptId = nome.replace('.html', '');
+                if (!transcriptsCarregados[transcriptId]) {
+                    transcriptsCarregados[transcriptId] = true;
+                    
+                    preview.innerHTML = '<div class="preview-loading">⏳ A carregar transcript...</div>';
+                    
+                    const iframe = document.createElement('iframe');
+                    iframe.src = `/transcripts/${transcriptId}`;
+                    
+                    iframe.onload = () => {
+                        preview.innerHTML = '';
+                        preview.appendChild(iframe);
+                    };
+                    
+                    iframe.onerror = () => {
+                        preview.innerHTML = '<div class="preview-loading">❌ Erro ao carregar.</div>';
+                    };
+                }
+            }
         }
-    }
-}
-        // Guarda os transcripts já carregados para não repetir
-const transcriptsCarregados = {};
-
-function togglePreview(id, nome) {
-    const preview = document.getElementById(`preview-${id}`);
-    const btn = document.getElementById(`btn-exp-${id}`);
-    const aberto = preview.classList.contains('aberto');
-
-    if (aberto) {
-        // Fecha
-        preview.classList.remove('aberto');
-        btn.classList.remove('aberto');
-        btn.innerText = '▼';
-    } else {
-        // Abre
-        preview.classList.add('aberto');
-        btn.classList.add('aberto');
-        btn.innerText = '▲';
-
-        // Só carrega se ainda não tiver carregado
-        const transcriptId = nome.replace('.html', '');
-        if (!transcriptsCarregados[transcriptId]) {
-            transcriptsCarregados[transcriptId] = true;
-            
-            preview.innerHTML = '<div class="preview-loading">⏳ A carregar transcript...</div>';
-            
-            const iframe = document.createElement('iframe');
-            iframe.src = `/transcripts/${transcriptId}`;
-            
-            iframe.onload = () => {
-                preview.innerHTML = '';
-                preview.appendChild(iframe);
-            };
-            
-            iframe.onerror = () => {
-                preview.innerHTML = '<div class="preview-loading">❌ Erro ao carregar.</div>';
-            };
-        }
-    }
-}
 
         function renderTranscripts(lista) {
             const container = document.getElementById('lista');
@@ -240,14 +274,6 @@ function togglePreview(id, nome) {
                 return;
             }
 
-            // Adiciona no início do script
-let transcriptsCarregados = {};
-
-function carregarTranscript(id) {
-    // Se já carregou, não repete
-    if (transcriptsCarregados[id]) return;
-    transcriptsCarregados[id] = true;
-    
             container.innerHTML = '';
             lista.forEach((file, index) => {
                 const nomeCompleto = file.name.replace('.html', '');
