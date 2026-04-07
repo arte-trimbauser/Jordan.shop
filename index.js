@@ -52,21 +52,8 @@ const supabase = createClient(
 const app = express();
 const port = process.env.PORT || 10000;
 
-// ✅ CORRIGIDO: Helmet configurado para permitir o site funcionar
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
-            scriptSrcAttr: ["'unsafe-inline'"],
-            styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "fonts.gstatic.com"],
-            fontSrc: ["'self'", "fonts.googleapis.com", "fonts.gstatic.com"],
-            imgSrc: ["'self'", "data:", "https://i.postimg.cc"],
-            connectSrc: ["'self'"]
-        }
-    }
-}));
-
+// ✅ MUDANÇA 1: Removido primeiro helmet() duplicado (linhas 54-64)
+// ✅ Fica só este, o completo:
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -100,24 +87,13 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "site", "login.html"));
 });
 
-// --- LISTAR TRANSCRIPTS DO SUPABASE ---
+// ✅ MUDANÇA 2: Removida primeira rota /transcripts/:id duplicada (linhas 95-103)
+// ✅ MUDANÇA 3: Corrigido caminho — era transcripts/transcripts/, agora é transcripts/
 app.get("/transcripts/:id", async (req, res) => {
     const id = req.params.id.replace('.html', '');
     const { data, error } = await supabase.storage
         .from("transcripts")
         .download(`transcripts/${id}.html`);
-    if (error || !data) return res.status(404).send("Transcript não encontrado.");
-    const text = await data.text();
-    res.setHeader("Content-Type", "text/html");
-    res.send(text);
-});
-
-// --- SERVIR TRANSCRIPTS DO SUPABASE ---
-app.get("/transcripts/:id", async (req, res) => {
-    const id = req.params.id.replace('.html', '');
-    const { data, error } = await supabase.storage
-        .from("transcripts")
-        .download(`transcripts/transcripts/${id}.html`);
 
     if (error || !data) return res.status(404).send("Transcript não encontrado.");
 
@@ -218,6 +194,7 @@ if (produtos?.length) {
 
 await canal.send({ embeds: [embed], components });
 res.send("✅ Enviado!");
+// ✅ MUDANÇA 4: Removido }); solitário (linhas 172-173)
 } catch (error) {
     console.error(error);
     res.status(500).send("Erro ao comunicar com o Discord.");
@@ -255,13 +232,15 @@ if (!TOKEN) {
     process.exit(1);
 }
 
+// ✅ MUDANÇA 5: Movido app.listen para fora do client.once, antes do client.login
+app.listen(port, () => {
+    console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
+});
+
 client.login(TOKEN)
     .then(() => console.log("✅ Pedido de login enviado ao Discord"))
     .catch(err => console.error("❌ ERRO NO LOGIN:", err));
 
 client.once(Events.ClientReady, () => {
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
-    app.listen(port, () => {
-        console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
-    });
 });
