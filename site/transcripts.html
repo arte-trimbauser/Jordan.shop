@@ -27,78 +27,351 @@
         .bg-full { position: fixed; top:0; left:0; width:100%; height:100%; background: url('menu.png') no-repeat center center; background-size: cover; z-index:-2; }
         .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--overlay-dark); z-index:-1; }
 
-        header { background: var(--primary-red); height:60px; display:flex; justify-content:space-between; align-items:center; padding:0 30px; box-shadow:0 4px 15px rgba(0,0,0,0.5); z-index:10; position:relative; }
-        .logo-link { color:white; text-decoration:none; font-weight:800; font-size:1.3rem; cursor:pointer; }
-        .user-tag { background:rgba(0,0,0,0.4); padding:8px 15px; border-radius:5px; font-weight:600; display:flex; align-items:center; gap:10px; }
+        /* HEADER - IDÊNTICO AO LOJA.HTML */
+        header { 
+            background: var(--primary-red); 
+            height:60px; 
+            display:flex; 
+            justify-content:space-between; 
+            align-items:center; 
+            padding:0 30px; 
+            box-shadow:0 4px 15px rgba(0,0,0,0.5); 
+            z-index:10; 
+            position:relative; 
+        }
+        .logo-link { 
+            color:white; 
+            text-decoration:none; 
+            font-weight:800; 
+            font-size:1.3rem; 
+            cursor:pointer; 
+            transition: all 0.3s ease;
+        }
+        .logo-link:hover {
+            transform: scale(1.05);
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+
+        /* BOTÃO ATUALIZAR NO HEADER - IGUAL AO LOJA */
+        .refresh-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .refresh-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .refresh-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        .refresh-btn.spinning {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .user-tag { 
+            background:rgba(0,0,0,0.4); 
+            padding:8px 15px; 
+            border-radius:5px; 
+            font-weight:600; 
+            display:flex; 
+            align-items:center; 
+            gap:10px; 
+        }
         .user-avatar { width:25px; height:25px; border-radius:50%; border:1px solid white; }
 
-        .container { display:flex; height:calc(100vh - 60px); }
+        /* CONTAINER - LAYOUT HORIZONTAL (flex row) */
+        .container { 
+            display:flex; 
+            flex-direction: row; /* HORIZONTAL: sidebar à esquerda, main à direita */
+            height:calc(100vh - 60px); 
+        }
 
-        /* Sidebar */
-        aside { width:220px; background:rgba(0,0,0,0.5); backdrop-filter:blur(15px); padding:20px; display:flex; flex-direction:column; border-right:1px solid rgba(255,255,255,0.1); }
-        .search-box { width:100%; padding:10px; border-radius:5px; border:none; background:rgba(255,255,255,0.1); color:white; outline:none; border-bottom:2px solid transparent; transition:0.3s; margin-bottom:15px; font-size:0.85rem; }
+        /* SIDEBAR - IDÊNTICA */
+        aside { 
+            width:260px; /* MESMA LARGURA QUE LOJA.HTML */
+            background:rgba(0,0,0,0.5); 
+            backdrop-filter:blur(15px); 
+            padding:20px; 
+            display:flex; 
+            flex-direction:column; 
+            border-right:1px solid rgba(255,255,255,0.1); 
+        }
+        .search-box { 
+            width:100%; 
+            padding:12px; 
+            border-radius:5px; 
+            border:none; 
+            background:rgba(255,255,255,0.1); 
+            color:white; 
+            outline:none; 
+            border-bottom:2px solid transparent; 
+            transition:0.3s; 
+            margin-bottom:20px; 
+            font-size:0.9rem; 
+        }
         .search-box:focus { border-bottom:2px solid var(--primary-red); }
-        .nav-links { display:flex; flex-direction:column; gap:10px; flex-grow:1; }
-        .nav-btn { background:var(--primary-red); color:white; border:none; padding:12px; border-radius:6px; font-weight:600; cursor:pointer; transition:var(--transition-speed); text-align:center; text-decoration:none; display:block; font-size:0.9rem; }
-        .nav-btn:hover { transform:translateX(8px); filter:brightness(1.3); }
-        .nav-btn.active { background:#ff0000; box-shadow:0 0 15px rgba(255,0,0,0.4); }
-        .logout-btn { background:#b30000; color:white; padding:12px; border-radius:6px; text-decoration:none; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:10px; transition:0.3s; margin-top:auto; border:none; cursor:pointer; font-size:0.9rem; }
-        .logout-btn:hover { background:#ff0000; transform:scale(1.02); }
+        .search-box::placeholder { color: #888; }
 
-        /* Main */
-        main { flex:1; padding:30px; overflow-y:auto; display:flex; flex-direction:column; align-items:center; }
-        h1 { font-size:2rem; font-weight:800; text-shadow:2px 2px 8px rgba(0,0,0,0.8); margin-bottom:5px; }
-        .subtitulo { color:#aaa; font-size:0.9rem; margin-bottom:20px; }
+        .nav-links { display:flex; flex-direction:column; gap:12px; flex-grow:1; }
+        .nav-btn { 
+            background:var(--primary-red); 
+            color:white; 
+            border:none; 
+            padding:14px; 
+            border-radius:6px; 
+            font-weight:600; 
+            cursor:pointer; 
+            transition:var(--transition-speed); 
+            text-align:center; 
+            text-decoration:none; 
+            display:block; 
+            font-size:0.9rem; 
+        }
+        .nav-btn:hover { 
+            transform:translateX(10px); 
+            filter:brightness(1.3); 
+        }
+        .nav-btn.active { 
+            background:#ff0000; 
+            box-shadow:0 0 15px rgba(255,0,0,0.4); 
+        }
+        .logout-btn { 
+            background:#b30000; 
+            color:white; 
+            padding:12px; 
+            border-radius:6px; 
+            text-decoration:none; 
+            font-weight:bold; 
+            display:flex; 
+            align-items:center; 
+            justify-content:center; 
+            gap:10px; 
+            transition:0.3s; 
+            margin-top:auto; 
+            border:none; 
+            cursor:pointer; 
+            font-size:0.9rem; 
+        }
+        .logout-btn:hover { 
+            background:#ff0000; 
+            transform:scale(1.02); 
+        }
 
-        /* Barra de pesquisa de transcripts */
-        .search-transcripts { width:100%; max-width:900px; padding:12px 15px; border-radius:8px; border:none; background:rgba(255,255,255,0.08); color:white; outline:none; border:1px solid rgba(255,255,255,0.1); font-size:0.95rem; margin-bottom:20px; transition:0.3s; }
-        .search-transcripts:focus { border-color:var(--primary-red); background:rgba(255,255,255,0.12); }
+        /* MAIN */
+        main { 
+            flex:1; 
+            padding:40px; 
+            overflow-y:auto; 
+            display:flex; 
+            flex-direction:column; 
+            align-items:center; 
+        }
+        h1 { 
+            font-size:2rem; 
+            font-weight:800; 
+            text-shadow:2px 2px 8px rgba(0,0,0,0.8); 
+            margin-bottom:5px; 
+        }
+        .subtitulo { 
+            color:#aaa; 
+            font-size:0.9rem; 
+            margin-bottom:20px; 
+        }
+
+        /* Barra de pesquisa */
+        .search-transcripts { 
+            width:100%; 
+            max-width:900px; 
+            padding:12px 15px; 
+            border-radius:8px; 
+            border:none; 
+            background:rgba(255,255,255,0.08); 
+            color:white; 
+            outline:none; 
+            border:1px solid rgba(255,255,255,0.1); 
+            font-size:0.95rem; 
+            margin-bottom:20px; 
+            transition:0.3s; 
+        }
+        .search-transcripts:focus { 
+            border-color:var(--primary-red); 
+            background:rgba(255,255,255,0.12); 
+        }
         .search-transcripts::placeholder { color:#666; }
 
         /* Lista de transcripts */
-        .transcripts-lista { width:100%; max-width:900px; display:flex; flex-direction:column; gap:10px; }
+        .transcripts-lista { 
+            width:100%; 
+            max-width:900px; 
+            display:flex; 
+            flex-direction:column; 
+            gap:10px; 
+        }
 
-        .transcript-item { background:rgba(20,20,20,0.92); border:1px solid rgba(255,255,255,0.08); border-left:5px solid var(--primary-red); border-radius:10px; overflow:hidden; transition:0.3s; }
-        .transcript-item:hover { border-left-color:#ff0000; box-shadow:0 4px 20px rgba(139,0,0,0.3); }
+        .transcript-item { 
+            background:rgba(20,20,20,0.92); 
+            border:1px solid rgba(255,255,255,0.08); 
+            border-left:5px solid var(--primary-red); 
+            border-radius:10px; 
+            overflow:hidden; 
+            transition:0.3s; 
+            animation: fadeIn 0.3s ease;
+        }
+        .transcript-item:hover { 
+            border-left-color:#ff0000; 
+            box-shadow:0 4px 20px rgba(139,0,0,0.3); 
+        }
 
-        .transcript-header { display:flex; justify-content:space-between; align-items:center; padding:15px 20px; cursor:pointer; gap:10px; }
-        .transcript-header:hover { background:rgba(255,255,255,0.03); }
+        .transcript-header { 
+            display:flex; 
+            justify-content:space-between; 
+            align-items:center; 
+            padding:15px 20px; 
+            cursor:pointer; 
+            gap:10px; 
+        }
+        .transcript-header:hover { 
+            background:rgba(255,255,255,0.03); 
+        }
 
         .transcript-info { flex:1; }
-        .transcript-nome { font-weight:700; font-size:0.95rem; color:#fff; }
-        .transcript-meta { font-size:0.78rem; color:#888; margin-top:3px; }
+        .transcript-nome { 
+            font-weight:700; 
+            font-size:0.95rem; 
+            color:#fff; 
+        }
+        .transcript-meta { 
+            font-size:0.78rem; 
+            color:#888; 
+            margin-top:3px; 
+        }
 
-        .transcript-btns { display:flex; gap:8px; align-items:center; flex-shrink:0; }
-        .btn-html { background:var(--primary-red); color:white; border:none; padding:7px 14px; border-radius:5px; font-weight:700; font-size:0.78rem; cursor:pointer; text-decoration:none; transition:0.3s; }
-        .btn-html:hover { background:#ff0000; }
-        .btn-expandir { background:rgba(255,255,255,0.1); color:white; border:none; padding:7px 12px; border-radius:5px; font-weight:700; font-size:0.85rem; cursor:pointer; transition:0.3s; }
-        .btn-expandir:hover { background:rgba(255,255,255,0.2); }
-        .btn-expandir.aberto { transform:rotate(180deg); }
+        .transcript-btns { 
+            display:flex; 
+            gap:8px; 
+            align-items:center; 
+            flex-shrink:0; 
+        }
+        .btn-html { 
+            background:var(--primary-red); 
+            color:white; 
+            border:none; 
+            padding:7px 14px; 
+            border-radius:5px; 
+            font-weight:700; 
+            font-size:0.78rem; 
+            cursor:pointer; 
+            text-decoration:none; 
+            transition:0.3s; 
+        }
+        .btn-html:hover { 
+            background:#ff0000; 
+            box-shadow: 0 0 10px rgba(255,0,0,0.4);
+        }
+        .btn-expandir { 
+            background:rgba(255,255,255,0.1); 
+            color:white; 
+            border:none; 
+            padding:7px 12px; 
+            border-radius:5px; 
+            font-weight:700; 
+            font-size:0.85rem; 
+            cursor:pointer; 
+            transition:0.3s; 
+        }
+        .btn-expandir:hover { 
+            background:rgba(255,255,255,0.2); 
+        }
+        .btn-expandir.aberto { 
+            transform:rotate(180deg); 
+        }
 
-        /* Área expandida com iframe */
-        .transcript-preview { display:none; border-top:1px solid rgba(255,255,255,0.08); background:#313338; }
-        .transcript-preview.aberto { display:block; }
-        .transcript-preview iframe { width:100%; height:400px; border:none; display:block; }
-        .preview-loading { padding:30px; text-align:center; color:#aaa; font-size:0.9rem; }
+        /* Área expandida com iframe - CORRIGIDO */
+        .transcript-preview { 
+            display:none; 
+            border-top:1px solid rgba(255,255,255,0.08); 
+            background:#1a1a1a;
+            min-height: 100px;
+        }
+        .transcript-preview.aberto { 
+            display:block; 
+        }
+        .transcript-preview iframe { 
+            width:100%; 
+            height:400px; 
+            border:none; 
+            display:block; 
+            background: white;
+        }
+        .preview-loading { 
+            padding:30px; 
+            text-align:center; 
+            color:#aaa; 
+            font-size:0.9rem; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .preview-loading::before {
+            content: "⏳";
+            font-size: 2rem;
+            animation: pulse 1.5s infinite;
+        }
+        .preview-error {
+            padding: 30px;
+            text-align: center;
+            color: #ff6666;
+            font-size: 0.9rem;
+        }
 
         /* Estado vazio */
-        .sem-resultados { color:#666; text-align:center; padding:60px 20px; font-size:1rem; }
+        .sem-resultados { 
+            color:#666; 
+            text-align:center; 
+            padding:60px 20px; 
+            font-size:1rem; 
+        }
 
-        @keyframes fadeIn { from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);} }
-        .transcript-item { animation:fadeIn 0.3s ease; }
+        @keyframes fadeIn { 
+            from{opacity:0;transform:translateY(-8px);} 
+            to{opacity:1;transform:translateY(0);} 
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+        }
 
-        /* ✅ RESPONSIVIDADE MOBILE - NOVO */
+        /* RESPONSIVIDADE - MANTÉM HORIZONTAL EM DESKTOP, VERTICAL EM MOBILE */
         @media (max-width: 768px) {
-            /* Header menor */
             header { height: 50px; padding: 0 15px; }
             .logo-link { font-size: 1rem; }
             .user-tag { padding: 5px 10px; font-size: 0.85rem; }
             .user-avatar { width: 20px; height: 20px; }
+            .refresh-btn { padding: 6px 12px; font-size: 0.8rem; }
 
-            /* Layout vertical */
-            .container { flex-direction: column; height: calc(100vh - 50px); }
+            /* EM MOBILE: MUDA PARA VERTICAL */
+            .container { 
+                flex-direction: column; 
+                height: calc(100vh - 50px); 
+            }
 
-            /* Sidebar como menu horizontal no topo */
             aside { 
                 width: 100%; 
                 height: auto; 
@@ -134,13 +407,11 @@
                 margin-left: auto;
             }
 
-            /* Main ajustado */
             main { padding: 15px; }
             h1 { font-size: 1.5rem; }
             .subtitulo { font-size: 0.8rem; margin-bottom: 15px; }
             .search-transcripts { padding: 10px; font-size: 0.9rem; margin-bottom: 15px; }
 
-            /* Transcripts mais compactos */
             .transcript-header { padding: 12px 15px; }
             .transcript-nome { font-size: 0.85rem; }
             .transcript-meta { font-size: 0.7rem; }
@@ -149,34 +420,38 @@
             .transcript-preview iframe { height: 300px; }
         }
 
-        /* ✅ MOBILE PEQUENO (até 480px) */
         @media (max-width: 480px) {
             .logo-link { font-size: 0.9rem; }
             .user-tag { font-size: 0.75rem; padding: 4px 8px; }
-            
             .nav-links { gap: 3px; }
             .nav-btn { padding: 6px 8px; font-size: 0.7rem; }
             .logout-btn { padding: 6px 8px; font-size: 0.7rem; }
-            
             h1 { font-size: 1.3rem; }
             .transcript-header { flex-direction: column; align-items: flex-start; gap: 8px; }
             .transcript-btns { width: 100%; justify-content: flex-end; }
             .transcript-preview iframe { height: 250px; }
         }
     </style>
+<base target="_blank">
 </head>
 <body>
     <div class="bg-full"></div>
     <div class="overlay"></div>
 
     <header>
-        <a href="loja.html" class="logo-link">Jordan Shop Site</a>
-        <div class="user-tag">
-            <img src="logo.png" class="user-avatar">
-            Olá, <span id="nav-username">Staff</span>
+        <a href="loja.html" class="logo-link">Jordan Shop | Atualizar</a>
+        <div class="refresh-container">
+            <button class="refresh-btn" onclick="atualizarPagina()" title="Atualizar página">
+                <span id="refreshIcon">🔃</span> Atualizar
+            </button>
+            <div class="user-tag">
+                <img src="logo.png" class="user-avatar" alt="Logo">
+                Olá, <span id="nav-username">Staff</span>
+            </div>
         </div>
     </header>
 
+    <!-- LAYOUT HORIZONTAL: Sidebar à esquerda, Main à direita -->
     <div class="container">
         <aside>
             <input type="text" class="search-box" placeholder="Procurar função..." onkeyup="filtrarMenu(this)">
@@ -199,13 +474,16 @@
             <input type="text" class="search-transcripts" placeholder="🔍 Pesquisar por nome ou produto..." oninput="pesquisarTranscripts(this.value)">
 
             <div class="transcripts-lista" id="lista">
-                <p class="sem-resultados">A procurar registos...</p>
+                <div class="sem-resultados">A procurar registos...</div>
             </div>
+
+            <!-- REMOVIDO: Link no final para voltar à loja -->
         </main>
     </div>
 
     <script>
         let todosTranscripts = [];
+        const transcriptsCarregados = {};
 
         function filtrarMenu(input) {
             const valor = input.value.toLowerCase();
@@ -225,8 +503,20 @@
             renderTranscripts(filtrados);
         }
 
-        // Guarda os transcripts já carregados para não repetir
-        const transcriptsCarregados = {};
+        function atualizarPagina() {
+            const btn = document.querySelector('.refresh-btn');
+            const icon = document.getElementById('refreshIcon');
+
+            btn.classList.add('spinning');
+            btn.disabled = true;
+
+            fetchLogs();
+
+            setTimeout(() => {
+                btn.classList.remove('spinning');
+                btn.disabled = false;
+            }, 1000);
+        }
 
         function togglePreview(id, nome) {
             const preview = document.getElementById(`preview-${id}`);
@@ -234,34 +524,50 @@
             const aberto = preview.classList.contains('aberto');
 
             if (aberto) {
-                // Fecha
                 preview.classList.remove('aberto');
                 btn.classList.remove('aberto');
                 btn.innerText = '▼';
             } else {
-                // Abre
                 preview.classList.add('aberto');
                 btn.classList.add('aberto');
                 btn.innerText = '▲';
 
-                // Só carrega se ainda não tiver carregado
                 const transcriptId = nome.replace('.html', '');
+
                 if (!transcriptsCarregados[transcriptId]) {
-                    transcriptsCarregados[transcriptId] = true;
-                    
-                    preview.innerHTML = '<div class="preview-loading">⏳ A carregar transcript...</div>';
-                    
+                    preview.innerHTML = '<div class="preview-loading">A carregar transcript...</div>';
+
                     const iframe = document.createElement('iframe');
-                    iframe.src = `/transcripts/${transcriptId}`;
-                    
+                    iframe.style.width = '100%';
+                    iframe.style.height = '400px';
+                    iframe.style.border = 'none';
+                    iframe.style.background = 'white';
+
+                    const timeout = setTimeout(() => {
+                        if (!transcriptsCarregados[transcriptId]) {
+                            preview.innerHTML = `
+                                <div class="preview-error">
+                                    ❌ Erro ao carregar transcript.<br>
+                                    <small>O arquivo pode não existir ou o servidor está offline.</small><br><br>
+                                    <a href="/transcripts/${transcriptId}" target="_blank" class="btn-html">Tentar abrir em nova aba</a>
+                                </div>
+                            `;
+                        }
+                    }, 5000);
+
                     iframe.onload = () => {
+                        clearTimeout(timeout);
+                        transcriptsCarregados[transcriptId] = true;
                         preview.innerHTML = '';
                         preview.appendChild(iframe);
                     };
-                    
+
                     iframe.onerror = () => {
-                        preview.innerHTML = '<div class="preview-loading">❌ Erro ao carregar.</div>';
+                        clearTimeout(timeout);
+                        preview.innerHTML = '<div class="preview-error">❌ Erro ao carregar.</div>';
                     };
+
+                    iframe.src = `/transcripts/${transcriptId}?t=${Date.now()}`;
                 }
             }
         }
@@ -308,13 +614,20 @@
             const subtitulo = document.getElementById('subtitulo');
             try {
                 const response = await fetch('/api/list-transcripts');
+                if (!response.ok) throw new Error('Erro na resposta');
                 const logs = await response.json();
                 todosTranscripts = logs;
                 subtitulo.innerText = `${logs.length} transcript(s) encontrado(s)`;
                 renderTranscripts(logs);
             } catch (e) {
+                console.error(e);
                 subtitulo.innerText = 'Erro ao carregar';
-                document.getElementById('lista').innerHTML = "<p class='sem-resultados'>❌ Erro ao ligar à API.</p>";
+                document.getElementById('lista').innerHTML = `
+                    <div class="sem-resultados">
+                        ❌ Erro ao ligar à API.<br>
+                        <small>Verifica se o servidor está online.</small>
+                    </div>
+                `;
             }
         }
     </script>
