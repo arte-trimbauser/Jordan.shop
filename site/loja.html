@@ -446,11 +446,16 @@
             .log-item { flex-direction: column; align-items: flex-start; gap: 10px; }
         }
 
-        /* ===== MODAL E SISTEMA DE VENDAS ===== */
+        /* ===== VENDAS CENTRALIZADAS ===== */
+        #vendas-section {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
         .vendas-wrapper {
             width: 100%;
             max-width: 900px;
-            margin: 0 auto;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -498,9 +503,11 @@
             width: 100%;
             display: flex;
             flex-direction: column;
+            align-items: center;
             gap: 12px;
         }
 
+        /* ===== MODAL VENDAS ===== */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -738,7 +745,6 @@
         }
     </style>
 <base target="_blank">
-<base target="_blank">
 </head>
 <body>
     <div id="welcome-screen" style="display:none;">
@@ -832,42 +838,36 @@
                     <div class="vendas-lista-container" id="vendas-lista">
                         <div class="log-item">
                             <div class="log-info">
-                                <strong>>🛍️ Comprador: @silvexxx/leo._.1330 |📅 Data: 27/09/2025</strong>
-                                <span>Produto: 🔥・sp00fer-1click<br>Staff: @! Jordan @migueldodrip</span>
-                                
+                                <strong>🛍️ Comprador: @silvexxx/leo._.1330 | 📅 Data: 27/09/2025</strong>
+                                <span>📦 Produto: 🔥・sp00fer-1click<br>💰 Preço: €25.00<br>🛡️ Staff: @! Jordan @migueldodrip</span>
                             </div>
                             <span class="status-badge" style="background: #00ff00; color: #000;">LIFETIME</span>
                         </div>
                         <div class="log-item">
                             <div class="log-info">
-                                <strong>🛍️ Comprador: @Tonethegoat/tonezz1_ |📅 Data: 27/09/2025</strong>
-                                <span>Produto: 🦈・shark-menu<br>Staff: @! Jordan @migueldodrip</span>
-                                
+                                <strong>🛍️ Comprador: @Tonethegoat/tonezz1_ | 📅 Data: 27/09/2025</strong>
+                                <span>📦 Produto: 🦈・shark-menu<br>💰 Preço: €18.00<br>🛡️ Staff: @! Jordan @migueldodrip</span>
                             </div>
                             <span class="status-badge" style="background: #ffcc00; color: #000;">SEMANAL</span>
                         </div>
                         <div class="log-item">
                             <div class="log-info">
-                                <strong>🛍️ Comprador: @silvexxx/leo._.1330 |📅 Data: 28/09/2025</strong>
-                                <span>Produto: ⭐・rockstar-unban<br>Staff: @! Jordan</span>
-                                <span>Preço: €0.50<br>Staff: @! Jordan</span>
-                                
+                                <strong>🛍️ Comprador: @silvexxx/leo._.1330 | 📅 Data: 28/09/2025</strong>
+                                <span>📦 Produto: ⭐・rockstar-unban<br>💰 Preço: €0.50<br>🛡️ Staff: @! Jordan</span>
                             </div>
                             <span class="status-badge" style="background: #00ff00; color: #000;">INFINITO</span>
                         </div>
                         <div class="log-item">
                             <div class="log-info">
-                                <strong>>🛍️ Comprador: @silvexxx/leo._.1330 |📅 Data: 28/09/2025</strong>
-                                <span>Produto: 🌎・vpn-service<br>Staff: @! Jordan</span>
-                                
+                                <strong>🛍️ Comprador: @silvexxx/leo._.1330 | 📅 Data: 28/09/2025</strong>
+                                <span>📦 Produto: 🌎・vpn-service<br>💰 Preço: ?<br>🛡️ Staff: @! Jordan</span>
                             </div>
                             <span class="status-badge" style="background: #00ff00; color: #000;">INFINITO</span>
                         </div>
                         <div class="log-item">
                             <div class="log-info">
-                                <strong>>🛍️ Comprador: @silvexxx/leo._.1330 |📅 Data: 19/10/2025</strong>
-                                <span>Produto: 🦈・shark-menu<br>Staff: @! Jordan</span>
-                                
+                                <strong>🛍️ Comprador: @silvexxx/leo._.1330 | 📅 Data: 19/10/2025</strong>
+                                <span>📦 Produto: 🦈・shark-menu<br>💰 Preço: €63.00<br>🛡️ Staff: @! Jordan</span>
                             </div>
                             <span class="status-badge" style="background: #00ff00; color: #000;">LIFETIME</span>
                         </div>
@@ -875,7 +875,7 @@
                 </div>
             </div>
 
-            <div id="bot-status-section" class="content-div" style="display:none; width:100%;">
+            <div id="bot-status-section" class="content-div" style="display:none; wi09dth:100%;">
                 <div class="status-card">
                     <h2 style="margin: 0; color: #00ff00;">✅ Site está online!</h2>
                     <p>O sistema do bot e a API do site estão operacionais.</p>
@@ -900,7 +900,7 @@
                 <div class="form-group">
                     <label class="form-label-modal">👤 Nome do Comprador</label>
                     <input type="text" class="form-input-modal" id="vendaComprador" 
-                           placeholder="Ex: @silvexxx/leo._.1330" required>
+                           placeholder="Mete @user/e o nome usuário" required>
                 </div>
 
                 <div class="form-group">
@@ -911,31 +911,31 @@
                 <div class="form-group">
                     <label class="form-label-modal">📦 Produto</label>
                     <input type="text" class="form-input-modal" id="vendaProduto" 
-                           placeholder="Ex: 🦈・shark-menu" required>
+                           placeholder="Ex: 🦈・shark-menu (mete o nome do menu e o nome da opção por exemplo vpn e tem o IPVanish ou Cyber Ghost ficará: 🌎・vpn-service - IPVanish ou outro substitui)" required>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label-modal">Preço</label>
+                    <label class="form-label-modal">💰 Preço</label>
                     <input type="text" class="form-input-modal" id="vendaPreco" 
-                           placeholder="Ex: 10€" required>
+                           placeholder="Ex: €10.00 (dependendo do menu) (" required>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label-modal">⏱️ Duração do Produto</label>
                     <input type="text" class="form-input-modal" id="vendaDuracao" 
-                           placeholder="Ex: LIFETIME, 30 dias, SEMANAL...">
+                           placeholder="Ex: Lifetime... 15 dias... (duração do produto)">
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label-modal">🛡️ Staff / Moderador Responsável</label>
+                    <label class="form-label-modal">@Staff🛡️ / @Moderador🛠️ responsável:</label>
                     <input type="text" class="form-input-modal" id="vendaStaff" 
-                           placeholder="Ex: @! Jordan" required>
+                           placeholder="Ex: @! Jordan (responsável pela a venda)" required>
                 </div>
 
                 <div class="checkbox-group">
                     <input type="checkbox" id="vendaEnviarDiscord" checked>
                     <label for="vendaEnviarDiscord">
-                        📨 Enviar também no Discord (canal de vendas)?
+                        📨 Pretendes enviar também no Discord (canal de vendas)?
                     </label>
                 </div>
 
@@ -1105,7 +1105,6 @@
 
         // ===== SISTEMA DE REGISTRO DE VENDAS =====
         const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1491444823251751083/Cdbu_D0JbeXbMXikLvm15Ij052NZsJL0FLoMTdpMcM6AiMzT_-pVWSkA91uFcp5DhL2x';
-        const CORS_PROXY_URL = 'https://corsproxy.io/?';
 
         // Abrir modal
         function abrirModalVenda() {
@@ -1241,7 +1240,7 @@
                     { name: '👤 Comprador', value: venda.comprador, inline: true },
                     { name: '📅 Data', value: formatarData(venda.data), inline: true },
                     { name: '📦 Produto', value: venda.produto, inline: false },
-                    { name: '💰 Preço', value: venda.preco || 'N/A', inline: true },
+                    { name: '💰 Preço', value: venda.preco, inline: true },
                     { name: '⏱️ Duração', value: venda.duracao, inline: true },
                     { name: '🛡️ Staff', value: venda.staff, inline: true }
                 ],
@@ -1254,19 +1253,26 @@
                 content: '🎉 Nova venda por **' + venda.registradoPor + '**!'
             };
 
-            // Tentar método 1: fetch com mode no-cors (não lê resposta mas envia)
+            // Tentar método 1: fetch com mode no-cors (envia mas não lê resposta)
             try {
                 console.log('Tentando fetch com no-cors...');
-                await fetch(DISCORD_WEBHOOK_URL, {
+                const response = await fetch(DISCORD_WEBHOOK_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
                     mode: 'no-cors'
                 });
-                console.log('Fetch enviado (no-cors)');
+
+                // Com no-cors, a resposta é opaque (não podemos ler)
+                // Mas o request foi enviado!
+                console.log('Fetch enviado com no-cors (resposta opaque)');
+
+                // Esperar um pouco e assumir sucesso
+                await new Promise(resolve => setTimeout(resolve, 500));
                 return;
+
             } catch (e) {
-                console.warn('Fetch falhou:', e);
+                console.warn('Fetch com no-cors falhou:', e);
             }
 
             // Tentar método 2: XMLHttpRequest
@@ -1301,16 +1307,13 @@
             if (duracaoUpper.includes('SEMANAL')) badgeStyle = 'background: #ffcc00; color: #000;';
             else if (duracaoUpper.includes('MENSAL')) badgeStyle = 'background: #ff6600; color: #fff;';
 
-            const dataHora = new Date().toLocaleString('pt-PT');
-
             const div = document.createElement('div');
             div.className = 'log-item';
             div.style.animation = 'fadeIn 0.5s ease';
             div.innerHTML = 
                 '<div class="log-info">' +
-                    '<strong>Comprador: ' + escapeHtml(venda.comprador) + ' | Data📅: ' + formatarData(venda.data) + '</strong>' +
-                    '<span>Produto: ' + escapeHtml(venda.produto) + '<br>Staff: ' + escapeHtml(venda.staff) + '</span>' +
-                    '' +
+                    '<strong>🛍️ Comprador: ' + escapeHtml(venda.comprador) + ' | 📅 Data: ' + formatarData(venda.data) + '</strong>' +
+                    '<span>📦 Produto: ' + escapeHtml(venda.produto) + '<br>💰 Preço: ' + escapeHtml(venda.preco) + '<br>🛡️ Staff: ' + escapeHtml(venda.staff) + '</span>' +
                 '</div>' +
                 '<span class="status-badge" style="' + badgeStyle + '">' + escapeHtml(venda.duracao.toUpperCase()) + '</span>';
 
