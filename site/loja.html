@@ -445,6 +445,278 @@
             .embed-creator-card { padding: 20px; }
             .log-item { flex-direction: column; align-items: flex-start; gap: 10px; }
         }
+    
+        /* ===== MODAL E FORMULÁRIO DE VENDAS ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-venda {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 2px solid var(--primary-red);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-30px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--primary-red);
+            padding-bottom: 15px;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-close {
+            background: var(--primary-red);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: #ff0000;
+            transform: rotate(90deg);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            color: #ff9999;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: rgba(255,255,255,0.05);
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-red);
+            box-shadow: 0 0 10px rgba(139, 0, 0, 0.3);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(139, 0, 0, 0.1);
+            border-radius: 10px;
+            border: 1px solid var(--primary-red);
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--primary-red);
+        }
+
+        .checkbox-group label {
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .btn-cancelar {
+            flex: 1;
+            background: #333;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cancelar:hover {
+            background: #444;
+        }
+
+        .btn-registrar {
+            flex: 2;
+            background: var(--primary-red);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-registrar:hover:not(:disabled) {
+            background: #ff0000;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255,0,0,0.4);
+        }
+
+        .btn-registrar:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Botão Registrar Venda no header */
+        .btn-nova-venda {
+            background: #00aa00;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 15px;
+        }
+
+        .btn-nova-venda:hover {
+            background: #00cc00;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,200,0,0.4);
+        }
+
+        /* Vendas centralizadas */
+        .vendas-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .vendas-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 20px;
+            padding: 0 10px;
+        }
+
+        .vendas-titulo {
+            font-size: 1.8rem;
+            font-weight: 800;
+        }
+
+        /* Info de quem registrou */
+        .registrado-por {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #333;
+        }
+
+        .registrado-por strong {
+            color: #ff9999;
+        }
+
+        /* Spinner loading */
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--primary-red);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transform: translateX(500px);
+            transition: transform 0.3s ease;
+            z-index: 10000;
+            font-weight: 600;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            background: #00aa00;
+        }
+
     </style>
 <base target="_blank">
 <base target="_blank">
@@ -531,8 +803,14 @@
             </div>
 
             <div id="vendas-section" class="content-div" style="display:none; width:100%;">
-                <h1>Histórico de Vendas</h1>
-                <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+                <div class="vendas-container">
+                    <div class="vendas-header">
+                        <h1 class="vendas-titulo">📊 Histórico de Vendas</h1>
+                        <button class="btn-nova-venda" onclick="abrirModalVenda()">
+                            <span>➕</span> Registrar Venda
+                        </button>
+                    </div>
+                    <div id="vendas-lista" style="width: 100%;">
                     <div class="log-item">
                         <div class="log-info">
                             <strong>Comprador: @silvexxx/leo._.1330 | Data📅: 27/09/2025</strong>
@@ -729,5 +1007,71 @@
             }
         }
     </script>
+
+    <!-- MODAL REGISTRAR VENDA -->
+    <div class="modal-overlay" id="modalVenda">
+        <div class="modal-venda">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <span>📝</span> Registrar Nova Venda
+                </h2>
+                <button class="modal-close" onclick="fecharModalVenda()">×</button>
+            </div>
+
+            <form id="formVenda" onsubmit="registrarVenda(event)">
+                <div class="form-group">
+                    <label class="form-label">👤 Nome do Comprador</label>
+                    <input type="text" class="form-input" id="vendaComprador" 
+                           placeholder="Ex: @silvexxx/leo._.1330" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">📅 Data da Venda</label>
+                    <input type="date" class="form-input" id="vendaData" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">📦 Produto</label>
+                    <input type="text" class="form-input" id="vendaProduto" 
+                           placeholder="Ex: 🦈・shark-menu" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">⏱️ Duração do Produto</label>
+                    <input type="text" class="form-input" id="vendaDuracao" 
+                           placeholder="Ex: LIFETIME, 30 dias, SEMANAL...">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">🛡️ Staff / Moderador Responsável</label>
+                    <input type="text" class="form-input" id="vendaStaff" 
+                           placeholder="Ex: @! Jordan" required>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="vendaEnviarDiscord" checked>
+                    <label for="vendaEnviarDiscord">
+                        📨 Enviar também no Discord (canal de vendas)
+                    </label>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-cancelar" onclick="fecharModalVenda()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-registrar" id="btnSubmitVenda">
+                        <span>💾</span> Registrar Venda
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div class="toast" id="toastVenda">
+        <span id="toastIcon">✅</span>
+        <span id="toastMsg">Venda registrada com sucesso!</span>
+    </div>
+
 </body>
 </html>
