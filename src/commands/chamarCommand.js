@@ -18,6 +18,7 @@ const STAFF_CHAMAR_ROLES = [
 const CHAMAR_COOLDOWN_MS = 2 * 60 * 1000;
 const cooldownsChamar = new Map();
 
+// ← SUBSTITUIR ESTA FUNÇÃO PELA VERSÃO COM DEBUG
 async function registrarComandoChamar(client) {
     try {
         const comando = new SlashCommandBuilder()
@@ -26,11 +27,15 @@ async function registrarComandoChamar(client) {
             .setDefaultMemberPermissions(PermissionFlagsBits.UseApplicationCommands);
 
         const guildId = process.env.GUILD_ID;
+        console.log('📝 GUILD_ID:', guildId); // ← DEBUG
+        
         if (guildId) {
             const guild = await client.guilds.fetch(guildId);
-            await guild.commands.create(comando);
-            console.log('✅ Comando /chamar registado em:', guild.name);
+            console.log('📝 Guild encontrada:', guild.name); // ← DEBUG
+            const result = await guild.commands.create(comando);
+            console.log('✅ Comando /chamar registado:', result.name); // ← DEBUG
         } else {
+            console.log('⚠️ GUILD_ID não definido, a registar globalmente'); // ← DEBUG
             await client.application.commands.create(comando);
             console.log('✅ Comando /chamar registado globalmente');
         }
@@ -41,32 +46,31 @@ async function registrarComandoChamar(client) {
 
 async function handleChamarCommand(interaction, client) {
     const { member, user, guild, channel } = interaction;
-
-    // Responder imediatamente para evitar timeout (3 segundos)
+    
     await interaction.deferReply({ flags: [64] });
-
+    
     const isStaff = STAFF_CHAMAR_ROLES.some(id => member.roles.cache.has(id));
     if (!isStaff) {
         return interaction.editReply({
             content: '❌ **Acesso Negado!** Apenas Staff pode usar este comando.',
         });
     }
-
+    
     if (!channel.name.startsWith('ticket-') && !channel.name.startsWith('staff-')) {
         return interaction.editReply({
             content: '❌ Este comando só pode ser usado em canais de ticket!',
         });
     }
-
+    
     const now = Date.now();
     const userCooldown = cooldownsChamar.get(user.id);
-
+    
     if (userCooldown && now < userCooldown) {
         const remaining = userCooldown - now;
         const minutes = Math.floor(remaining / 60000);
         const seconds = Math.floor((remaining % 60000) / 1000);
         const tempoFormatado = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-
+        
         const embedCooldown = new EmbedBuilder()
             .setTitle('⏰ Cooldown Ativo')
             .setDescription(
@@ -76,27 +80,26 @@ async function handleChamarCommand(interaction, client) {
             .setColor('#ff9900')
             .setFooter({ text: user.tag, iconURL: user.displayAvatarURL() })
             .setTimestamp();
-
+            
         return interaction.editReply({ embeds: [embedCooldown] });
     }
-
+    
     const topic = channel.topic;
     if (!topic) {
         return interaction.editReply({
             content: '❌ Não foi possível identificar o cliente deste ticket!',
         });
     }
-
+    
     const clienteId = topic.split('|')[0];
     if (!clienteId || !/^\d{17,19}$/.test(clienteId)) {
         return interaction.editReply({
             content: '❌ ID do cliente inválido no tópico do canal!',
         });
     }
-
+    
     let clienteMember;
     try {
-        // Timeout de 5 segundos para o fetch
         clienteMember = await Promise.race([
             guild.members.fetch({ user: clienteId, force: true }),
             new Promise((_, reject) => 
@@ -104,7 +107,6 @@ async function handleChamarCommand(interaction, client) {
             )
         ]);
     } catch (err) {
-        // Cliente não está no servidor
         const embedSaiu = new EmbedBuilder()
             .setTitle('👋 Cliente Saiu do Servidor')
             .setDescription(
@@ -113,23 +115,23 @@ async function handleChamarCommand(interaction, client) {
             )
             .setColor('#ff0000')
             .setTimestamp();
-
+        
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId(`fechar_ticket_saida_${channel.id}`)
                 .setLabel('🔒 Fechar Ticket')
                 .setStyle(ButtonStyle.Danger)
         );
-
+        
         return interaction.editReply({ 
             embeds: [embedSaiu], 
             components: [row]
         });
     }
-
+    
     cooldownsChamar.set(user.id, now + CHAMAR_COOLDOWN_MS);
     setTimeout(() => cooldownsChamar.delete(user.id), CHAMAR_COOLDOWN_MS);
-
+    
     try {
         const embedDM = new EmbedBuilder()
             .setColor('#2b2d31')
@@ -138,25 +140,25 @@ async function handleChamarCommand(interaction, client) {
                 `O staff **${user.username}** chamou-te em ${channel}`
             )
             .setTimestamp();
-
+        
         const rowDM = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setLabel('Ir para o Ticket')
                 .setURL(`https://discord.com/channels/${guild.id}/${channel.id}`)
                 .setStyle(ButtonStyle.Link)
         );
-
+        
         await clienteMember.send({ 
             embeds: [embedDM], 
             components: [rowDM] 
         });
-
+        
     } catch (err) {
         return interaction.editReply({
             content: `❌ Não foi possível chamar **${clienteMember.user.username}** (DMs fechadas).`,
         });
     }
-
+    
     const embedConfirm = new EmbedBuilder()
         .setTitle('✅ Cliente Chamado!')
         .setDescription(
@@ -167,10 +169,9 @@ async function handleChamarCommand(interaction, client) {
         )
         .setColor('#00ff00')
         .setTimestamp();
-
+    
     await interaction.editReply({ embeds: [embedConfirm] });
-
-    // Log assíncrono (não bloqueia)
+    
     setImmediate(async () => {
         try {
             const logId = process.env.LOG_CHANNEL_ID || "1437076921627181228";
@@ -195,12 +196,12 @@ async function handleChamarCommand(interaction, client) {
 
 async function handleFecharTicketSaida(interaction, client) {
     const { member, channel } = interaction;
-
+    
     const isStaff = STAFF_CHAMAR_ROLES.some(id => member.roles.cache.has(id));
     if (!isStaff) {
         return interaction.reply({ content: 'Apenas Staff!', flags: [64] });
     }
-
+    
     await interaction.reply('🔒 A fechar ticket em 5 segundos...');
     setTimeout(() => channel.delete().catch(() => {}), 5000);
 }
