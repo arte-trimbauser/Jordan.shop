@@ -7,7 +7,7 @@ const isStaff = require("../helpers/isStaff");
 const sendTranscript = require("../helpers/sendTranscript");
 const menus = require("../menus"); // ✅ CORRIGIDO: menus agora está importado
 const cooldowns = new Map();
-const { handleChamarCommand } = require("../commands/chamarCommand");
+const { handleChamarCommand, handleFecharTicketSaida } = require("../commands/chamarCommand");
 
 const emojisPagamento = {
     "MBWay": "<:mbway:1464608251516813446>",
@@ -34,8 +34,8 @@ if (interaction.isChatInputCommand()) {
 
     // /chamar - Staff chamar cliente
     if (interaction.commandName === "chamar") {
-        return await handleChamarCommand(interaction, client);
-    }
+    return await handleChamarCommand(interaction, client);
+}
                 // /adicionar
                 if (interaction.commandName === "adicionar") {
                     const embed = new EmbedBuilder()
@@ -404,6 +404,10 @@ if (interaction.isButton() && cid.startsWith("fechar_ticket_saida_")) {
     return setTimeout(() => channel.delete().catch(() => {}), 5000);
 }
 
+            if (interaction.isButton() && interaction.customId.startsWith("fechar_ticket_saida_")) {
+    return await handleFecharTicketSaida(interaction, client);
+}
+            
         } catch (err) {
             console.error("❌ Erro Geral no InteractionCreate:", err);
         }
