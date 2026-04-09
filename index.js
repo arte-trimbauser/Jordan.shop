@@ -8,7 +8,7 @@ const fs = require("fs");
 const axios = require("axios");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-const { registrarComandoChamar, handleChamarCommand } = require('./src/events/chamarCommand');
+const { registrarComandoChamar, handleChamarCommand } = require('./src/commands/chamarCommand');
 
 const {
     Client,
