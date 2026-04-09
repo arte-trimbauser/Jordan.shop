@@ -1,11 +1,9 @@
 
-# Criar o sistema /chamar para Staff com cooldown de 2 minutos
-# Baseado na imagem: embed com "Chamada de Staff", menção do cliente e botão para o ticket
+# Código atualizado do /chamar com verificação se cliente ainda está no servidor
 
-codigo_chamar_staff = """
+codigo_atualizado = """
 // ============================================================================
-// COMANDO /CHAMAR - STAFF ONLY (Versão para chamar users que abriram tickets)
-// Integração com Jordan.Shop-Bot-Site
+// COMANDO /CHAMAR - STAFF ONLY (Atualizado com verificação de presença)
 // ============================================================================
 
 const { 
@@ -31,7 +29,7 @@ const CHAMAR_COOLDOWN_MS = 2 * 60 * 1000;
 const cooldownsChamar = new Map();
 
 // ============================================================================
-// REGISTO DO COMANDO /CHAMAR
+// REGISTO DO COMANDO
 // ============================================================================
 
 async function registrarComandoChamar(client) {
@@ -72,7 +70,6 @@ async function handleChamarCommand(interaction, client) {
     }
     
     // 2. VERIFICAR SE ESTÁ NUM CANAL DE TICKET
-    // Verifica se o canal começa com "ticket-" ou "staff-" (os teus tickets)
     if (!channel.name.startsWith('ticket-') && !channel.name.startsWith('staff-')) {
         return interaction.reply({
             content: '❌ Este comando só pode ser usado em canais de ticket!',
@@ -104,7 +101,6 @@ async function handleChamarCommand(interaction, client) {
     }
     
     // 4. OBTER O CLIENTE DO TÓPICO DO CANAL
-    // O teu bot guarda no topic: "userId|motivo|tipo|timestamp"
     const topic = channel.topic;
     if (!topic) {
         return interaction.reply({
@@ -121,28 +117,47 @@ async function handleChamarCommand(interaction, client) {
         });
     }
     
-    // 5. BUSCAR O CLIENTE
-    let cliente;
+    // 5. VERIFICAR SE O CLIENTE AINDA ESTÁ NO SERVIDOR
+    let clienteMember;
     try {
-        cliente = await client.users.fetch(clienteId);
+        // Tenta buscar o membro no servidor (force: true para não usar cache)
+        clienteMember = await guild.members.fetch({ user: clienteId, force: true });
     } catch (err) {
-        return interaction.reply({
-            content: '❌ Não foi possível encontrar o cliente (pode ter saído do servidor).',
-            flags: [64]
+        // Se der erro, o cliente não está no servidor
+        const embedSaiu = new EmbedBuilder()
+            .setTitle('👋 Cliente Saiu do Servidor')
+            .setDescription(
+                `O cliente <@${clienteId}> **não está mais presente** neste ticket.\\n\\n` +
+                `🔒 Podes fechar o ticket se desejares.`
+            )
+            .setColor('#ff0000')
+            .setTimestamp();
+        
+        // Botão para fechar ticket
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`fechar_ticket_saida_${channel.id}`)
+                .setLabel('🔒 Fechar Ticket')
+                .setStyle(ButtonStyle.Danger)
+        );
+        
+        return interaction.reply({ 
+            embeds: [embedSaiu], 
+            components: [row]
         });
     }
     
-    // 6. DEFINIR COOLDOWN
+    // 6. DEFINIR COOLDOWN (só se o cliente estiver no servidor)
     cooldownsChamar.set(user.id, now + CHAMAR_COOLDOWN_MS);
     setTimeout(() => cooldownsChamar.delete(user.id), CHAMAR_COOLDOWN_MS);
     
-    // 7. ENVIAR DM AO CLIENTE (igual à imagem)
+    // 7. ENVIAR DM AO CLIENTE
     try {
         const embedDM = new EmbedBuilder()
-            .setColor('#2b2d31') // Cor escura do Discord
+            .setColor('#2b2d31')
             .setTitle('📞 Chamada de Staff')
             .setDescription(
-                `O cliente **${cliente.username}** chamou-te em ${channel}`
+                `O staff **${user.username}** chamou-te em ${channel}`
             )
             .setTimestamp();
         
@@ -153,15 +168,15 @@ async function handleChamarCommand(interaction, client) {
                 .setStyle(ButtonStyle.Link)
         );
         
-        await cliente.send({ 
+        await clienteMember.send({ 
             embeds: [embedDM], 
             components: [rowDM] 
         });
         
     } catch (err) {
-        console.log(`⚠️ Não foi possível enviar DM para ${cliente.tag} (DMs fechadas)`);
+        // Se DM estiver fechada
         return interaction.reply({
-            content: `❌ Não foi possível chamar **${cliente.username}** (DMs fechadas).`,
+            content: `❌ Não foi possível chamar **${clienteMember.user.username}** (DMs fechadas).`,
             flags: [64]
         });
     }
@@ -171,7 +186,7 @@ async function handleChamarCommand(interaction, client) {
         .setTitle('✅ Cliente Chamado!')
         .setDescription(
             `**Staff:** <@${user.id}>\\n` +
-            `**Cliente:** <@${cliente.id}>\\n` +
+            `**Cliente:** <@${clienteId}>\\n` +
             `**Canal:** ${channel}\\n\\n` +
             `⏰ **Cooldown:** 2 minutos ativos.`
         )
@@ -189,7 +204,7 @@ async function handleChamarCommand(interaction, client) {
                 .setTitle('📞 Staff Chamou Cliente')
                 .setDescription(
                     `**Staff:** <@${user.id}> (${user.tag})\\n` +
-                    `**Cliente:** <@${cliente.id}> (${cliente.tag})\\n` +
+                    `**Cliente:** <@${clienteId}> (${clienteMember.user.tag})\\n` +
                     `**Ticket:** ${channel.name}`
                 )
                 .setColor('#8b0000')
@@ -202,15 +217,33 @@ async function handleChamarCommand(interaction, client) {
 }
 
 // ============================================================================
+// HANDLER DO BOTÃO FECHAR (quando cliente saiu)
+// ============================================================================
+
+async function handleFecharTicketSaida(interaction, client) {
+    const { member, channel } = interaction;
+    
+    // Verificar se é staff
+    const isStaff = STAFF_CHAMAR_ROLES.some(id => member.roles.cache.has(id));
+    if (!isStaff) {
+        return interaction.reply({ content: 'Apenas Staff!', flags: [64] });
+    }
+    
+    await interaction.reply('🔒 A fechar ticket em 5 segundos...');
+    setTimeout(() => channel.delete().catch(() => {}), 5000);
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
 module.exports = {
     registrarComandoChamar,
     handleChamarCommand,
+    handleFecharTicketSaida,
     STAFF_CHAMAR_ROLES,
     cooldownsChamar
 };
 """
 
-print(codigo_chamar_staff)
+print(codigo_atualizado)
