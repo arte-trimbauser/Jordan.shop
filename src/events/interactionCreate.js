@@ -7,6 +7,7 @@ const isStaff = require("../helpers/isStaff");
 const sendTranscript = require("../helpers/sendTranscript");
 const menus = require("../menus"); // ✅ CORRIGIDO: menus agora está importado
 const cooldowns = new Map();
+const { handleChamarCommand } = require("../commands/chamarCommand");
 
 const emojisPagamento = {
     "MBWay": "<:mbway:1464608251516813446>",
@@ -28,9 +29,13 @@ module.exports = (client) => {
 
         try {
 
-            /* ================= SLASH COMMANDS ================= */
-            if (interaction.isChatInputCommand()) {
+/* ================= SLASH COMMANDS ================= */
+if (interaction.isChatInputCommand()) {
 
+    // /chamar - Staff chamar cliente
+    if (interaction.commandName === "chamar") {
+        return await handleChamarCommand(interaction, client);
+    }
                 // /adicionar
                 if (interaction.commandName === "adicionar") {
                     const embed = new EmbedBuilder()
@@ -389,7 +394,15 @@ module.exports = (client) => {
             if (cid === "confirm_close_silent") {
                 await interaction.update({ content: "❌ Ticket eliminado sem registo.", embeds: [], components: [] });
                 return setTimeout(() => channel.delete().catch(() => {}), 3000);
+           
             }
+
+            /* ================= FECHAR TICKET CLIENTE SAIU ================= */
+if (interaction.isButton() && cid.startsWith("fechar_ticket_saida_")) {
+    if (!isStaff(member)) return interaction.reply({ content: "Apenas Staff!", flags: [64] });
+    await interaction.reply("🔒 A fechar ticket em 5 segundos...");
+    return setTimeout(() => channel.delete().catch(() => {}), 5000);
+}
 
         } catch (err) {
             console.error("❌ Erro Geral no InteractionCreate:", err);
