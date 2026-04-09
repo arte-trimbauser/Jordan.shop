@@ -24,8 +24,7 @@ async function registrarComandoChamar(client) {
         const comando = new SlashCommandBuilder()
             .setName('chamar')
             .setDescription('📞 Chamar o cliente que abriu o ticket (Staff Only)')
-            .setDefaultMemberPermissions(PermissionFlagsBits.UseApplicationCommands);
-
+        
         const guildId = process.env.GUILD_ID;
         console.log('📝 GUILD_ID:', guildId); // ← DEBUG
         
