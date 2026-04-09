@@ -8,6 +8,7 @@ const fs = require("fs");
 const axios = require("axios");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const { registrarComandoChamar, handleChamarCommand } = require('./src/events/chamarCommand');
 
 const {
     Client,
@@ -258,6 +259,9 @@ client.login(TOKEN)
     .then(() => console.log("✅ Pedido de login enviado ao Discord"))
     .catch(err => console.error("❌ ERRO NO LOGIN:", err));
 
-client.once(Events.ClientReady, () => {
+client.once(Events.ClientReady, async () => {  // ← Adicionar "async" aqui
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
+    
+    // ← ADICIONAR AQUI
+    await registrarComandoChamar(client);
 });
