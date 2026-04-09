@@ -41,31 +41,32 @@ async function registrarComandoChamar(client) {
 
 async function handleChamarCommand(interaction, client) {
     const { member, user, guild, channel } = interaction;
-    
+
+    // Responder imediatamente para evitar timeout (3 segundos)
+    await interaction.deferReply({ flags: [64] });
+
     const isStaff = STAFF_CHAMAR_ROLES.some(id => member.roles.cache.has(id));
     if (!isStaff) {
-        return interaction.reply({
+        return interaction.editReply({
             content: '❌ **Acesso Negado!** Apenas Staff pode usar este comando.',
-            flags: [64]
         });
     }
-    
+
     if (!channel.name.startsWith('ticket-') && !channel.name.startsWith('staff-')) {
-        return interaction.reply({
+        return interaction.editReply({
             content: '❌ Este comando só pode ser usado em canais de ticket!',
-            flags: [64]
         });
     }
-    
+
     const now = Date.now();
     const userCooldown = cooldownsChamar.get(user.id);
-    
+
     if (userCooldown && now < userCooldown) {
         const remaining = userCooldown - now;
         const minutes = Math.floor(remaining / 60000);
         const seconds = Math.floor((remaining % 60000) / 1000);
         const tempoFormatado = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-        
+
         const embedCooldown = new EmbedBuilder()
             .setTitle('⏰ Cooldown Ativo')
             .setDescription(
@@ -75,30 +76,35 @@ async function handleChamarCommand(interaction, client) {
             .setColor('#ff9900')
             .setFooter({ text: user.tag, iconURL: user.displayAvatarURL() })
             .setTimestamp();
-            
-        return interaction.reply({ embeds: [embedCooldown], flags: [64] });
+
+        return interaction.editReply({ embeds: [embedCooldown] });
     }
-    
+
     const topic = channel.topic;
     if (!topic) {
-        return interaction.reply({
+        return interaction.editReply({
             content: '❌ Não foi possível identificar o cliente deste ticket!',
-            flags: [64]
         });
     }
-    
+
     const clienteId = topic.split('|')[0];
     if (!clienteId || !/^\d{17,19}$/.test(clienteId)) {
-        return interaction.reply({
+        return interaction.editReply({
             content: '❌ ID do cliente inválido no tópico do canal!',
-            flags: [64]
         });
     }
-    
+
     let clienteMember;
     try {
-        clienteMember = await guild.members.fetch({ user: clienteId, force: true });
+        // Timeout de 5 segundos para o fetch
+        clienteMember = await Promise.race([
+            guild.members.fetch({ user: clienteId, force: true }),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout')), 5000)
+            )
+        ]);
     } catch (err) {
+        // Cliente não está no servidor
         const embedSaiu = new EmbedBuilder()
             .setTitle('👋 Cliente Saiu do Servidor')
             .setDescription(
@@ -107,23 +113,23 @@ async function handleChamarCommand(interaction, client) {
             )
             .setColor('#ff0000')
             .setTimestamp();
-        
+
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId(`fechar_ticket_saida_${channel.id}`)
                 .setLabel('🔒 Fechar Ticket')
                 .setStyle(ButtonStyle.Danger)
         );
-        
-        return interaction.reply({ 
+
+        return interaction.editReply({ 
             embeds: [embedSaiu], 
             components: [row]
         });
     }
-    
+
     cooldownsChamar.set(user.id, now + CHAMAR_COOLDOWN_MS);
     setTimeout(() => cooldownsChamar.delete(user.id), CHAMAR_COOLDOWN_MS);
-    
+
     try {
         const embedDM = new EmbedBuilder()
             .setColor('#2b2d31')
@@ -132,26 +138,25 @@ async function handleChamarCommand(interaction, client) {
                 `O staff **${user.username}** chamou-te em ${channel}`
             )
             .setTimestamp();
-        
+
         const rowDM = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setLabel('Ir para o Ticket')
                 .setURL(`https://discord.com/channels/${guild.id}/${channel.id}`)
                 .setStyle(ButtonStyle.Link)
         );
-        
+
         await clienteMember.send({ 
             embeds: [embedDM], 
             components: [rowDM] 
         });
-        
+
     } catch (err) {
-        return interaction.reply({
+        return interaction.editReply({
             content: `❌ Não foi possível chamar **${clienteMember.user.username}** (DMs fechadas).`,
-            flags: [64]
         });
     }
-    
+
     const embedConfirm = new EmbedBuilder()
         .setTitle('✅ Cliente Chamado!')
         .setDescription(
@@ -162,37 +167,40 @@ async function handleChamarCommand(interaction, client) {
         )
         .setColor('#00ff00')
         .setTimestamp();
-    
-    await interaction.reply({ embeds: [embedConfirm] });
-    
-    try {
-        const logId = process.env.LOG_CHANNEL_ID || "1437076921627181228";
-        const logChannel = await guild.channels.fetch(logId);
-        if (logChannel) {
-            const embedLog = new EmbedBuilder()
-                .setTitle('📞 Staff Chamou Cliente')
-                .setDescription(
-                    `**Staff:** <@${user.id}> (${user.tag})\n` +
-                    `**Cliente:** <@${clienteId}> (${clienteMember.user.tag})\n` +
-                    `**Ticket:** ${channel.name}`
-                )
-                .setColor('#8b0000')
-                .setTimestamp();
-            await logChannel.send({ embeds: [embedLog] });
+
+    await interaction.editReply({ embeds: [embedConfirm] });
+
+    // Log assíncrono (não bloqueia)
+    setImmediate(async () => {
+        try {
+            const logId = process.env.LOG_CHANNEL_ID || "1437076921627181228";
+            const logChannel = await guild.channels.fetch(logId);
+            if (logChannel) {
+                const embedLog = new EmbedBuilder()
+                    .setTitle('📞 Staff Chamou Cliente')
+                    .setDescription(
+                        `**Staff:** <@${user.id}> (${user.tag})\n` +
+                        `**Cliente:** <@${clienteId}> (${clienteMember.user.tag})\n` +
+                        `**Ticket:** ${channel.name}`
+                    )
+                    .setColor('#8b0000')
+                    .setTimestamp();
+                await logChannel.send({ embeds: [embedLog] });
+            }
+        } catch (err) {
+            console.error('Erro ao enviar log:', err);
         }
-    } catch (err) {
-        console.error('Erro ao enviar log:', err);
-    }
+    });
 }
 
 async function handleFecharTicketSaida(interaction, client) {
     const { member, channel } = interaction;
-    
+
     const isStaff = STAFF_CHAMAR_ROLES.some(id => member.roles.cache.has(id));
     if (!isStaff) {
         return interaction.reply({ content: 'Apenas Staff!', flags: [64] });
     }
-    
+
     await interaction.reply('🔒 A fechar ticket em 5 segundos...');
     setTimeout(() => channel.delete().catch(() => {}), 5000);
 }
