@@ -9,16 +9,13 @@ const axios = require("axios");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 
-// Importações - CORRIGIDO
-const { registrarComandoChamar, handleChamarCommand } = require('./src/commands/chamarCommand');
-
-// Sistema completo (descomenta quando criares o ficheiro)
-// const { 
-//     entrarCanalVoz, 
-//     enviarEmbedSuporte, 
-//     enviarFormularios,
-//     handleSistemaInteraction 
-// } = require('./src/events/sistemaCompleto');
+// Importações dos teus comandos e do novo sistema
+const { registrarComandoChamar } = require('./src/commands/chamarCommand');
+const { 
+    entrarCanalVoz, 
+    enviarEmbedSuporte, 
+    enviarFormularios 
+} = require('./src/events/sistemaCompleto'); // <-- ADICIONADO
 
 const {
     Client,
@@ -35,14 +32,15 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildVoiceStates // <-- IMPORTANTE: Adiciona isto para o canal de voz!
     ]
 });
 
-// Carrinho global
+// Carrinho global (necessário)
 const carrinhos = new Map();
 
-// Staff autorizado
+// ✅ ADICIONA ISTO AQUI
 const staffAutorizado = {
     "924344854232834068": "Jordan Costa",
     "996454465555136675": "Arteex26",
@@ -53,7 +51,7 @@ const staffAutorizado = {
 
 let tokensAtivos = new Set();
 
-// Configuração Supabase
+// --- CONFIGURAÇÃO SUPABASE ---
 const { createClient } = require("@supabase/supabase-js");
 const supabase = createClient(
     "https://fdbmhgcfhdnnpwuodxzh.supabase.co",
@@ -63,7 +61,8 @@ const supabase = createClient(
 const app = express();
 const port = process.env.PORT || 10000;
 
-// Middleware
+// ✅ MUDANÇA 1: Removido primeiro helmet() duplicado (linhas 54-64)
+// ✅ Fica só este, o completo:
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -80,7 +79,7 @@ app.use(helmet({
             fontSrc: ["'self'", "fonts.googleapis.com", "fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "https://i.postimg.cc", "https://cdn.discordapp.com", "https://cdnjs.cloudflare.com"],
             connectSrc: ["'self'"],
-            frameSrc: ["'self'"]
+            frameSrc: ["'self'"]  // ← CORRIGIDO: permitir iframes do mesmo site
         }
     }
 }));
@@ -89,21 +88,23 @@ app.use(express.json({ limit: "1mb" }));
 
 const limiter = rateLimit({ 
     windowMs: 60 * 1000, 
-    max: 1000
+    max: 1000  // ← Aumentar de 120 para 1000
 });
 app.use(limiter);
 
 app.use(express.static(path.join(__dirname, "site"), { index: false }));
-// Rotas
+
+// Rotas Login
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "site", "login.html"));
 });
 
+// ✅ ADICIONAR ISTO — Listar transcripts do Supabase
 app.get("/api/list-transcripts", async (req, res) => {
     const { data, error } = await supabase.storage
         .from("transcripts")
         .list("transcripts", { sortBy: { column: "created_at", order: "desc" } });
-    
+
     if (error) {
         console.error("Erro Supabase list:", error.message);
         return res.status(500).json({ error: error.message });
@@ -111,6 +112,9 @@ app.get("/api/list-transcripts", async (req, res) => {
     res.json(data || []);
 });
 
+
+// ✅ MUDANÇA 2: Removida primeira rota /transcripts/:id duplicada (linhas 95-103)
+// ✅ MUDANÇA 3: Corrigido caminho — era transcripts/transcripts/, agora é transcripts/
 app.get("/transcripts/:id", async (req, res) => {
     const id = req.params.id.replace('.html', '');
     const { data, error } = await supabase.storage
@@ -152,6 +156,7 @@ app.post("/api/login-manual", async (req, res) => {
     res.json({ success: true, user: username, token: tokenSessao });
 });
 
+// Callback Discord (mantido igual)
 app.get("/callback", async (req, res) => {
     const code = req.query.code;
     if (!code) return res.redirect("/login.html?error=no_code");
@@ -185,6 +190,7 @@ app.get("/callback", async (req, res) => {
     }
 });
 
+// Enviar Embed (mantido igual)
 app.post("/api/enviar-embed", async (req, res) => {
     const { titulo, desc, cor, canalId, produtos } = req.body;
     if (!titulo || !desc || !canalId)
@@ -194,32 +200,35 @@ app.post("/api/enviar-embed", async (req, res) => {
         const canal = await client.channels.fetch(canalId);
         if (!canal) return res.status(404).send("Canal não encontrado.");
 
-        const embed = new EmbedBuilder()
-            .setTitle(titulo)
-            .setDescription(desc)
-            .setColor(cor || "#8b0000");
+    const embed = new EmbedBuilder()
+    .setTitle(titulo)
+    .setDescription(desc)
+    .setColor(cor || "#8b0000");
 
-        const components = [];
-        if (produtos?.length) {
-            const selectMenu = new StringSelectMenuBuilder()
-                .setCustomId("menu_produtos")
-                .setPlaceholder("Escolhe uma opção")
-                .addOptions(produtos.map((p, i) => ({
-                    label: p.nome,
-                    description: `Preço: ${p.preco}`,
-                    value: `prod_${p.nome.replace(/\s+/g, "_").toLowerCase()}_${i}`
-                })));
-            components.push(new ActionRowBuilder().addComponents(selectMenu));
-        }
+const components = [];
+if (produtos?.length) {
+    const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId("menu_produtos")
+        .setPlaceholder("Escolhe uma opção")
+        .addOptions(produtos.map((p, i) => ({
+            label: p.nome,
+            description: `Preço: ${p.preco}`,
+            value: `prod_${p.nome.replace(/\s+/g, "_").toLowerCase()}_${i}`
+        })));
+    components.push(new ActionRowBuilder().addComponents(selectMenu));
+}
 
-        await canal.send({ embeds: [embed], components });
-        res.send("✅ Enviado!");
-    } catch (error) {
-        console.error(error);
-        res.status(500).send("Erro ao comunicar com o Discord.");
-    }
+await canal.send({ embeds: [embed], components });
+res.send("✅ Enviado!");
+// ✅ MUDANÇA 4: Removido }); solitário (linhas 172-173)
+} catch (error) {
+    console.error(error);
+    res.status(500).send("Erro ao comunicar com o Discord.");
+}
+
 });
-// Inicialização do bot
+
+// Inicialização
 const inicializarBot = () => {
     try {
         const interactionPath = path.join(__dirname, "src/events/interactionCreate.js");
@@ -243,100 +252,38 @@ const inicializarBot = () => {
 
 inicializarBot();
 
-// DEFINIR TOKEN - CORRIGIDO
 const TOKEN = process.env.DISCORD_TOKEN;
+if (!TOKEN) {
+    console.error("❌ Token não encontrado!");
+    process.exit(1);
+}
 
-// Debug
-console.log('🔐 TOKEN existe?', !!TOKEN);
-console.log('🔐 TOKEN começa com:', TOKEN ? TOKEN.substring(0, 20) + '...' : 'undefined');
-
-// Servidor HTTP
-app.listen(port, () => {
-    console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
-});
-
-// Login do bot
-console.log('🤖 A tentar login no Discord...');
-client.login(TOKEN)
-    .then(() => {
-        console.log("✅ Pedido de login enviado ao Discord");
-    })
-    .catch(err => {
-        console.error("❌ ERRO NO LOGIN:", err.message);
-        console.error("❌ Código:", err.code);
-        console.error(err);
-    });
-
-// Evento ready
+// No final do ficheiro, altera o teu ClientReady para isto:
 client.once(Events.ClientReady, async () => {
-    try {
-        console.log(`🤖 Bot ligado como ${client.user.tag}`);
-        console.log(`🤖 Bot ID: ${client.user.id}`);
+    console.log(`🤖 Bot ligado como ${client.user.tag}`);
 
-        // Registar comando /chamar
-        console.log('📞 A registar comando /chamar...');
+    try {
+        // 1. Regista o comando /chamar
         await registrarComandoChamar(client);
-        console.log('📞 Comando /chamar OK');
-        
-        // Descomenta quando criares o sistemaCompleto.js
-        // console.log('🔊 A entrar no canal de voz...');
-        // await entrarCanalVoz(client);
-        // console.log('🔊 Canal de voz OK');
-        // 
-        // console.log('📨 A enviar embeds...');
-        // await enviarEmbedSuporte(client);
-        // console.log('📨 Embeds OK');
-        // 
-        // console.log('📋 A enviar formulários...');
-        // await enviarFormularios(client);
-        // console.log('📋 Formulários OK');
-        
-    } catch (err) {
-        console.error("❌ ERRO NO READY:", err.message);
-        console.error(err);
+
+        // 2. Faz o bot entrar no canal de áudio 1492521949736472757
+        await entrarCanalVoz(client);
+
+        // 3. Enviar as mensagens iniciais (Executa apenas uma vez!)
+        // Podes comentar estas duas linhas abaixo após o bot enviar as mensagens pela primeira vez
+        await enviarEmbedSuporte(client);
+        await enviarFormularios(client);
+
+        console.log("✅ Todos os sistemas iniciais foram carregados com sucesso.");
+    } catch (error) {
+        console.error("❌ Erro ao inicializar funções de suporte/voz:", error);
     }
 });
-// Adiciona ISTO no final do index.js, depois de tudo:
-
-// Debug adicional
-client.on("debug", (info) => {
-    console.log("🔍 DEBUG:", info);
-});
-
-client.on("error", (err) => {
-    console.error("❌ CLIENT ERROR:", err.message);
-});
-
-client.on("disconnect", () => {
-    console.log("⚠️ Bot desconectado");
-});
-
-client.on("reconnecting", () => {
-    console.log("🔄 Bot a reconectar...");
-});
 
 client.login(TOKEN)
-    .then((token) => {
-        console.log("✅ Pedido de login enviado ao Discord");
-        console.log("🔑 Token recebido:", token ? "Sim" : "Não");
-    })
-    .catch(err => {
-        console.error("❌ ERRO NO LOGIN:", err.message);
-        console.error("❌ Código:", err.code);
-        console.error("❌ Status:", err.status);
-        console.error("❌ Stack:", err.stack);
-        // Não deixar o processo morrer
-        setTimeout(() => process.exit(1), 5000);
-    });
+    .then(() => console.log("✅ Pedido de login enviado ao Discord"))
+    .catch(err => console.error("❌ ERRO NO LOGIN:", err));
 
-client.on("shardError", (err) => {
-    console.error("❌ SHARD ERROR:", err);
-});
-
-client.on("shardDisconnect", () => {
-    console.log("⚠️ Shard desconectado");
-});
-
-client.on("shardReconnecting", () => {
-    console.log("🔄 Shard a reconectar...");
+app.listen(port, () => {
+    console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
 });
