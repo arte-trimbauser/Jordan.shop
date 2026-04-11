@@ -1,4 +1,5 @@
 const { EmbedBuilder, ActivityType, REST, Routes } = require("discord.js");
+const { registrarComandoChamar } = require('../commands/chamarCommand');
 
 module.exports = async (client) => {
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
@@ -30,6 +31,15 @@ module.exports = async (client) => {
         console.log(`✅ ${commands.length} comandos registados no servidor com sucesso!`);
     } catch (err) {
         console.error("❌ Erro ao registar slash commands:", err);
+    }
+
+    // ==================== REGISTAR COMANDO /CHAMAR ====================
+    console.log("📞 A registar comando /chamar...");
+    try {
+        await registrarComandoChamar(client);
+        console.log("✅ Comando /chamar registado com sucesso!");
+    } catch (err) {
+        console.error("❌ Erro ao registar /chamar:", err);
     }
 
     // ==================== STATUS ROTATIVO ====================
@@ -65,8 +75,7 @@ module.exports = async (client) => {
             });
             const embedLog = new EmbedBuilder()
                 .setTitle("✅ Bot está online!")
-                .setDescription(`O bot foi iniciado com sucesso e está pronto para uso.\n\n🕒 **Hora:** ${agora}
-                🌐 Site da Jordan Shop | Logs: https://jordan-shop.onrender.com/`)
+                .setDescription(`O bot foi iniciado com sucesso e está pronto para uso.\n\n🕒 **Hora:** ${agora}\n🌐 Site: https://jordan-shop.onrender.com/`)
                 .setImage("https://i.postimg.cc/YCmc9zyY/sucesso-no-neg-cio-61850034.webp")
                 .setThumbnail(client.user.displayAvatarURL())
                 .setColor("#00ff00")
