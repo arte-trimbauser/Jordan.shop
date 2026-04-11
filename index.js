@@ -267,6 +267,13 @@ client.login(TOKEN)
 
 client.once(Events.ClientReady, async () => {  // ← Adicionar "async" aqui
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
+
+    // Entrar no canal de voz automaticamente
+await entrarCanalVoz(client);
+
+// Enviar embeds e formulários (apenas na primeira vez, depois comenta)
+await enviarEmbedSuporte(client);
+await enviarFormularios(client);
     
     // ← ADICIONAR AQUI
     await registrarComandoChamar(client);
