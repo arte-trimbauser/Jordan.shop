@@ -328,3 +328,15 @@ client.login(TOKEN)
         // Não deixar o processo morrer
         setTimeout(() => process.exit(1), 5000);
     });
+
+client.on("shardError", (err) => {
+    console.error("❌ SHARD ERROR:", err);
+});
+
+client.on("shardDisconnect", () => {
+    console.log("⚠️ Shard desconectado");
+});
+
+client.on("shardReconnecting", () => {
+    console.log("🔄 Shard a reconectar...");
+});
