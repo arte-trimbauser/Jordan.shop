@@ -9,6 +9,12 @@ const axios = require("axios");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const { registrarComandoChamar, handleChamarCommand } = require('./src/commands/chamarCommand');
+entrarCanalVoz, 
+    enviarEmbedSuporte, 
+    enviarFormularios,
+    handleSistemaInteraction 
+} = require('./src/events/sistemaCompleto');
+
 
 const {
     Client,
