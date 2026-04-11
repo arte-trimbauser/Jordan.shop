@@ -262,18 +262,6 @@ if (!TOKEN) {
 client.once(Events.ClientReady, async () => {
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
 
-    try {
-        // 1. Regista o comando /chamar
-        await registrarComandoChamar(client);
-
-        // 2. Faz o bot entrar no canal de áudio 1492521949736472757
-        await entrarCanalVoz(client);
-
-        // 3. Enviar as mensagens iniciais (Executa apenas uma vez!)
-        // Podes comentar estas duas linhas abaixo após o bot enviar as mensagens pela primeira vez
-        await enviarEmbedSuporte(client);
-        await enviarFormularios(client);
-
         console.log("✅ Todos os sistemas iniciais foram carregados com sucesso.");
     } catch (error) {
         console.error("❌ Erro ao inicializar funções de suporte/voz:", error);
