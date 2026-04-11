@@ -8,7 +8,8 @@ const sendTranscript = require("../helpers/sendTranscript");
 const menus = require("../menus"); // ✅ CORRIGIDO: menus agora está importado
 const cooldowns = new Map();
 const { handleChamarCommand, handleFecharTicketSaida } = require("../commands/chamarCommand");
-const { handleSistemaInteraction } = require("../commands/sistemaCompleto");
+// ✅ CORRETO (mesma pasta)
+const { handleSistemaInteraction } = require("./sistemaCompleto");
 
 const emojisPagamento = {
     "MBWay": "<:mbway:1464608251516813446>",
