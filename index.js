@@ -252,31 +252,56 @@ const inicializarBot = () => {
 
 inicializarBot();
 
-const TOKEN = process.env.DISCORD_TOKEN;
-if (!TOKEN) {
-    console.error("❌ Token não encontrado!");
-    process.exit(1);
-}
+// Debug: Verificar se TOKEN existe
+console.log('🔐 TOKEN existe?', !!TOKEN);
+console.log('🔐 TOKEN começa com:', TOKEN ? TOKEN.substring(0, 20) + '...' : 'undefined');
 
 // ✅ MUDANÇA 5: Movido app.listen para fora do client.once, antes do client.login
 app.listen(port, () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
 });
 
+// Login do bot com mais debug
+console.log('🤖 A tentar login no Discord...');
 client.login(TOKEN)
-    .then(() => console.log("✅ Pedido de login enviado ao Discord"))
-    .catch(err => console.error("❌ ERRO NO LOGIN:", err));
+    .then(() => {
+        console.log("✅ Pedido de login enviado ao Discord");
+        console.log("🤖 Token aceite pela API do Discord");
+    })
+    .catch(err => {
+        console.error("❌ ERRO NO LOGIN:", err.message);
+        console.error("❌ Código do erro:", err.code);
+        console.error("❌ HTTP Status:", err.status);
+        console.error(err);
+    });
 
-client.once(Events.ClientReady, async () => {  // ← Adicionar "async" aqui
-    console.log(`🤖 Bot ligado como ${client.user.tag}`);
+// Evento ready com try-catch
+client.once(Events.ClientReady, async () => {
+    try {
+        console.log(`🤖 Bot ligado como ${client.user.tag}`);
+        console.log(`🤖 Bot ID: ${client.user.id}`);
 
-    // Entrar no canal de voz automaticamente
-await entrarCanalVoz(client);
+        // Entrar no canal de voz
+        console.log('🔊 A entrar no canal de voz...');
+        await entrarCanalVoz(client);
+        console.log('🔊 Canal de voz OK');
 
-// Enviar embeds e formulários (apenas na primeira vez, depois comenta)
-await enviarEmbedSuporte(client);
-await enviarFormularios(client);
-    
-    // ← ADICIONAR AQUI
-    await registrarComandoChamar(client);
+        // Enviar embeds e formulários
+        console.log('📨 A enviar embeds...');
+        await enviarEmbedSuporte(client);
+        console.log('📨 Embeds OK');
+        
+        console.log('📋 A enviar formulários...');
+        await enviarFormularios(client);
+        console.log('📋 Formulários OK');
+
+        // Comando /chamar
+        console.log('📞 A registar comando /chamar...');
+        await registrarComandoChamar(client);
+        console.log('📞 Comando /chamar OK');
+        
+    } catch (err) {
+        console.error("❌ ERRO NO READY:", err.message);
+        console.error(err);
+    }
 });
