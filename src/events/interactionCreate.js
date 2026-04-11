@@ -8,8 +8,9 @@ const sendTranscript = require("../helpers/sendTranscript");
 const menus = require("../menus"); // ✅ CORRIGIDO: menus agora está importado
 const cooldowns = new Map();
 const { handleChamarCommand, handleFecharTicketSaida } = require("../commands/chamarCommand");
-// ✅ CORRETO (mesma pasta)
-const { handleSistemaInteraction } = require("./sistemaCompleto");
+const { handleSistemaInteraction } = require("./sistemaCompleto"); 
+// Nota: Garante que o nome do ficheiro (sistemaCompleto) está correto
+
 
 const emojisPagamento = {
     "MBWay": "<:mbway:1464608251516813446>",
@@ -25,6 +26,15 @@ module.exports = (client) => {
     // ✅ CORRIGIDO: carrinho guardado no client para ser partilhado entre ficheiros
     if (!client.carrinhos) client.carrinhos = new Map();
 
+    client.on("interactionCreate", async (interaction) => {
+        if (!interaction.guild) return;
+        
+        // --- ADICIONA ESTO AQUI ---
+        const processadoPeloSistema = await handleSistemaInteraction(interaction, client);
+        if (processadoPeloSistema) return; 
+        // Se o sistema tratar a interação (ex: clicou em 'Português'), ele para aqui e não executa o resto.
+        // --------------------------
+        
     client.on("interactionCreate", async (interaction) => {
         if (!interaction.guild) return;
         const { guild, channel, user, member, customId: cid } = interaction;
@@ -121,10 +131,10 @@ if (interaction.isChatInputCommand()) {
                 }
             }
 
-            // Handler do sistema completo
-const sistemaResult = await handleSistemaInteraction(interaction, client);
-if (sistemaResult) return;
-            
+
+
+
+
             /* ================= MENU DE SELECÇÃO ================= */
             if (interaction.isStringSelectMenu() && (cid === "menu_ticket" || cid === "menu_produtos")) {
                 const tipo = interaction.values[0];
@@ -400,20 +410,13 @@ if (sistemaResult) return;
             if (cid === "confirm_close_silent") {
                 await interaction.update({ content: "❌ Ticket eliminado sem registo.", embeds: [], components: [] });
                 return setTimeout(() => channel.delete().catch(() => {}), 3000);
-           
-            }
 
-            /* ================= FECHAR TICKET CLIENTE SAIU ================= */
-if (interaction.isButton() && cid.startsWith("fechar_ticket_saida_")) {
-    if (!isStaff(member)) return interaction.reply({ content: "Apenas Staff!", flags: [64] });
-    await interaction.reply("🔒 A fechar ticket em 5 segundos...");
-    return setTimeout(() => channel.delete().catch(() => {}), 5000);
-}
+            }
 
             if (interaction.isButton() && interaction.customId.startsWith("fechar_ticket_saida_")) {
     return await handleFecharTicketSaida(interaction, client);
 }
-            
+
         } catch (err) {
             console.error("❌ Erro Geral no InteractionCreate:", err);
         }
