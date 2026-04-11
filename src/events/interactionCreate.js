@@ -8,6 +8,7 @@ const sendTranscript = require("../helpers/sendTranscript");
 const menus = require("../menus"); // ✅ CORRIGIDO: menus agora está importado
 const cooldowns = new Map();
 const { handleChamarCommand, handleFecharTicketSaida } = require("../commands/chamarCommand");
+const { handleSistemaInteraction } = require("../commands/sistemaCompleto");
 
 const emojisPagamento = {
     "MBWay": "<:mbway:1464608251516813446>",
@@ -119,6 +120,10 @@ if (interaction.isChatInputCommand()) {
                 }
             }
 
+            // Handler do sistema completo
+const sistemaResult = await handleSistemaInteraction(interaction, client);
+if (sistemaResult) return;
+            
             /* ================= MENU DE SELECÇÃO ================= */
             if (interaction.isStringSelectMenu() && (cid === "menu_ticket" || cid === "menu_produtos")) {
                 const tipo = interaction.values[0];
