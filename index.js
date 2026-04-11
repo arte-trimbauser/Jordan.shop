@@ -296,3 +296,35 @@ client.once(Events.ClientReady, async () => {
         console.error(err);
     }
 });
+// Adiciona ISTO no final do index.js, depois de tudo:
+
+// Debug adicional
+client.on("debug", (info) => {
+    console.log("🔍 DEBUG:", info);
+});
+
+client.on("error", (err) => {
+    console.error("❌ CLIENT ERROR:", err.message);
+});
+
+client.on("disconnect", () => {
+    console.log("⚠️ Bot desconectado");
+});
+
+client.on("reconnecting", () => {
+    console.log("🔄 Bot a reconectar...");
+});
+
+client.login(TOKEN)
+    .then((token) => {
+        console.log("✅ Pedido de login enviado ao Discord");
+        console.log("🔑 Token recebido:", token ? "Sim" : "Não");
+    })
+    .catch(err => {
+        console.error("❌ ERRO NO LOGIN:", err.message);
+        console.error("❌ Código:", err.code);
+        console.error("❌ Status:", err.status);
+        console.error("❌ Stack:", err.stack);
+        // Não deixar o processo morrer
+        setTimeout(() => process.exit(1), 5000);
+    });
