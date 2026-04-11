@@ -23,20 +23,16 @@ const emojisPagamento = {
 };
 
 module.exports = (client) => {
-    // ✅ CORRIGIDO: carrinho guardado no client para ser partilhado entre ficheiros
     if (!client.carrinhos) client.carrinhos = new Map();
 
     client.on("interactionCreate", async (interaction) => {
         if (!interaction.guild) return;
         
-        // --- ADICIONA ESTO AQUI ---
+        // 1. Chamar o sistema de idiomas/voz
         const processadoPeloSistema = await handleSistemaInteraction(interaction, client);
         if (processadoPeloSistema) return; 
-        // Se o sistema tratar a interação (ex: clicou em 'Português'), ele para aqui e não executa o resto.
-        // --------------------------
-        
-    client.on("interactionCreate", async (interaction) => {
-        if (!interaction.guild) return;
+
+        // 2. Definir as variáveis para o resto do código
         const { guild, channel, user, member, customId: cid } = interaction;
 
         try {
