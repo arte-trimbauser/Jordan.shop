@@ -252,6 +252,9 @@ const inicializarBot = () => {
 
 inicializarBot();
 
+// Definir TOKEN (ADICIONAR ISTO)
+const TOKEN = process.env.DISCORD_TOKEN;
+
 // Debug: Verificar se TOKEN existe
 console.log('🔐 TOKEN existe?', !!TOKEN);
 console.log('🔐 TOKEN começa com:', TOKEN ? TOKEN.substring(0, 20) + '...' : 'undefined');
@@ -274,34 +277,4 @@ client.login(TOKEN)
         console.error("❌ HTTP Status:", err.status);
         console.error(err);
     });
-
-// Evento ready com try-catch
-client.once(Events.ClientReady, async () => {
-    try {
-        console.log(`🤖 Bot ligado como ${client.user.tag}`);
-        console.log(`🤖 Bot ID: ${client.user.id}`);
-
-        // Entrar no canal de voz
-        console.log('🔊 A entrar no canal de voz...');
-        await entrarCanalVoz(client);
-        console.log('🔊 Canal de voz OK');
-
-        // Enviar embeds e formulários
-        console.log('📨 A enviar embeds...');
-        await enviarEmbedSuporte(client);
-        console.log('📨 Embeds OK');
-        
-        console.log('📋 A enviar formulários...');
-        await enviarFormularios(client);
-        console.log('📋 Formulários OK');
-
-        // Comando /chamar
-        console.log('📞 A registar comando /chamar...');
-        await registrarComandoChamar(client);
-        console.log('📞 Comando /chamar OK');
-        
-    } catch (err) {
-        console.error("❌ ERRO NO READY:", err.message);
-        console.error(err);
-    }
 });
