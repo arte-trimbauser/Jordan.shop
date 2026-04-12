@@ -260,16 +260,23 @@ if (!TOKEN) {
     process.exit(1);
 }
 
-client.once(Events.ClientReady, async () => {
-    console.log(`🤖 Bot ligado como ${client.user.tag}`);
+client.once(Events.ClientReady, async (c) => {
+    console.log(`✅ [DISCORD] Autenticado como ${c.user.tag}`);
+    
+    // Forçar o status para "Online" mal liga
+    client.user.setPresence({
+        activities: [{ name: 'Jordan Shop', type: ActivityType.Watching }],
+        status: 'online',
+    });
+
     try {
-        // Aqui o bot executa as funções de voz e suporte ao ligar
+        console.log("⏳ A carregar sistemas de voz...");
         await entrarCanalVoz(client);
-        console.log("✅ Todos os sistemas iniciais foram carregados com sucesso.");
+        console.log("✅ [SISTEMA] Tudo carregado com sucesso.");
     } catch (error) {
-        console.error("❌ Erro ao inicializar funções de suporte/voz:", error);
+        console.error("⚠️ [AVISO] Falha ao carregar voz/suporte, mas o bot deve estar ON:", error.message);
     }
-}); // <-- Garante que fecha com });
+});
 
 client.login(TOKEN)
     .then(() => console.log("✅ Pedido de login enviado ao Discord"))
