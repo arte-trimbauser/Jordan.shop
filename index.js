@@ -254,37 +254,26 @@ const inicializarBot = () => {
 
 inicializarBot();
 
-// --- LOGIN E LIGAÇÃO ---
+// --- TESTE DE LIGAÇÃO DIRETA ---
 
 const TOKEN = process.env.DISCORD_TOKEN;
 
-if (!TOKEN) {
-    console.error("❌ [ERRO] DISCORD_TOKEN não definido nas variáveis de ambiente!");
-    process.exit(1);
-}
-
-// Evento Ready simplificado para garantir que o bot sobe
-client.once(Events.ClientReady, async (c) => {
-    console.log(`✅ [DISCORD] Bot Online! Logado como: ${c.user.tag}`);
-    
-    try {
-        // Tenta carregar a voz, mas não deixa o bot crashar se falhar
-        await entrarCanalVoz(client).catch(err => console.error("⚠️ Erro na Voz:", err.message));
-        console.log("✅ [SISTEMA] Funções de voz verificadas.");
-    } catch (error) {
-        console.error("❌ Erro no Ready:", error);
-    }
+client.once(Events.ClientReady, (c) => {
+    console.log(`✅✅✅ SUCESSO ABSOLUTO! O BOT ESTÁ ON: ${c.user.tag}`);
+    // Só inicializamos o resto DEPOIS do bot estar online
+    inicializarBot(); 
 });
 
-// O LOGIN TEM DE SER A ÚLTIMA COISA OU ANTES DO APP.LISTEN
-console.log("⏳ A tentar ligar ao Discord...");
+console.log("⏳ Iniciando processo de login...");
+
 client.login(TOKEN)
-    .then(() => console.log("🚀 [OK] Pedido de login aceite pelo Discord!"))
+    .then(() => {
+        console.log("📡 Ligação ao Gateway iniciada com sucesso.");
+    })
     .catch(err => {
-        console.error("❌ [ERRO FATAL] Falha no login:");
-        console.error(err);
+        console.error("❌ ERRO CRÍTICO NO LOGIN:", err.message);
     });
 
 app.listen(port, () => {
-    console.log(`🌐 [SITE] Painel Jordan Shop ativo na porta ${port}`);
+    console.log(`🌐 SITE OK na porta ${port}`);
 });
