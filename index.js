@@ -224,9 +224,8 @@ await canal.send({ embeds: [embed], components });
         console.error(error);
         res.status(500).send("Erro ao comunicar com o Discord.");
     }
-});
+}); // <-- Esta fecha o app.post
 
-    try {
 // Inicialização
 const inicializarBot = () => {
     try {
@@ -266,7 +265,7 @@ client.once(Events.ClientReady, async () => {
     } catch (error) {
         console.error("❌ Erro ao inicializar funções de suporte/voz:", error);
     }
-});
+}); // <-- Garante que fecha com });
 
 client.login(TOKEN)
     .then(() => console.log("✅ Pedido de login enviado ao Discord"))
