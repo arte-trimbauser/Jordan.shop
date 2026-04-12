@@ -217,17 +217,16 @@ if (produtos?.length) {
         })));
     components.push(new ActionRowBuilder().addComponents(selectMenu));
 }
-
+        
 await canal.send({ embeds: [embed], components });
-res.send("✅ Enviado!");
-// ✅ MUDANÇA 4: Removido }); solitário (linhas 172-173)
-} catch (error) {
-    console.error(error);
-    res.status(500).send("Erro ao comunicar com o Discord.");
-}
-
+        res.send("✅ Enviado!");
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Erro ao comunicar com o Discord.");
+    }
 });
 
+    try {
 // Inicialização
 const inicializarBot = () => {
     try {
@@ -258,10 +257,11 @@ if (!TOKEN) {
     process.exit(1);
 }
 
-// No final do ficheiro, altera o teu ClientReady para isto:
 client.once(Events.ClientReady, async () => {
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
-
+    try {
+        // Aqui o bot executa as funções de voz e suporte ao ligar
+        await entrarCanalVoz(client);
         console.log("✅ Todos os sistemas iniciais foram carregados com sucesso.");
     } catch (error) {
         console.error("❌ Erro ao inicializar funções de suporte/voz:", error);
