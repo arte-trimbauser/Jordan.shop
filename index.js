@@ -9,6 +9,7 @@ const axios = require("axios");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 
+
 // Importações dos teus comandos e do novo sistema
 const { registrarComandoChamar } = require('./src/commands/chamarCommand');
 const { 
@@ -36,6 +37,9 @@ const client = new Client({
         GatewayIntentBits.GuildVoiceStates // <-- IMPORTANTE: Adiciona isto para o canal de voz!
     ]
 });
+
+client.on("debug", (info) => console.log(`[DEBUG] ${info}`));
+client.on("error", (err) => console.error(`[ERRO CRÍTICO] ${err}`));
 
 // Carrinho global (necessário)
 const carrinhos = new Map();
