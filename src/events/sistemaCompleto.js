@@ -22,15 +22,15 @@ const CONFIG = {
     // Canal dos formulários
     formsChannelId: '1490783323780419664',
     
-    // Emojis personalizados (substitua pelos seus IDs reais)
+    // Emojis personalizados (DISCORD - arte_10)
     emojis: {
-        portugal: '<:portugal:EMOJI_ID_PT>',
-        england: '<:england:EMOJI_ID_EN>',
-        spain: '<:spain:EMOJI_ID_ES>',
-        bug: '<:bug:EMOJI_ID_BUG>',
-        idea: '<:idea:EMOJI_ID_IDEA>',
-        star: '<:star:EMOJI_ID_STAR>',
-        support: '<:support:EMOJI_ID_SUPPORT>'
+        portugal: '<:Flag_of_Portugal:1492525538416267536>',
+        england: '<:Flag_of_England:1492526158309359726>',
+        spain: '<:Flag_of_Spain:1492525567889641583>',
+        bug: '🐛',
+        idea: '💡',
+        star: '⭐',
+        support: '🎧'
     },
     
     // Categorias para tickets por idioma
@@ -108,19 +108,19 @@ async function enviarEmbedSuporte(client) {
                         label: 'Português',
                         description: 'Suporte em Português',
                         value: 'lang_pt',
-                        emoji: CONFIG.emojis.portugal
+                        emoji: '1492525538416267536' // ID do emoji Portugal
                     },
                     {
                         label: 'English',
                         description: 'Support in English',
                         value: 'lang_en',
-                        emoji: CONFIG.emojis.england
+                        emoji: '1492526158309359726' // ID do emoji England
                     },
                     {
                         label: 'Español',
                         description: 'Soporte en Español',
                         value: 'lang_es',
-                        emoji: CONFIG.emojis.spain
+                        emoji: '1492525567889641583' // ID do emoji Spain
                     }
                 ])
         );
@@ -225,15 +225,18 @@ async function handleSistemaInteraction(interaction, client) {
             const embedTicket = new EmbedBuilder()
                 .setTitle(`${selecionado.emoji} Ticket de Suporte - ${selecionado.nome}`)
                 .setDescription(
-                    `Olá <@${user.id}>! Bem-vindo ao suporte em **${selecionado.nome}**.\n\n` +
-                    `Descreva o seu problema e aguarde por um membro da staff.`
+                    idioma === 'lang_pt' ? 
+                        `Olá <@${user.id}>! Bem-vindo ao suporte em **${selecionado.nome}**.\n\nDescreva o seu problema e aguarde por um membro da staff.` :
+                    idioma === 'lang_en' ?
+                        `Hello <@${user.id}>! Welcome to **${selecionado.nome}** support.\n\nDescribe your issue and wait for a staff member.` :
+                        `¡Hola <@${user.id}>! Bienvenido al soporte en **${selecionado.nome}**.\n\nDescribe tu problema y espera a un miembro del staff.`
                 )
                 .setColor('#8b0000');
 
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
                     .setCustomId('close_ticket_lang')
-                    .setLabel('🔒 Fechar Ticket')
+                    .setLabel(idioma === 'lang_pt' ? '🔒 Fechar Ticket' : idioma === 'lang_en' ? '🔒 Close Ticket' : '🔒 Cerrar Ticket')
                     .setStyle(ButtonStyle.Danger)
             );
 
