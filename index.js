@@ -1,3 +1,4 @@
+// index.js - VERSÃO CORRIGIDA
 require("dotenv").config();
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
@@ -9,14 +10,13 @@ const axios = require("axios");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 
-
 // Importações dos teus comandos e do novo sistema
 const { registrarComandoChamar } = require('./src/commands/chamarCommand');
 const { 
     entrarCanalVoz, 
     enviarEmbedSuporte, 
     enviarFormularios 
-} = require('./src/events/sistemaCompleto'); // <-- ADICIONADO
+} = require('./src/events/sistemaCompleto');
 
 const {
     Client,
@@ -34,12 +34,13 @@ const client = new Client({
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildVoiceStates // <-- IMPORTANTE: Adiciona isto para o canal de voz!
+        GatewayIntentBits.GuildVoiceStates
     ]
 });
 
 client.on("debug", (info) => console.log(`[DEBUG] ${info}`));
 client.on("error", (err) => console.error(`[ERRO CRÍTICO] ${err}`));
+client.on("warn", (info) => console.warn(`[AVISO] ${info}`));
 
 // Carrinho global (necessário)
 const carrinhos = new Map();
@@ -65,8 +66,7 @@ const supabase = createClient(
 const app = express();
 const port = process.env.PORT || 10000;
 
-// ✅ MUDANÇA 1: Removido primeiro helmet() duplicado (linhas 54-64)
-// ✅ Fica só este, o completo:
+// Configuração do Express
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -83,7 +83,7 @@ app.use(helmet({
             fontSrc: ["'self'", "fonts.googleapis.com", "fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "https://i.postimg.cc", "https://cdn.discordapp.com", "https://cdnjs.cloudflare.com"],
             connectSrc: ["'self'"],
-            frameSrc: ["'self'"]  // ← CORRIGIDO: permitir iframes do mesmo site
+            frameSrc: ["'self'"]
         }
     }
 }));
@@ -92,18 +92,17 @@ app.use(express.json({ limit: "1mb" }));
 
 const limiter = rateLimit({ 
     windowMs: 60 * 1000, 
-    max: 1000  // ← Aumentar de 120 para 1000
+    max: 1000
 });
 app.use(limiter);
 
 app.use(express.static(path.join(__dirname, "site"), { index: false }));
 
-// Rotas Login
+// Rotas Express...
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "site", "login.html"));
 });
 
-// ✅ ADICIONAR ISTO — Listar transcripts do Supabase
 app.get("/api/list-transcripts", async (req, res) => {
     const { data, error } = await supabase.storage
         .from("transcripts")
@@ -116,9 +115,6 @@ app.get("/api/list-transcripts", async (req, res) => {
     res.json(data || []);
 });
 
-
-// ✅ MUDANÇA 2: Removida primeira rota /transcripts/:id duplicada (linhas 95-103)
-// ✅ MUDANÇA 3: Corrigido caminho — era transcripts/transcripts/, agora é transcripts/
 app.get("/transcripts/:id", async (req, res) => {
     const id = req.params.id.replace('.html', '');
     const { data, error } = await supabase.storage
@@ -160,7 +156,6 @@ app.post("/api/login-manual", async (req, res) => {
     res.json({ success: true, user: username, token: tokenSessao });
 });
 
-// Callback Discord (mantido igual)
 app.get("/callback", async (req, res) => {
     const code = req.query.code;
     if (!code) return res.redirect("/login.html?error=no_code");
@@ -194,7 +189,6 @@ app.get("/callback", async (req, res) => {
     }
 });
 
-// Enviar Embed (mantido igual)
 app.post("/api/enviar-embed", async (req, res) => {
     const { titulo, desc, cor, canalId, produtos } = req.body;
     if (!titulo || !desc || !canalId)
@@ -204,69 +198,76 @@ app.post("/api/enviar-embed", async (req, res) => {
         const canal = await client.channels.fetch(canalId);
         if (!canal) return res.status(404).send("Canal não encontrado.");
 
-    const embed = new EmbedBuilder()
-    .setTitle(titulo)
-    .setDescription(desc)
-    .setColor(cor || "#8b0000");
+        const embed = new EmbedBuilder()
+            .setTitle(titulo)
+            .setDescription(desc)
+            .setColor(cor || "#8b0000");
 
-const components = [];
-if (produtos?.length) {
-    const selectMenu = new StringSelectMenuBuilder()
-        .setCustomId("menu_produtos")
-        .setPlaceholder("Escolhe uma opção")
-        .addOptions(produtos.map((p, i) => ({
-            label: p.nome,
-            description: `Preço: ${p.preco}`,
-            value: `prod_${p.nome.replace(/\s+/g, "_").toLowerCase()}_${i}`
-        })));
-    components.push(new ActionRowBuilder().addComponents(selectMenu));
-}
+        const components = [];
+        if (produtos?.length) {
+            const selectMenu = new StringSelectMenuBuilder()
+                .setCustomId("menu_produtos")
+                .setPlaceholder("Escolhe uma opção")
+                .addOptions(produtos.map((p, i) => ({
+                    label: p.nome,
+                    description: `Preço: ${p.preco}`,
+                    value: `prod_${p.nome.replace(/\s+/g, "_").toLowerCase()}_${i}`
+                })));
+            components.push(new ActionRowBuilder().addComponents(selectMenu));
+        }
         
-await canal.send({ embeds: [embed], components });
+        await canal.send({ embeds: [embed], components });
         res.send("✅ Enviado!");
     } catch (error) {
         console.error(error);
         res.status(500).send("Erro ao comunicar com o Discord.");
     }
-}); // <-- Esta fecha o app.post
-
-// Inicialização
-const inicializarBot = () => {
-    try {
-        const interactionPath = path.join(__dirname, "src/events/interactionCreate.js");
-        if (fs.existsSync(interactionPath)) {
-            require(interactionPath)(client);
-            console.log("✅ Sistema de Interações preparado.");
-        }
-
-        // Substituir a parte do ready no index.js por isto:
-
-const readyPath = path.join(__dirname, "src/events/ready.js");
-if (fs.existsSync(readyPath)) {
-    const readyEvent = require(readyPath);
-    if (typeof readyEvent === 'function') {
-        client.once(Events.ClientReady, () => readyEvent(client));
-        console.log("✅ Evento Ready configurado.");
-    }
-}
-    } catch (e) {
-        console.warn("⚠️ Erro ao configurar eventos:", e.message);
-    }
-};
-
-inicializarBot();
-
-// --- TESTE DE LIGAÇÃO DIRETA ---
-
-const TOKEN = process.env.DISCORD_TOKEN;
-
-client.once(Events.ClientReady, (c) => {
-    console.log(`✅✅✅ SUCESSO ABSOLUTO! O BOT ESTÁ ON: ${c.user.tag}`);
-    // Só inicializamos o resto DEPOIS do bot estar online
-    inicializarBot(); 
 });
 
+// ==================== CONFIGURAR EVENTOS DO DISCORD ====================
+// IMPORTANTE: Configurar ANTES do login!
+
+// 1. Evento Ready (QUANDO o bot fica online)
+client.once(Events.ClientReady, async (c) => {
+    console.log(`✅✅✅ SUCESSO ABSOLUTO! O BOT ESTÁ ON: ${c.user.tag}`);
+    
+    // Inicializar sistemas que precisam do bot online
+    try {
+        const readyEvent = require('./src/events/ready.js');
+        if (typeof readyEvent === 'function') {
+            await readyEvent(client);
+        }
+    } catch (err) {
+        console.error("❌ Erro no ready.js:", err);
+    }
+});
+
+// 2. Sistema de Interações (buttons, menus, etc)
+try {
+    const interactionPath = path.join(__dirname, "src/events/interactionCreate.js");
+    if (fs.existsSync(interactionPath)) {
+        require(interactionPath)(client);
+        console.log("✅ Sistema de Interações preparado.");
+    }
+} catch (e) {
+    console.warn("⚠️ Erro ao configurar interações:", e.message);
+}
+
+// ==================== INICIAR SERVIDOR ====================
+app.listen(port, () => {
+    console.log(`🌐 SITE OK na porta ${port}`);
+});
+
+// ==================== LOGIN DO BOT ====================
+// AGORA sim, fazer login (depois de TUDO configurado)
+const TOKEN = process.env.DISCORD_TOKEN;
+
 console.log("⏳ Iniciando processo de login...");
+
+if (!TOKEN) {
+    console.error("❌ ERRO CRÍTICO: DISCORD_TOKEN não definido!");
+    process.exit(1);
+}
 
 client.login(TOKEN)
     .then(() => {
@@ -274,8 +275,5 @@ client.login(TOKEN)
     })
     .catch(err => {
         console.error("❌ ERRO CRÍTICO NO LOGIN:", err.message);
+        process.exit(1);
     });
-
-app.listen(port, () => {
-    console.log(`🌐 SITE OK na porta ${port}`);
-});
