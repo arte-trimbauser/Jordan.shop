@@ -1,4 +1,4 @@
-// index.js - VERSÃO CORRIGIDA
+// index.js - VERSÃO SIMPLIFICADA E FUNCIONAL
 require("dotenv").config();
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
@@ -10,14 +10,6 @@ const axios = require("axios");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 
-// Importações dos teus comandos e do novo sistema
-const { registrarComandoChamar } = require('./src/commands/chamarCommand');
-const { 
-    entrarCanalVoz, 
-    enviarEmbedSuporte, 
-    enviarFormularios 
-} = require('./src/events/sistemaCompleto');
-
 const {
     Client,
     GatewayIntentBits,
@@ -25,9 +17,20 @@ const {
     EmbedBuilder,
     ActionRowBuilder,
     StringSelectMenuBuilder,
-    Events
+    Events,
+    REST,
+    Routes
 } = require("discord.js");
 
+const { 
+    entrarCanalVoz, 
+    enviarEmbedSuporte, 
+    enviarFormularios 
+} = require('./src/events/sistemaCompleto');
+
+const { registrarComandoChamar } = require('./src/commands/chamarCommand');
+
+// ==================== CLIENT DISCORD ====================
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -38,14 +41,17 @@ const client = new Client({
     ]
 });
 
-client.on("debug", (info) => console.log(`[DEBUG] ${info}`));
+client.on("debug", (info) => {
+    // Não mostrar o token nos logs por segurança
+    if (info.includes("token")) return;
+    console.log(`[DEBUG] ${info}`);
+});
 client.on("error", (err) => console.error(`[ERRO CRÍTICO] ${err}`));
 client.on("warn", (info) => console.warn(`[AVISO] ${info}`));
 
-// Carrinho global (necessário)
+// Carrinho global
 const carrinhos = new Map();
 
-// ✅ ADICIONA ISTO AQUI
 const staffAutorizado = {
     "924344854232834068": "Jordan Costa",
     "996454465555136675": "Arteex26",
@@ -63,10 +69,10 @@ const supabase = createClient(
     process.env.SUPABASE_KEY
 );
 
+// ==================== EXPRESS APP ====================
 const app = express();
 const port = process.env.PORT || 10000;
 
-// Configuração do Express
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -98,7 +104,7 @@ app.use(limiter);
 
 app.use(express.static(path.join(__dirname, "site"), { index: false }));
 
-// Rotas Express...
+// Rotas
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "site", "login.html"));
 });
@@ -224,25 +230,97 @@ app.post("/api/enviar-embed", async (req, res) => {
     }
 });
 
-// ==================== CONFIGURAR EVENTOS DO DISCORD ====================
-// IMPORTANTE: Configurar ANTES do login!
+// ==================== EVENTOS DISCORD ====================
 
-// 1. Evento Ready (QUANDO o bot fica online)
-client.once(Events.ClientReady, async (c) => {
-    console.log(`✅✅✅ SUCESSO ABSOLUTO! O BOT ESTÁ ON: ${c.user.tag}`);
+// 1. QUANDO O BOT FICA ONLINE (READY)
+client.once(Events.ClientReady, async () => {
+    console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
+    console.log(`✅ Sistema Jordan Shop Online!`);
+    console.log(`🌐 Site: https://jordan-shop.onrender.com/`);
+    console.log(`✅ Bot online como: ${client.user.tag}`);
+    console.log(`🕒 Hora de Portugal: ${new Date().toLocaleString('pt-PT', { timeZone: 'Europe/Lisbon' })}`);
+    console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
+
+    // Registrar comandos slash
+    console.log("🔄 A registar slash commands...");
+    const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
     
-    // Inicializar sistemas que precisam do bot online
     try {
-        const readyEvent = require('./src/events/ready.js');
-        if (typeof readyEvent === 'function') {
-            await readyEvent(client);
+        const adicionar = require("./src/commands/adicionar");
+        const carrinho = require("./src/commands/carrinho");
+        const commands = [adicionar, carrinho].filter(Boolean).map(cmd => cmd.data.toJSON());
+
+        await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
+        await rest.put(
+            Routes.applicationGuildCommands(client.user.id, "1393629457599828040"),
+            { body: commands }
+        );
+
+        console.log(`✅ ${commands.length} comandos registados!`);
+    } catch (err) {
+        console.error("❌ Erro ao registar slash commands:", err);
+    }
+
+    // Registrar comando /chamar
+    console.log("📞 A registar comando /chamar...");
+    try {
+        await registrarComandoChamar(client);
+        console.log("✅ Comando /chamar registado!");
+    } catch (err) {
+        console.error("❌ Erro ao registar /chamar:", err);
+    }
+
+    // Inicializar sistemas adicionais
+    console.log("🎵 A inicializar sistemas adicionais...");
+    try {
+        await entrarCanalVoz(client);
+        await enviarEmbedSuporte(client);
+        await enviarFormularios(client);
+        console.log("✅ Sistemas adicionais inicializados!");
+    } catch (err) {
+        console.error("❌ Erro nos sistemas adicionais:", err);
+    }
+
+    // Status rotativo
+    const statusList = [
+        { name: "Jordan Shop | discord.gg/6hhZeqb7Qk", type: ActivityType.Competing },
+        { name: "Os melhores preços!", type: ActivityType.Watching },
+        { name: "Jordan Shop #100", type: ActivityType.Listening },
+        { name: "MELHOR LOJA DE PORTUGAL!!!", type: ActivityType.Playing }
+    ];
+
+    let i = 0;
+    setInterval(() => {
+        client.user.setPresence({
+            activities: [statusList[i]],
+            status: "online"
+        });
+        i = (i + 1) % statusList.length;
+    }, 5000);
+
+    // Log no Discord
+    const LOG_ID = process.env.LOG_CHANNEL_ID || "1437076921627181228";
+    try {
+        const logChannel = await client.channels.fetch(LOG_ID).catch(() => null);
+        if (logChannel) {
+            const agora = new Date().toLocaleTimeString('pt-PT', {
+                timeZone: 'Europe/Lisbon',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            const embedLog = new EmbedBuilder()
+                .setTitle("✅ Bot está online!")
+                .setDescription(`O bot foi iniciado com sucesso!\n\n🕒 **Hora:** ${agora}`)
+                .setColor("#00ff00");
+            await logChannel.send({ embeds: [embedLog] });
         }
     } catch (err) {
-        console.error("❌ Erro no ready.js:", err);
+        console.error("Erro ao enviar log no Discord.");
     }
 });
 
-// 2. Sistema de Interações (buttons, menus, etc)
+// 2. SISTEMA DE INTERAÇÕES
 try {
     const interactionPath = path.join(__dirname, "src/events/interactionCreate.js");
     if (fs.existsSync(interactionPath)) {
@@ -253,27 +331,25 @@ try {
     console.warn("⚠️ Erro ao configurar interações:", e.message);
 }
 
-// ==================== INICIAR SERVIDOR ====================
+// ==================== INICIAR SERVIDOR E BOT ====================
 app.listen(port, () => {
     console.log(`🌐 SITE OK na porta ${port}`);
 });
 
-// ==================== LOGIN DO BOT ====================
-// AGORA sim, fazer login (depois de TUDO configurado)
 const TOKEN = process.env.DISCORD_TOKEN;
 
-console.log("⏳ Iniciando processo de login...");
+console.log("⏳ A iniciar bot...");
 
 if (!TOKEN) {
-    console.error("❌ ERRO CRÍTICO: DISCORD_TOKEN não definido!");
+    console.error("❌ ERRO: DISCORD_TOKEN não definido!");
     process.exit(1);
 }
 
 client.login(TOKEN)
     .then(() => {
-        console.log("📡 Ligação ao Gateway iniciada com sucesso.");
+        console.log("📡 Login iniciado, aguardando ready event...");
     })
     .catch(err => {
-        console.error("❌ ERRO CRÍTICO NO LOGIN:", err.message);
+        console.error("❌ ERRO NO LOGIN:", err.message);
         process.exit(1);
     });
