@@ -239,14 +239,16 @@ const inicializarBot = () => {
             console.log("✅ Sistema de Interações preparado.");
         }
 
-        const readyPath = path.join(__dirname, "src/events/ready.js");
-        if (fs.existsSync(readyPath)) {
-            const readyEvent = require(readyPath);
-            if (typeof readyEvent === "function") {
-                client.once(Events.ClientReady, (...args) => readyEvent(client, ...args));
-                console.log("✅ Evento Ready configurado.");
-            }
-        }
+        // Substituir a parte do ready no index.js por isto:
+
+const readyPath = path.join(__dirname, "src/events/ready.js");
+if (fs.existsSync(readyPath)) {
+    const readyEvent = require(readyPath);
+    if (typeof readyEvent === 'function') {
+        client.once(Events.ClientReady, () => readyEvent(client));
+        console.log("✅ Evento Ready configurado.");
+    }
+}
     } catch (e) {
         console.warn("⚠️ Erro ao configurar eventos:", e.message);
     }
