@@ -86,3 +86,15 @@ module.exports = async (client) => {
         console.error("Erro ao enviar log de inicialização no Discord.");
     }
 };
+
+// No final do ready.js, adicione:
+const { 
+    entrarCanalVoz, 
+    enviarEmbedSuporte, 
+    enviarFormularios 
+} = require('./sistemaCompleto');
+
+// Chamar quando o bot estiver pronto
+await entrarCanalVoz(client);
+await enviarEmbedSuporte(client);
+await enviarFormularios(client);
