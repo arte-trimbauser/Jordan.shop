@@ -1,4 +1,4 @@
-// index.js - VERSÃO SIMPLIFICADA E FUNCIONAL
+// index.js - VERSÃO MÍNIMA E FUNCIONAL
 require("dotenv").config();
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
@@ -41,16 +41,16 @@ const client = new Client({
     ]
 });
 
+// Debug seguro (não mostra token)
 client.on("debug", (info) => {
-    // Não mostrar o token nos logs por segurança
-    if (info.includes("token")) return;
+    if (info.toLowerCase().includes("token")) return;
     console.log(`[DEBUG] ${info}`);
 });
-client.on("error", (err) => console.error(`[ERRO CRÍTICO] ${err}`));
+client.on("error", (err) => console.error(`[ERRO] ${err.message}`));
 client.on("warn", (info) => console.warn(`[AVISO] ${info}`));
 
 // Carrinho global
-const carrinhos = new Map();
+client.carrinhos = new Map();
 
 const staffAutorizado = {
     "924344854232834068": "Jordan Costa",
@@ -62,14 +62,14 @@ const staffAutorizado = {
 
 let tokensAtivos = new Set();
 
-// --- CONFIGURAÇÃO SUPABASE ---
+// --- SUPABASE ---
 const { createClient } = require("@supabase/supabase-js");
 const supabase = createClient(
     "https://fdbmhgcfhdnnpwuodxzh.supabase.co",
     process.env.SUPABASE_KEY
 );
 
-// ==================== EXPRESS APP ====================
+// ==================== EXPRESS ====================
 const app = express();
 const port = process.env.PORT || 10000;
 
@@ -77,17 +77,11 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: [
-                "'self'",
-                "'unsafe-inline'",
-                "fonts.googleapis.com",
-                "cdn.jsdelivr.net",
-                "cdnjs.cloudflare.com"
-            ],
+            scriptSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "cdn.jsdelivr.net", "cdnjs.cloudflare.com"],
             scriptSrcAttr: ["'unsafe-inline'"],
             styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "fonts.gstatic.com"],
             fontSrc: ["'self'", "fonts.googleapis.com", "fonts.gstatic.com"],
-            imgSrc: ["'self'", "data:", "https://i.postimg.cc", "https://cdn.discordapp.com", "https://cdnjs.cloudflare.com"],
+            imgSrc: ["'self'", "data:", "https://i.postimg.cc", "https://cdn.discordapp.com"],
             connectSrc: ["'self'"],
             frameSrc: ["'self'"]
         }
@@ -95,50 +89,28 @@ app.use(helmet({
 }));
 
 app.use(express.json({ limit: "1mb" }));
-
-const limiter = rateLimit({ 
-    windowMs: 60 * 1000, 
-    max: 1000
-});
-app.use(limiter);
-
+app.use(rateLimit({ windowMs: 60 * 1000, max: 1000 }));
 app.use(express.static(path.join(__dirname, "site"), { index: false }));
 
-// Rotas
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "site", "login.html"));
-});
+// Rotas básicas
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "site", "login.html")));
 
 app.get("/api/list-transcripts", async (req, res) => {
-    const { data, error } = await supabase.storage
-        .from("transcripts")
-        .list("transcripts", { sortBy: { column: "created_at", order: "desc" } });
-
-    if (error) {
-        console.error("Erro Supabase list:", error.message);
-        return res.status(500).json({ error: error.message });
-    }
+    const { data, error } = await supabase.storage.from("transcripts").list("transcripts", { sortBy: { column: "created_at", order: "desc" } });
+    if (error) return res.status(500).json({ error: error.message });
     res.json(data || []);
 });
 
 app.get("/transcripts/:id", async (req, res) => {
     const id = req.params.id.replace('.html', '');
-    const { data, error } = await supabase.storage
-        .from("transcripts")
-        .download(`transcripts/${id}.html`);
-
+    const { data, error } = await supabase.storage.from("transcripts").download(`transcripts/${id}.html`);
     if (error || !data) return res.status(404).send("Transcript não encontrado.");
-
-    const text = await data.text();
     res.setHeader("Content-Type", "text/html");
-    res.send(text);
+    res.send(await data.text());
 });
 
 app.post("/api/login-manual", async (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password)
-        return res.status(400).json({ success: false });
-
     const loginValido =
         (username === "Jordan Costa" && password === "Jordan26Costa") ||
         (username === "Arteex26" && password === "Arteex_26") ||
@@ -146,19 +118,10 @@ app.post("/api/login-manual", async (req, res) => {
         (username === "migueldodrip_09110" && password === "migueldodrip") ||
         (username === "pincher11" && password === "pincher11");
 
-    if (!loginValido)
-        return res.status(401).json({ success: false });
+    if (!loginValido) return res.status(401).json({ success: false });
 
     const tokenSessao = Math.random().toString(36).substring(2);
     tokensAtivos.add(tokenSessao);
-
-    try {
-        const canalLogsLogin = await client.channels.fetch("1437076921627181228").catch(() => null);
-        if (canalLogsLogin) {
-            canalLogsLogin.send(`🔐 **[SISTEMA]** O utilizador **${username}** acabou de entrar no painel de controlo da Jordan Shop.`);
-        }
-    } catch {}
-
     res.json({ success: true, user: username, token: tokenSessao });
 });
 
@@ -180,16 +143,12 @@ app.get("/callback", async (req, res) => {
             headers: { Authorization: `Bearer ${tokenRes.data.access_token}` }
         });
 
-        const discordID = userRes.data.id;
-        const discordUser = userRes.data.username;
-
-        if (!staffAutorizado[discordID])
+        if (!staffAutorizado[userRes.data.id])
             return res.redirect("/login.html?error=nao_autorizado");
 
         const tokenSessao = Math.random().toString(36).substring(2);
         tokensAtivos.add(tokenSessao);
-
-        res.redirect(`/loja.html?user=${encodeURIComponent(discordUser)}&token=${tokenSessao}`);
+        res.redirect(`/loja.html?user=${encodeURIComponent(userRes.data.username)}&token=${tokenSessao}`);
     } catch {
         res.redirect("/login.html?error=auth_failed");
     }
@@ -197,18 +156,11 @@ app.get("/callback", async (req, res) => {
 
 app.post("/api/enviar-embed", async (req, res) => {
     const { titulo, desc, cor, canalId, produtos } = req.body;
-    if (!titulo || !desc || !canalId)
-        return res.status(400).send("Faltam campos.");
+    if (!titulo || !desc || !canalId) return res.status(400).send("Faltam campos.");
 
     try {
         const canal = await client.channels.fetch(canalId);
-        if (!canal) return res.status(404).send("Canal não encontrado.");
-
-        const embed = new EmbedBuilder()
-            .setTitle(titulo)
-            .setDescription(desc)
-            .setColor(cor || "#8b0000");
-
+        const embed = new EmbedBuilder().setTitle(titulo).setDescription(desc).setColor(cor || "#8b0000");
         const components = [];
         if (produtos?.length) {
             const selectMenu = new StringSelectMenuBuilder()
@@ -221,7 +173,6 @@ app.post("/api/enviar-embed", async (req, res) => {
                 })));
             components.push(new ActionRowBuilder().addComponents(selectMenu));
         }
-        
         await canal.send({ embeds: [embed], components });
         res.send("✅ Enviado!");
     } catch (error) {
@@ -230,126 +181,91 @@ app.post("/api/enviar-embed", async (req, res) => {
     }
 });
 
-// ==================== EVENTOS DISCORD ====================
-
-// 1. QUANDO O BOT FICA ONLINE (READY)
+// ==================== EVENTO READY ====================
 client.once(Events.ClientReady, async () => {
-    console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
-    console.log(`✅ Sistema Jordan Shop Online!`);
-    console.log(`🌐 Site: https://jordan-shop.onrender.com/`);
-    console.log(`✅ Bot online como: ${client.user.tag}`);
-    console.log(`🕒 Hora de Portugal: ${new Date().toLocaleString('pt-PT', { timeZone: 'Europe/Lisbon' })}`);
-    console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
-
-    // Registrar comandos slash
-    console.log("🔄 A registar slash commands...");
-    const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
+    console.log(`✅ BOT ONLINE: ${client.user.tag}`);
     
+    // Slash commands
     try {
+        const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
         const adicionar = require("./src/commands/adicionar");
         const carrinho = require("./src/commands/carrinho");
         const commands = [adicionar, carrinho].filter(Boolean).map(cmd => cmd.data.toJSON());
-
+        
         await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
-        await rest.put(
-            Routes.applicationGuildCommands(client.user.id, "1393629457599828040"),
-            { body: commands }
-        );
-
-        console.log(`✅ ${commands.length} comandos registados!`);
+        await rest.put(Routes.applicationGuildCommands(client.user.id, "1393629457599828040"), { body: commands });
+        console.log(`✅ ${commands.length} comandos registados`);
     } catch (err) {
-        console.error("❌ Erro ao registar slash commands:", err);
+        console.error("❌ Erro comandos:", err.message);
     }
 
-    // Registrar comando /chamar
-    console.log("📞 A registar comando /chamar...");
+    // Comando /chamar
     try {
         await registrarComandoChamar(client);
-        console.log("✅ Comando /chamar registado!");
+        console.log("✅ Comando /chamar registado");
     } catch (err) {
-        console.error("❌ Erro ao registar /chamar:", err);
+        console.error("❌ Erro /chamar:", err.message);
     }
 
-    // Inicializar sistemas adicionais
-    console.log("🎵 A inicializar sistemas adicionais...");
+    // Sistemas adicionais (voz, embeds, formulários)
     try {
         await entrarCanalVoz(client);
         await enviarEmbedSuporte(client);
         await enviarFormularios(client);
-        console.log("✅ Sistemas adicionais inicializados!");
+        console.log("✅ Sistemas adicionais OK");
     } catch (err) {
-        console.error("❌ Erro nos sistemas adicionais:", err);
+        console.error("❌ Erro sistemas adicionais:", err.message);
     }
 
-    // Status rotativo
+    // Status
     const statusList = [
-        { name: "Jordan Shop | discord.gg/6hhZeqb7Qk", type: ActivityType.Competing },
-        { name: "Os melhores preços!", type: ActivityType.Watching },
-        { name: "Jordan Shop #100", type: ActivityType.Listening },
-        { name: "MELHOR LOJA DE PORTUGAL!!!", type: ActivityType.Playing }
+        { name: "Jordan Shop", type: ActivityType.Playing },
+        { name: "Os melhores preços!", type: ActivityType.Watching }
     ];
-
     let i = 0;
     setInterval(() => {
-        client.user.setPresence({
-            activities: [statusList[i]],
-            status: "online"
-        });
+        client.user.setPresence({ activities: [statusList[i]], status: "online" });
         i = (i + 1) % statusList.length;
-    }, 5000);
-
-    // Log no Discord
-    const LOG_ID = process.env.LOG_CHANNEL_ID || "1437076921627181228";
-    try {
-        const logChannel = await client.channels.fetch(LOG_ID).catch(() => null);
-        if (logChannel) {
-            const agora = new Date().toLocaleTimeString('pt-PT', {
-                timeZone: 'Europe/Lisbon',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            const embedLog = new EmbedBuilder()
-                .setTitle("✅ Bot está online!")
-                .setDescription(`O bot foi iniciado com sucesso!\n\n🕒 **Hora:** ${agora}`)
-                .setColor("#00ff00");
-            await logChannel.send({ embeds: [embedLog] });
-        }
-    } catch (err) {
-        console.error("Erro ao enviar log no Discord.");
-    }
+    }, 10000);
 });
 
-// 2. SISTEMA DE INTERAÇÕES
+// ==================== INTERACTIONS ====================
 try {
     const interactionPath = path.join(__dirname, "src/events/interactionCreate.js");
     if (fs.existsSync(interactionPath)) {
         require(interactionPath)(client);
-        console.log("✅ Sistema de Interações preparado.");
+        console.log("✅ Interações carregadas");
     }
 } catch (e) {
-    console.warn("⚠️ Erro ao configurar interações:", e.message);
+    console.warn("⚠️ Erro interações:", e.message);
 }
 
-// ==================== INICIAR SERVIDOR E BOT ====================
-app.listen(port, () => {
-    console.log(`🌐 SITE OK na porta ${port}`);
-});
+// ==================== INICIAR ====================
+app.listen(port, () => console.log(`🌐 Site na porta ${port}`));
 
+// LOGIN DO BOT - VERIFICAÇÃO ROBUSTA
 const TOKEN = process.env.DISCORD_TOKEN;
 
-console.log("⏳ A iniciar bot...");
+console.log("⏳ Iniciando...");
 
 if (!TOKEN) {
     console.error("❌ ERRO: DISCORD_TOKEN não definido!");
     process.exit(1);
 }
 
+// Verificar formato do token (deve ter pelo menos 2 pontos)
+const partes = TOKEN.split('.');
+if (partes.length !== 3 || TOKEN.length < 50) {
+    console.error("❌ ERRO: Token com formato inválido!");
+    console.error("🔍 Partes encontradas:", partes.length);
+    process.exit(1);
+}
+
+console.log("🔍 Token válido, a fazer login...");
+
 client.login(TOKEN)
-    .then(() => {
-        console.log("📡 Login iniciado, aguardando ready event...");
-    })
+    .then(() => console.log("📡 Login enviado"))
     .catch(err => {
-        console.error("❌ ERRO NO LOGIN:", err.message);
+        console.error("❌ FALHA NO LOGIN:", err.message);
         process.exit(1);
     });
