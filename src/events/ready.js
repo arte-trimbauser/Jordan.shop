@@ -1,5 +1,11 @@
+// src/events/ready.js
 const { EmbedBuilder, ActivityType, REST, Routes } = require("discord.js");
 const { registrarComandoChamar } = require('../commands/chamarCommand');
+const { 
+    entrarCanalVoz, 
+    enviarEmbedSuporte, 
+    enviarFormularios 
+} = require('./sistemaCompleto');
 
 module.exports = async (client) => {
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
@@ -40,6 +46,17 @@ module.exports = async (client) => {
         console.log("✅ Comando /chamar registado com sucesso!");
     } catch (err) {
         console.error("❌ Erro ao registar /chamar:", err);
+    }
+
+    // ==================== INICIALIZAR SISTEMAS ADICIONAIS ====================
+    console.log("🎵 A inicializar sistemas adicionais...");
+    try {
+        await entrarCanalVoz(client);
+        await enviarEmbedSuporte(client);
+        await enviarFormularios(client);
+        console.log("✅ Sistemas adicionais inicializados!");
+    } catch (err) {
+        console.error("❌ Erro ao inicializar sistemas adicionais:", err);
     }
 
     // ==================== STATUS ROTATIVO ====================
@@ -86,15 +103,3 @@ module.exports = async (client) => {
         console.error("Erro ao enviar log de inicialização no Discord.");
     }
 };
-
-// No final do ready.js, adicione:
-const { 
-    entrarCanalVoz, 
-    enviarEmbedSuporte, 
-    enviarFormularios 
-} = require('./sistemaCompleto');
-
-// Chamar quando o bot estiver pronto
-await entrarCanalVoz(client);
-await enviarEmbedSuporte(client);
-await enviarFormularios(client);
