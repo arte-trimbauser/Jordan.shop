@@ -1,202 +1,249 @@
-// src/events/sistemaCompleto.js
+// src/events/sistemaCompleto.js - VERSÃO ATUALIZADA COM CATEGORIA E TICKETS
 const { 
     EmbedBuilder, 
     ActionRowBuilder, 
     ButtonBuilder, 
     ButtonStyle,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
     StringSelectMenuBuilder,
+    StringSelectMenuOptionBuilder,
     ChannelType,
-    PermissionsBitField,
-    ComponentType
+    PermissionFlagsBits
 } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
+const { joinVoiceChannel, VoiceConnectionStatus, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
+const fs = require('fs');
+const path = require('path');
 
-// ==================== CONFIGURAÇÕES ====================
-const CONFIG = {
-    // Canal de voz onde o bot vai entrar
-    voiceChannelId: '1492521949736472757',
-    
-    // Canal do embed de suporte (3 idiomas)
-    supportChannelId: '1393946650128679092',
-    
-    // Canal dos formulários
-    formsChannelId: '1490783323780419664',
-    
-    // Emojis personalizados (DISCORD - arte_10)
-    emojis: {
-        portugal: '<:Flag_of_Portugal:1492525538416267536>',
-        england: '<:Flag_of_England:1492526158309359726>',
-        spain: '<:Flag_of_Spain:1492525567889641583>',
-        bug: '🐛',
-        idea: '💡',
-        star: '⭐',
-        support: '🎧'
-    },
-    
-    // Categorias para tickets por idioma
-    categories: {
-        pt: '1492521949736472758', // Categoria tickets PT
-        en: '1492521949736472759', // Categoria tickets EN
-        es: '1492521949736472760'  // Categoria tickets ES
-    }
+// IDs dos canais
+const CANAL_VOZ_ID = "1492521949736472757";
+const CANAL_TICKET_ID = "1393946650128679092";
+const CANAL_FORMULARIO_ID = "1490783323780419664";
+const CATEGORIA_TICKETS_ID = "1490783459470475414"; // ← CATEGORIA ATUALIZADA
+
+// Emojis personalizados
+const EMOJIS = {
+    pt: "<:Flag_of_Portugal:1492525538416267536>",
+    es: "<:Flag_of_Spain:1492525567889641583>",
+    en: "<:Flag_of_England:1492526158309359726>"
 };
 
-// ==================== SISTEMA DE VOZ ====================
+// Variáveis globais para áudio
 let voiceConnection = null;
 let audioPlayer = null;
+let currentResource = null;
+
+// ============================================================================
+// 1. BOT ENTRA NO CANAL DE VOZ
+// ============================================================================
 
 async function entrarCanalVoz(client) {
     try {
-        const channel = await client.channels.fetch(CONFIG.voiceChannelId);
-        if (!channel || channel.type !== ChannelType.GuildVoice) {
-            console.error('❌ Canal de voz não encontrado ou inválido!');
+        const guild = client.guilds.cache.first();
+        const canal = await guild.channels.fetch(CANAL_VOZ_ID);
+        
+        if (!canal || canal.type !== ChannelType.GuildVoice) {
+            console.log('❌ Canal de voz não encontrado');
             return;
         }
 
         voiceConnection = joinVoiceChannel({
-            channelId: channel.id,
-            guildId: channel.guild.id,
-            adapterCreator: channel.guild.voiceAdapterCreator,
+            channelId: canal.id,
+            guildId: canal.guild.id,
+            adapterCreator: canal.guild.voiceAdapterCreator,
             selfDeaf: false,
             selfMute: true
         });
 
-        // Criar player de áudio (opcional - para tocar algo depois)
-        audioPlayer = createAudioPlayer();
-        voiceConnection.subscribe(audioPlayer);
+        voiceConnection.on(VoiceConnectionStatus.Ready, () => {
+            console.log('✅ Bot entrou no canal de voz:', canal.name);
+        });
 
         voiceConnection.on('error', (err) => {
             console.error('❌ Erro na conexão de voz:', err);
         });
 
-        console.log(`✅ Bot entrou no canal de voz: ${channel.name}`);
     } catch (err) {
         console.error('❌ Erro ao entrar no canal de voz:', err);
     }
 }
 
-// ==================== EMBED DE SUPORTE (3 IDIOMAS) ====================
-async function enviarEmbedSuporte(client) {
+// ============================================================================
+// 1.5 TOCAR ÁUDIO EM LOOP (OPCIONAL)
+// ============================================================================
+
+async function tocarAudioLoop(audioPath) {
     try {
-        const channel = await client.channels.fetch(CONFIG.supportChannelId);
-        if (!channel) {
-            console.error('❌ Canal de suporte não encontrado!');
-            return;
+        if (!fs.existsSync(audioPath)) {
+            console.error(`❌ Ficheiro não encontrado: ${audioPath}`);
+            return false;
         }
 
-        // Embed Principal
-        const embed = new EmbedBuilder()
-            .setTitle(`${CONFIG.emojis.support} Jordan Shop | Central de Suporte`)
-            .setDescription(
-                `Bem-vindo à nossa central de suporte! Escolha o seu idioma abaixo.\n\n` +
-                `${CONFIG.emojis.portugal} **Português** - Suporte em Português\n` +
-                `${CONFIG.emojis.england} **English** - Support in English\n` +
-                `${CONFIG.emojis.spain} **Español** - Soporte en Español`
-            )
-            .setColor('#8b0000')
-            .setImage('https://i.postimg.cc/YCmc9zyY/sucesso-no-neg-cio-61850034.webp')
-            .setFooter({ text: 'Jordan Shop © 2024', iconURL: client.user.displayAvatarURL() })
-            .setTimestamp();
+        if (!audioPlayer) {
+            audioPlayer = createAudioPlayer();
+            
+            audioPlayer.on(AudioPlayerStatus.Idle, () => {
+                if (currentResource && voiceConnection) {
+                    audioPlayer.play(currentResource);
+                }
+            });
 
-        // Menu de seleção de idioma
-        const row = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('select_language_support')
-                .setPlaceholder('🌍 Selecione seu idioma / Select your language')
-                .addOptions([
-                    {
-                        label: 'Português',
-                        description: 'Suporte em Português',
-                        value: 'lang_pt',
-                        emoji: '1492525538416267536' // ID do emoji Portugal
-                    },
-                    {
-                        label: 'English',
-                        description: 'Support in English',
-                        value: 'lang_en',
-                        emoji: '1492526158309359726' // ID do emoji England
-                    },
-                    {
-                        label: 'Español',
-                        description: 'Soporte en Español',
-                        value: 'lang_es',
-                        emoji: '1492525567889641583' // ID do emoji Spain
-                    }
-                ])
-        );
+            audioPlayer.on('error', (err) => {
+                console.error("❌ Erro no player:", err.message);
+            });
+        }
 
-        await channel.send({ embeds: [embed], components: [row] });
-        console.log('✅ Embed de suporte enviado!');
+        currentResource = createAudioResource(audioPath, {
+            inputType: StreamType.Arbitrary,
+            inlineVolume: true
+        });
+
+        if (currentResource.volume) {
+            currentResource.volume.setVolume(0.5);
+        }
+
+        audioPlayer.play(currentResource);
+        
+        if (voiceConnection) {
+            voiceConnection.subscribe(audioPlayer);
+        }
+
+        console.log(`🎵 Áudio em loop: ${path.basename(audioPath)}`);
+        return true;
+
     } catch (err) {
-        console.error('❌ Erro ao enviar embed de suporte:', err);
+        console.error("❌ Erro ao tocar áudio:", err);
+        return false;
     }
 }
 
-// ==================== FORMULÁRIOS ====================
-async function enviarFormularios(client) {
-    try {
-        const channel = await client.channels.fetch(CONFIG.formsChannelId);
-        if (!channel) {
-            console.error('❌ Canal de formulários não encontrado!');
-            return;
-        }
+function pararAudio() {
+    if (audioPlayer) {
+        audioPlayer.stop();
+        console.log("🛑 Áudio parado");
+    }
+}
 
-        // Embed de Formulários
+// ============================================================================
+// 2. EMBED DE SUPORTE COM 3 IDIOMAS
+// ============================================================================
+
+async function enviarEmbedSuporte(client) {
+    try {
+        const canal = await client.channels.fetch(CANAL_TICKET_ID);
+        if (!canal) return console.log('❌ Canal de suporte não encontrado');
+
         const embed = new EmbedBuilder()
-            .setTitle('📝 Jordan Shop | Formulários')
+            .setTitle('🎫 Suporte - Jordan Shop')
             .setDescription(
-                `Ajude-nos a melhorar! Escolha uma opção abaixo:\n\n` +
-                `${CONFIG.emojis.bug} **Reportar Bug** - Encontrou algum problema?\n` +
-                `${CONFIG.emojis.idea} **Sugerir Ideia** - Tem uma sugestão?\n` +
-                `${CONFIG.emojis.star} **Avaliar Bot** - Dê-nos a sua opinião!`
+                `**Para criar um ticket escolhe a opção:**\n` +
+                `${EMOJIS.pt} **Suporte**\n\n` +
+                `**Para abrir tu ticket elije tu opción:**\n` +
+                `${EMOJIS.es} **Suporte**\n\n` +
+                `**To create your ticket select:**\n` +
+                `${EMOJIS.en} **Support option**`
             )
-            .setColor('#5865F2')
-            .setThumbnail(client.user.displayAvatarURL())
-            .setFooter({ text: 'Jordan Shop © 2024', iconURL: client.user.displayAvatarURL() })
+            .setColor('#8b0000')
+            .setFooter({ text: 'Jordan Shop | Sistema de Suporte' })
             .setTimestamp();
 
-        // Botões para formulários
+        const menu = new StringSelectMenuBuilder()
+            .setCustomId('menu_suporte_idioma')
+            .setPlaceholder('🌐 Seleciona o teu idioma / Selecciona tu idioma / Select your language')
+            .addOptions(
+                new StringSelectMenuOptionBuilder()
+                    .setLabel('Português')
+                    .setDescription('Suporte em Português')
+                    .setValue('pt')
+                    .setEmoji('1492525538416267536'),
+                new StringSelectMenuOptionBuilder()
+                    .setLabel('Español')
+                    .setDescription('Soporte en Español')
+                    .setValue('es')
+                    .setEmoji('1492525567889641583'),
+                new StringSelectMenuOptionBuilder()
+                    .setLabel('English')
+                    .setDescription('Support in English')
+                    .setValue('en')
+                    .setEmoji('1492526158309359726')
+            );
+
+        const row = new ActionRowBuilder().addComponents(menu);
+
+        await canal.send({ embeds: [embed], components: [row] });
+        console.log('✅ Embed de suporte enviado');
+
+    } catch (err) {
+        console.error('❌ Erro ao enviar embed:', err);
+    }
+}
+
+// ============================================================================
+// 3. FORMULÁRIOS: BUG, IDEIAS, AVALIAÇÃO
+// ============================================================================
+
+async function enviarFormularios(client) {
+    try {
+        const canal = await client.channels.fetch(CANAL_FORMULARIO_ID);
+        if (!canal) return console.log('❌ Canal de formulários não encontrado');
+
+        const embed = new EmbedBuilder()
+            .setTitle('📋 Centro de Feedback - Jordan Shop')
+            .setDescription(
+                'Bem-vindo ao centro de feedback! Escolhe uma opção abaixo:\n\n' +
+                `🐛 **Reportar Bug** - Encontras-te algum problema?\n` +
+                `💡 **Ideias** - Tens sugestões para melhorar?\n` +
+                `⭐ **Avaliar Bot** - Dá-nos a tua opinião (1-5 estrelas)`
+            )
+            .setColor('#8b0000')
+            .setFooter({ text: 'A tua opinião é importante!' })
+            .setTimestamp();
+
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
-                .setCustomId('form_bug_report')
+                .setCustomId('form_bug')
                 .setLabel('🐛 Reportar Bug')
                 .setStyle(ButtonStyle.Danger),
             new ButtonBuilder()
-                .setCustomId('form_idea_suggest')
-                .setLabel('💡 Sugerir Ideia')
+                .setCustomId('form_ideia')
+                .setLabel('💡 Ideias')
                 .setStyle(ButtonStyle.Primary),
             new ButtonBuilder()
-                .setCustomId('form_rate_bot')
+                .setCustomId('form_avaliar')
                 .setLabel('⭐ Avaliar Bot')
                 .setStyle(ButtonStyle.Success)
         );
 
-        await channel.send({ embeds: [embed], components: [row] });
-        console.log('✅ Formulários enviados!');
+        await canal.send({ embeds: [embed], components: [row] });
+        console.log('✅ Formulários enviados');
+
     } catch (err) {
         console.error('❌ Erro ao enviar formulários:', err);
     }
 }
 
-// ==================== HANDLER DE INTERAÇÕES ====================
-async function handleSistemaInteraction(interaction, client) {
-    const { customId, user, guild, channel } = interaction;
+// ============================================================================
+// CRIAR TICKET (NOVO - COM CATEGORIA)
+// ============================================================================
 
-    // ----- SELEÇÃO DE IDIOMA -----
-    if (customId === 'select_language_support') {
-        const idioma = interaction.values[0];
-        const langData = {
-            'lang_pt': { nome: 'Português', emoji: CONFIG.emojis.portugal, cat: CONFIG.categories.pt },
-            'lang_en': { nome: 'English', emoji: CONFIG.emojis.england, cat: CONFIG.categories.en },
-            'lang_es': { nome: 'Español', emoji: CONFIG.emojis.spain, cat: CONFIG.categories.es }
-        };
+async function criarTicket(interaction, tipo, idioma) {
+    const { guild, user, member } = interaction;
+    
+    const nomes = {
+        pt: { suporte: 'suporte', compra: 'compra', tecnico: 'tecnico' },
+        es: { suporte: 'soporte', compra: 'compra', tecnico: 'tecnico' },
+        en: { suporte: 'support', compra: 'purchase', tecnico: 'technical' }
+    };
 
-        const selecionado = langData[idioma];
-        
-        // Verifica se já existe ticket aberto
+    const prefixo = nomes[idioma][tipo];
+    const nomeCanal = `ticket-${prefixo}-${user.username}`.toLowerCase().replace(/[^a-z0-9-]/g, '');
+
+    try {
+        // Verificar se já existe ticket aberto
         const ticketExistente = guild.channels.cache.find(ch => 
-            ch.name === `ticket-${user.username.toLowerCase()}` && 
-            ch.parentId === selecionado.cat
+            ch.name.includes(`ticket-${prefixo}-${user.username.toLowerCase()}`) &&
+            ch.parentId === CATEGORIA_TICKETS_ID
         );
 
         if (ticketExistente) {
@@ -206,215 +253,279 @@ async function handleSistemaInteraction(interaction, client) {
             });
         }
 
-        // Criar ticket
-        try {
-            const ticketChannel = await guild.channels.create({
-                name: `ticket-${user.username}`.toLowerCase(),
-                type: ChannelType.GuildText,
-                parent: selecionado.cat,
-                topic: `${user.id}|${idioma}`,
-                permissionOverwrites: [
-                    { id: guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-                    {
-                        id: user.id,
-                        allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles]
-                    }
-                ]
-            });
-
-            const embedTicket = new EmbedBuilder()
-                .setTitle(`${selecionado.emoji} Ticket de Suporte - ${selecionado.nome}`)
-                .setDescription(
-                    idioma === 'lang_pt' ? 
-                        `Olá <@${user.id}>! Bem-vindo ao suporte em **${selecionado.nome}**.\n\nDescreva o seu problema e aguarde por um membro da staff.` :
-                    idioma === 'lang_en' ?
-                        `Hello <@${user.id}>! Welcome to **${selecionado.nome}** support.\n\nDescribe your issue and wait for a staff member.` :
-                        `¡Hola <@${user.id}>! Bienvenido al soporte en **${selecionado.nome}**.\n\nDescribe tu problema y espera a un miembro del staff.`
-                )
-                .setColor('#8b0000');
-
-            const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId('close_ticket_lang')
-                    .setLabel(idioma === 'lang_pt' ? '🔒 Fechar Ticket' : idioma === 'lang_en' ? '🔒 Close Ticket' : '🔒 Cerrar Ticket')
-                    .setStyle(ButtonStyle.Danger)
-            );
-
-            await ticketChannel.send({ content: `<@${user.id}>`, embeds: [embedTicket], components: [row] });
-
-            await interaction.reply({
-                content: `✅ Ticket criado: ${ticketChannel}`,
-                flags: [64]
-            });
-        } catch (err) {
-            console.error(err);
-            await interaction.reply({ content: '❌ Erro ao criar ticket.', flags: [64] });
-        }
-        return true;
-    }
-
-    // ----- FORMULÁRIO: REPORTAR BUG -----
-    if (customId === 'form_bug_report') {
-        const modal = {
-            title: '🐛 Reportar Bug',
-            custom_id: 'modal_bug_report',
-            components: [
+        // Criar canal de ticket
+        const ticketChannel = await guild.channels.create({
+            name: nomeCanal,
+            type: ChannelType.GuildText,
+            parent: CATEGORIA_TICKETS_ID,
+            topic: `${user.id}|${tipo}|${idioma}`,
+            permissionOverwrites: [
                 {
-                    type: 1,
-                    components: [{
-                        type: 4,
-                        custom_id: 'bug_titulo',
-                        label: 'Título do Bug',
-                        style: 1,
-                        placeholder: 'Ex: Erro ao adicionar ao carrinho',
-                        required: true,
-                        max_length: 100
-                    }]
+                    id: guild.id,
+                    deny: [PermissionFlagsBits.ViewChannel]
                 },
                 {
-                    type: 1,
-                    components: [{
-                        type: 4,
-                        custom_id: 'bug_descricao',
-                        label: 'Descrição detalhada',
-                        style: 2,
-                        placeholder: 'Descreva o bug passo a passo...',
-                        required: true,
-                        max_length: 1000
-                    }]
+                    id: user.id,
+                    allow: [
+                        PermissionFlagsBits.ViewChannel,
+                        PermissionFlagsBits.SendMessages,
+                        PermissionFlagsBits.AttachFiles,
+                        PermissionFlagsBits.ReadMessageHistory
+                    ]
                 }
             ]
-        };
-        await interaction.showModal(modal);
-        return true;
-    }
+        });
 
-    // ----- FORMULÁRIO: SUGERIR IDEIA -----
-    if (customId === 'form_idea_suggest') {
-        const modal = {
-            title: '💡 Sugerir Ideia',
-            custom_id: 'modal_idea_suggest',
-            components: [
-                {
-                    type: 1,
-                    components: [{
-                        type: 4,
-                        custom_id: 'idea_titulo',
-                        label: 'Título da Ideia',
-                        style: 1,
-                        placeholder: 'Ex: Novo sistema de pontos',
-                        required: true,
-                        max_length: 100
-                    }]
-                },
-                {
-                    type: 1,
-                    components: [{
-                        type: 4,
-                        custom_id: 'idea_descricao',
-                        label: 'Descrição da ideia',
-                        style: 2,
-                        placeholder: 'Explique a sua sugestão...',
-                        required: true,
-                        max_length: 1000
-                    }]
-                }
-            ]
+        // Textos por idioma
+        const textos = {
+            pt: {
+                titulo: '🎫 Ticket de Suporte',
+                desc: `Olá <@${user.id}>!\n\nObrigado por contactares o suporte. A equipa da Jordan Shop irá ajudar-te brevemente.\n\n**Tipo:** Suporte ${tipo}`,
+                fechar: '🔒 Fechar Ticket'
+            },
+            es: {
+                titulo: '🎫 Ticket de Soporte',
+                desc: `¡Hola <@${user.id}>!\n\nGracias por contactar con el soporte. El equipo de Jordan Shop te ayudará pronto.\n\n**Tipo:** Soporte ${tipo}`,
+                fechar: '🔒 Cerrar Ticket'
+            },
+            en: {
+                titulo: '🎫 Support Ticket',
+                desc: `Hello <@${user.id}>!\n\nThank you for contacting support. The Jordan Shop team will help you shortly.\n\n**Type:** ${tipo} Support`,
+                fechar: '🔒 Close Ticket'
+            }
         };
-        await interaction.showModal(modal);
-        return true;
-    }
 
-    // ----- FORMULÁRIO: AVALIAR BOT -----
-    if (customId === 'form_rate_bot') {
+        const t = textos[idioma];
+
         const embed = new EmbedBuilder()
-            .setTitle('⭐ Avalie o Bot')
-            .setDescription('Quantas estrelas o bot merece?')
-            .setColor('#FFD700');
+            .setTitle(t.titulo)
+            .setDescription(t.desc)
+            .setColor('#8b0000')
+            .setTimestamp();
 
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('rate_1').setLabel('⭐').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('rate_2').setLabel('⭐⭐').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('rate_3').setLabel('⭐⭐⭐').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('rate_4').setLabel('⭐⭐⭐⭐').setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId('rate_5').setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Primary)
+            new ButtonBuilder()
+                .setCustomId('fechar_ticket')
+                .setLabel(t.fechar)
+                .setStyle(ButtonStyle.Danger)
         );
 
-        await interaction.reply({ embeds: [embed], components: [row], flags: [64] });
-        return true;
-    }
+        await ticketChannel.send({ content: `<@${user.id}>`, embeds: [embed], components: [row] });
 
-    // ----- AVALIAÇÃO COM ESTRELAS -----
-    if (customId?.startsWith('rate_')) {
-        const estrelas = customId.replace('rate_', '');
-        const stars = '⭐'.repeat(parseInt(estrelas));
-        
-        // Enviar para canal de logs
-        const logChannel = await guild.channels.fetch(process.env.LOG_CHANNEL_ID || "1437076921627181228");
-        if (logChannel) {
-            const embed = new EmbedBuilder()
-                .setTitle('⭐ Nova Avaliação')
-                .setDescription(`**Utilizador:** <@${user.id}>\n**Avaliação:** ${stars}\n**Data:** <t:${Math.floor(Date.now()/1000)}:F>`)
-                .setColor('#FFD700');
-            await logChannel.send({ embeds: [embed] });
-        }
-
-        await interaction.update({ 
-            content: `✅ Obrigado pela sua avaliação de ${stars}!`, 
-            embeds: [], 
-            components: [] 
+        await interaction.reply({
+            content: `✅ Ticket criado: ${ticketChannel}`,
+            flags: [64]
         });
-        return true;
+
+    } catch (err) {
+        console.error('❌ Erro ao criar ticket:', err);
+        await interaction.reply({
+            content: '❌ Erro ao criar ticket. Contacta um administrador.',
+            flags: [64]
+        });
     }
+}
 
-    // ----- MODAL SUBMIT: BUG -----
-    if (customId === 'modal_bug_report') {
-        const titulo = interaction.fields.getTextInputValue('bug_titulo');
-        const descricao = interaction.fields.getTextInputValue('bug_descricao');
+// ============================================================================
+// HANDLERS
+// ============================================================================
 
-        const logChannel = await guild.channels.fetch(process.env.LOG_CHANNEL_ID || "1437076921627181228");
+async function handleMenuSuporte(interaction) {
+    const idioma = interaction.values[0];
+    
+    const textos = {
+        pt: { titulo: '🎫 Criar Ticket', desc: 'Escolhe o tipo de suporte:', suporte: 'Suporte Geral', compra: 'Ajuda com Compra', tecnico: 'Problema Técnico' },
+        es: { titulo: '🎫 Crear Ticket', desc: 'Elige el tipo de soporte:', suporte: 'Soporte General', compra: 'Ayuda con Compra', tecnico: 'Problema Técnico' },
+        en: { titulo: '🎫 Create Ticket', desc: 'Choose support type:', suporte: 'General Support', compra: 'Purchase Help', tecnico: 'Technical Issue' }
+    };
+
+    const t = textos[idioma];
+
+    const embed = new EmbedBuilder()
+        .setTitle(t.titulo)
+        .setDescription(t.desc)
+        .setColor('#8b0000');
+
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId(`ticket_suporte_${idioma}`).setLabel(t.suporte).setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId(`ticket_compra_${idioma}`).setLabel(t.compra).setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`ticket_tecnico_${idioma}`).setLabel(t.tecnico).setStyle(ButtonStyle.Danger)
+    );
+
+    await interaction.reply({ embeds: [embed], components: [row], flags: [64] });
+}
+
+async function handleFormBug(interaction) {
+    const modal = new ModalBuilder()
+        .setCustomId('modal_bug')
+        .setTitle('🐛 Reportar Bug');
+
+    const input1 = new TextInputBuilder()
+        .setCustomId('descricao_bug')
+        .setLabel('Descrição do Bug')
+        .setPlaceholder('Descreve o bug detalhadamente...')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setMaxLength(1000);
+
+    const input2 = new TextInputBuilder()
+        .setCustomId('canal_bug')
+        .setLabel('Canal onde ocorreu (opcional)')
+        .setPlaceholder('Ex: #geral ou ID do canal')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false)
+        .setMaxLength(100);
+
+    modal.addComponents(
+        new ActionRowBuilder().addComponents(input1),
+        new ActionRowBuilder().addComponents(input2)
+    );
+    
+    await interaction.showModal(modal);
+}
+
+async function handleFormIdeia(interaction) {
+    const modal = new ModalBuilder()
+        .setCustomId('modal_ideia')
+        .setTitle('💡 Sugestão');
+
+    const input = new TextInputBuilder()
+        .setCustomId('descricao_ideia')
+        .setLabel('A tua ideia')
+        .setPlaceholder('Descreve a tua sugestão...')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setMaxLength(2000);
+
+    modal.addComponents(new ActionRowBuilder().addComponents(input));
+    await interaction.showModal(modal);
+}
+
+async function handleFormAvaliar(interaction) {
+    const embed = new EmbedBuilder()
+        .setTitle('⭐ Avalia o Jordan Shop')
+        .setDescription('Quantas estrelas dás ao nosso serviço (bot)?')
+        .setColor('#FFD700');
+
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('avaliar_1').setLabel('⭐').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('avaliar_2').setLabel('⭐⭐').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('avaliar_3').setLabel('⭐⭐⭐').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('avaliar_4').setLabel('⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('avaliar_5').setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary)
+    );
+
+    await interaction.reply({ embeds: [embed], components: [row], flags: [64] });
+}
+
+async function handleAvaliacaoEstrelas(interaction, estrelas) {
+    const modal = new ModalBuilder()
+        .setCustomId(`modal_avaliacao_${estrelas}`)
+        .setTitle(`⭐ Avaliação: ${estrelas} Estrelas`);
+
+    const input = new TextInputBuilder()
+        .setCustomId('motivo_avaliacao')
+        .setLabel('Comentário (opcional)')
+        .setPlaceholder('Conta-nos o que gostaste ou como podemos melhorar...')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(false)
+        .setMaxLength(1000);
+
+    modal.addComponents(new ActionRowBuilder().addComponents(input));
+    await interaction.showModal(modal);
+}
+
+async function handleModalSubmit(interaction) {
+    const { customId, fields, user } = interaction;
+    
+    // Enviar para canal de logs
+    const LOG_ID = process.env.LOG_CHANNEL_ID || "1437076921627181228";
+    const logChannel = await interaction.guild.channels.fetch(LOG_ID).catch(() => null);
+    
+    if (customId === 'modal_bug') {
+        const descricao = fields.getTextInputValue('descricao_bug');
+        const canal = fields.getTextInputValue('canal_bug') || 'Não especificado';
+        
         if (logChannel) {
             const embed = new EmbedBuilder()
                 .setTitle('🐛 Novo Bug Reportado')
                 .addFields(
                     { name: 'Utilizador', value: `<@${user.id}>`, inline: true },
-                    { name: 'Título', value: titulo, inline: true },
+                    { name: 'Canal', value: canal, inline: true },
                     { name: 'Descrição', value: descricao }
                 )
                 .setColor('#FF0000')
                 .setTimestamp();
             await logChannel.send({ embeds: [embed] });
         }
-
+        
         await interaction.reply({ content: '✅ Bug reportado com sucesso! Obrigado.', flags: [64] });
-        return true;
     }
-
-    // ----- MODAL SUBMIT: IDEIA -----
-    if (customId === 'modal_idea_suggest') {
-        const titulo = interaction.fields.getTextInputValue('idea_titulo');
-        const descricao = interaction.fields.getTextInputValue('idea_descricao');
-
-        const logChannel = await guild.channels.fetch(process.env.LOG_CHANNEL_ID || "1437076921627181228");
+    else if (customId === 'modal_ideia') {
+        const ideia = fields.getTextInputValue('descricao_ideia');
+        
         if (logChannel) {
             const embed = new EmbedBuilder()
                 .setTitle('💡 Nova Sugestão')
                 .addFields(
                     { name: 'Utilizador', value: `<@${user.id}>`, inline: true },
-                    { name: 'Título', value: titulo, inline: true },
-                    { name: 'Descrição', value: descricao }
+                    { name: 'Ideia', value: ideia }
                 )
                 .setColor('#5865F2')
                 .setTimestamp();
             await logChannel.send({ embeds: [embed] });
         }
+        
+        await interaction.reply({ content: '💡 Obrigado pela tua sugestão!', flags: [64] });
+    }
+    else if (customId.startsWith('modal_avaliacao_')) {
+        const estrelas = customId.split('_')[2];
+        const motivo = fields.getTextInputValue('motivo_avaliacao') || 'Sem comentário';
+        
+        if (logChannel) {
+            const embed = new EmbedBuilder()
+                .setTitle('⭐ Nova Avaliação')
+                .addFields(
+                    { name: 'Utilizador', value: `<@${user.id}>`, inline: true },
+                    { name: 'Avaliação', value: '⭐'.repeat(parseInt(estrelas)), inline: true },
+                    { name: 'Comentário', value: motivo }
+                )
+                .setColor('#FFD700')
+                .setTimestamp();
+            await logChannel.send({ embeds: [embed] });
+        }
+        
+        await interaction.reply({ 
+            content: `⭐ Obrigado pela tua avaliação de ${estrelas} estrelas!`, 
+            flags: [64] 
+        });
+    }
+}
 
-        await interaction.reply({ content: '✅ Ideia enviada com sucesso! Obrigado.', flags: [64] });
+// ============================================================================
+// HANDLER PRINCIPAL
+// ============================================================================
+
+async function handleSistemaInteraction(interaction, client) {
+    // Menu de idioma
+    if (interaction.isStringSelectMenu() && interaction.customId === 'menu_suporte_idioma') {
+        await handleMenuSuporte(interaction);
         return true;
     }
-
-    // ----- FECHAR TICKET DE IDIOMA -----
-    if (customId === 'close_ticket_lang') {
+    
+    // Botões de ticket (suporte, compra, tecnico)
+    if (interaction.isButton() && interaction.customId.startsWith('ticket_')) {
+        const parts = interaction.customId.split('_');
+        const tipo = parts[1]; // suporte, compra, tecnico
+        const idioma = parts[2]; // pt, es, en
+        
+        await criarTicket(interaction, tipo, idioma);
+        return true;
+    }
+    
+    // Botão fechar ticket
+    if (interaction.isButton() && interaction.customId === 'fechar_ticket') {
+        const { channel } = interaction;
         if (!channel.name.startsWith('ticket-')) {
             return interaction.reply({ content: '❌ Este não é um canal de ticket.', flags: [64] });
         }
@@ -422,8 +533,35 @@ async function handleSistemaInteraction(interaction, client) {
         setTimeout(() => channel.delete().catch(() => {}), 5000);
         return true;
     }
-
-    return false; // Não processou esta interação
+    
+    // Botões de formulário
+    if (interaction.isButton()) {
+        if (interaction.customId === 'form_bug') {
+            await handleFormBug(interaction);
+            return true;
+        }
+        if (interaction.customId === 'form_ideia') {
+            await handleFormIdeia(interaction);
+            return true;
+        }
+        if (interaction.customId === 'form_avaliar') {
+            await handleFormAvaliar(interaction);
+            return true;
+        }
+        if (interaction.customId.startsWith('avaliar_')) {
+            const estrelas = interaction.customId.split('_')[1];
+            await handleAvaliacaoEstrelas(interaction, estrelas);
+            return true;
+        }
+    }
+    
+    // Modais
+    if (interaction.isModalSubmit()) {
+        await handleModalSubmit(interaction);
+        return true;
+    }
+    
+    return false;
 }
 
 module.exports = {
@@ -431,5 +569,6 @@ module.exports = {
     enviarEmbedSuporte,
     enviarFormularios,
     handleSistemaInteraction,
-    CONFIG
+    tocarAudioLoop,
+    pararAudio
 };
