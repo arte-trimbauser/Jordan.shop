@@ -1,4 +1,3 @@
-// index.js - VERSÃO MÍNIMA E FUNCIONAL
 require("dotenv").config();
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
@@ -9,6 +8,15 @@ const fs = require("fs");
 const axios = require("axios");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const { registrarComandoChamar, handleChamarCommand } = require('./src/commands/chamarCommand');
+
+// ADICIONAR NO TOPO DO index.js (depois dos requires existentes)
+const { 
+    entrarCanalVoz, 
+    enviarEmbedSuporte, 
+    enviarFormularios,
+    handleSistemaInteraction 
+} = require('./src/events/sistemaCompleto');
 
 const {
     Client,
@@ -17,41 +25,22 @@ const {
     EmbedBuilder,
     ActionRowBuilder,
     StringSelectMenuBuilder,
-    Events,
-    REST,
-    Routes
+    Events
 } = require("discord.js");
 
-const { 
-    entrarCanalVoz, 
-    enviarEmbedSuporte, 
-    enviarFormularios 
-} = require('./src/events/sistemaCompleto');
-
-const { registrarComandoChamar } = require('./src/commands/chamarCommand');
-
-// ==================== CLIENT DISCORD ====================
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildVoiceStates
+        GatewayIntentBits.MessageContent
     ]
 });
 
-// Debug seguro (não mostra token)
-client.on("debug", (info) => {
-    if (info.toLowerCase().includes("token")) return;
-    console.log(`[DEBUG] ${info}`);
-});
-client.on("error", (err) => console.error(`[ERRO] ${err.message}`));
-client.on("warn", (info) => console.warn(`[AVISO] ${info}`));
+// Carrinho global (necessário)
+const carrinhos = new Map();
 
-// Carrinho global
-client.carrinhos = new Map();
-
+// ✅ ADICIONA ISTO AQUI
 const staffAutorizado = {
     "924344854232834068": "Jordan Costa",
     "996454465555136675": "Arteex26",
@@ -62,55 +51,88 @@ const staffAutorizado = {
 
 let tokensAtivos = new Set();
 
-// --- SUPABASE ---
+// --- CONFIGURAÇÃO SUPABASE ---
 const { createClient } = require("@supabase/supabase-js");
 const supabase = createClient(
     "https://fdbmhgcfhdnnpwuodxzh.supabase.co",
     process.env.SUPABASE_KEY
 );
 
-// ==================== EXPRESS ====================
 const app = express();
 const port = process.env.PORT || 10000;
 
+// ✅ MUDANÇA 1: Removido primeiro helmet() duplicado (linhas 54-64)
+// ✅ Fica só este, o completo:
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "cdn.jsdelivr.net", "cdnjs.cloudflare.com"],
+            scriptSrc: [
+                "'self'",
+                "'unsafe-inline'",
+                "fonts.googleapis.com",
+                "cdn.jsdelivr.net",
+                "cdnjs.cloudflare.com"
+            ],
             scriptSrcAttr: ["'unsafe-inline'"],
             styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "fonts.gstatic.com"],
             fontSrc: ["'self'", "fonts.googleapis.com", "fonts.gstatic.com"],
-            imgSrc: ["'self'", "data:", "https://i.postimg.cc", "https://cdn.discordapp.com"],
+            imgSrc: ["'self'", "data:", "https://i.postimg.cc", "https://cdn.discordapp.com", "https://cdnjs.cloudflare.com"],
             connectSrc: ["'self'"],
-            frameSrc: ["'self'"]
+            frameSrc: ["'self'"]  // ← CORRIGIDO: permitir iframes do mesmo site
         }
     }
 }));
 
 app.use(express.json({ limit: "1mb" }));
-app.use(rateLimit({ windowMs: 60 * 1000, max: 1000 }));
+
+const limiter = rateLimit({ 
+    windowMs: 60 * 1000, 
+    max: 1000  // ← Aumentar de 120 para 1000
+});
+app.use(limiter);
+
 app.use(express.static(path.join(__dirname, "site"), { index: false }));
 
-// Rotas básicas
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "site", "login.html")));
+// Rotas Login
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "site", "login.html"));
+});
 
+// ✅ ADICIONAR ISTO — Listar transcripts do Supabase
 app.get("/api/list-transcripts", async (req, res) => {
-    const { data, error } = await supabase.storage.from("transcripts").list("transcripts", { sortBy: { column: "created_at", order: "desc" } });
-    if (error) return res.status(500).json({ error: error.message });
+    const { data, error } = await supabase.storage
+        .from("transcripts")
+        .list("transcripts", { sortBy: { column: "created_at", order: "desc" } });
+
+    if (error) {
+        console.error("Erro Supabase list:", error.message);
+        return res.status(500).json({ error: error.message });
+    }
     res.json(data || []);
 });
 
+
+// ✅ MUDANÇA 2: Removida primeira rota /transcripts/:id duplicada (linhas 95-103)
+// ✅ MUDANÇA 3: Corrigido caminho — era transcripts/transcripts/, agora é transcripts/
 app.get("/transcripts/:id", async (req, res) => {
     const id = req.params.id.replace('.html', '');
-    const { data, error } = await supabase.storage.from("transcripts").download(`transcripts/${id}.html`);
+    const { data, error } = await supabase.storage
+        .from("transcripts")
+        .download(`transcripts/${id}.html`);
+
     if (error || !data) return res.status(404).send("Transcript não encontrado.");
+
+    const text = await data.text();
     res.setHeader("Content-Type", "text/html");
-    res.send(await data.text());
+    res.send(text);
 });
 
 app.post("/api/login-manual", async (req, res) => {
     const { username, password } = req.body;
+    if (!username || !password)
+        return res.status(400).json({ success: false });
+
     const loginValido =
         (username === "Jordan Costa" && password === "Jordan26Costa") ||
         (username === "Arteex26" && password === "Arteex_26") ||
@@ -118,13 +140,23 @@ app.post("/api/login-manual", async (req, res) => {
         (username === "migueldodrip_09110" && password === "migueldodrip") ||
         (username === "pincher11" && password === "pincher11");
 
-    if (!loginValido) return res.status(401).json({ success: false });
+    if (!loginValido)
+        return res.status(401).json({ success: false });
 
     const tokenSessao = Math.random().toString(36).substring(2);
     tokensAtivos.add(tokenSessao);
+
+    try {
+        const canalLogsLogin = await client.channels.fetch("1437076921627181228").catch(() => null);
+        if (canalLogsLogin) {
+            canalLogsLogin.send(`🔐 **[SISTEMA]** O utilizador **${username}** acabou de entrar no painel de controlo da Jordan Shop.`);
+        }
+    } catch {}
+
     res.json({ success: true, user: username, token: tokenSessao });
 });
 
+// Callback Discord (mantido igual)
 app.get("/callback", async (req, res) => {
     const code = req.query.code;
     if (!code) return res.redirect("/login.html?error=no_code");
@@ -143,129 +175,135 @@ app.get("/callback", async (req, res) => {
             headers: { Authorization: `Bearer ${tokenRes.data.access_token}` }
         });
 
-        if (!staffAutorizado[userRes.data.id])
+        const discordID = userRes.data.id;
+        const discordUser = userRes.data.username;
+
+        if (!staffAutorizado[discordID])
             return res.redirect("/login.html?error=nao_autorizado");
 
         const tokenSessao = Math.random().toString(36).substring(2);
         tokensAtivos.add(tokenSessao);
-        res.redirect(`/loja.html?user=${encodeURIComponent(userRes.data.username)}&token=${tokenSessao}`);
+
+        res.redirect(`/loja.html?user=${encodeURIComponent(discordUser)}&token=${tokenSessao}`);
     } catch {
         res.redirect("/login.html?error=auth_failed");
     }
 });
 
+// Enviar Embed (mantido igual)
 app.post("/api/enviar-embed", async (req, res) => {
     const { titulo, desc, cor, canalId, produtos } = req.body;
-    if (!titulo || !desc || !canalId) return res.status(400).send("Faltam campos.");
+    if (!titulo || !desc || !canalId)
+        return res.status(400).send("Faltam campos.");
 
     try {
         const canal = await client.channels.fetch(canalId);
-        const embed = new EmbedBuilder().setTitle(titulo).setDescription(desc).setColor(cor || "#8b0000");
-        const components = [];
-        if (produtos?.length) {
-            const selectMenu = new StringSelectMenuBuilder()
-                .setCustomId("menu_produtos")
-                .setPlaceholder("Escolhe uma opção")
-                .addOptions(produtos.map((p, i) => ({
-                    label: p.nome,
-                    description: `Preço: ${p.preco}`,
-                    value: `prod_${p.nome.replace(/\s+/g, "_").toLowerCase()}_${i}`
-                })));
-            components.push(new ActionRowBuilder().addComponents(selectMenu));
-        }
-        await canal.send({ embeds: [embed], components });
-        res.send("✅ Enviado!");
-    } catch (error) {
-        console.error(error);
-        res.status(500).send("Erro ao comunicar com o Discord.");
-    }
+        if (!canal) return res.status(404).send("Canal não encontrado.");
+
+    const embed = new EmbedBuilder()
+    .setTitle(titulo)
+    .setDescription(desc)
+    .setColor(cor || "#8b0000");
+
+const components = [];
+if (produtos?.length) {
+    const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId("menu_produtos")
+        .setPlaceholder("Escolhe uma opção")
+        .addOptions(produtos.map((p, i) => ({
+            label: p.nome,
+            description: `Preço: ${p.preco}`,
+            value: `prod_${p.nome.replace(/\s+/g, "_").toLowerCase()}_${i}`
+        })));
+    components.push(new ActionRowBuilder().addComponents(selectMenu));
+}
+
+await canal.send({ embeds: [embed], components });
+res.send("✅ Enviado!");
+// ✅ MUDANÇA 4: Removido }); solitário (linhas 172-173)
+} catch (error) {
+    console.error(error);
+    res.status(500).send("Erro ao comunicar com o Discord.");
+}
+
 });
 
-// ==================== EVENTO READY ====================
-client.once(Events.ClientReady, async () => {
-    console.log(`✅ BOT ONLINE: ${client.user.tag}`);
-    
-    // Slash commands
+// Inicialização
+const inicializarBot = () => {
     try {
-        const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
-        const adicionar = require("./src/commands/adicionar");
-        const carrinho = require("./src/commands/carrinho");
-        const commands = [adicionar, carrinho].filter(Boolean).map(cmd => cmd.data.toJSON());
-        
-        await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
-        await rest.put(Routes.applicationGuildCommands(client.user.id, "1393629457599828040"), { body: commands });
-        console.log(`✅ ${commands.length} comandos registados`);
+        const interactionPath = path.join(__dirname, "src/events/interactionCreate.js");
+        if (fs.existsSync(interactionPath)) {
+            require(interactionPath)(client);
+            console.log("✅ Sistema de Interações preparado.");
+        }
+
+        const readyPath = path.join(__dirname, "src/events/ready.js");
+        if (fs.existsSync(readyPath)) {
+            const readyEvent = require(readyPath);
+            if (typeof readyEvent === "function") {
+                client.once(Events.ClientReady, (...args) => readyEvent(client, ...args));
+                console.log("✅ Evento Ready configurado.");
+            }
+        }
+    } catch (e) {
+        console.warn("⚠️ Erro ao configurar eventos:", e.message);
+    }
+};
+
+inicializarBot();
+
+const TOKEN = process.env.DISCORD_TOKEN;
+if (!TOKEN) {
+    console.error("❌ Token não encontrado!");
+    process.exit(1);
+}
+
+// ✅ MUDANÇA 5: Movido app.listen para fora do client.once, antes do client.login
+app.listen(port, () => {
+    console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
+});
+
+
+
+client.login(TOKEN)
+    .then(() => console.log("✅ Pedido de login enviado ao Discord"))
+    .catch(err => console.error("❌ ERRO NO LOGIN:", err));
+
+// ==================== EVENTO READY ====================
+// SUBSTITUIR o client.once(Events.ClientReady, ...) atual por este:
+
+client.once(Events.ClientReady, async () => {
+    console.log(`🤖 Bot ligado como ${client.user.tag}`);
+
+    // 1. Entrar no canal de voz
+    try {
+        await entrarCanalVoz(client);
+        console.log("✅ Bot entrou no canal de voz");
     } catch (err) {
-        console.error("❌ Erro comandos:", err.message);
+        console.error("❌ Erro ao entrar no canal de voz:", err.message);
     }
 
-    // Comando /chamar
+    // 2. Enviar embed de suporte (3 idiomas)
+    try {
+        await enviarEmbedSuporte(client);
+        console.log("✅ Embed de suporte enviado");
+    } catch (err) {
+        console.error("❌ Erro ao enviar embed de suporte:", err.message);
+    }
+
+    // 3. Enviar formulários
+    try {
+        await enviarFormularios(client);
+        console.log("✅ Formulários enviados");
+    } catch (err) {
+        console.error("❌ Erro ao enviar formulários:", err.message);
+    }
+
+    // 4. Registrar comando /chamar
     try {
         await registrarComandoChamar(client);
         console.log("✅ Comando /chamar registado");
     } catch (err) {
-        console.error("❌ Erro /chamar:", err.message);
+        console.error("❌ Erro ao registar /chamar:", err.message);
     }
-
-    // Sistemas adicionais (voz, embeds, formulários)
-    try {
-        await entrarCanalVoz(client);
-        await enviarEmbedSuporte(client);
-        await enviarFormularios(client);
-        console.log("✅ Sistemas adicionais OK");
-    } catch (err) {
-        console.error("❌ Erro sistemas adicionais:", err.message);
-    }
-
-    // Status
-    const statusList = [
-        { name: "Jordan Shop", type: ActivityType.Playing },
-        { name: "Os melhores preços!", type: ActivityType.Watching }
-    ];
-    let i = 0;
-    setInterval(() => {
-        client.user.setPresence({ activities: [statusList[i]], status: "online" });
-        i = (i + 1) % statusList.length;
-    }, 10000);
 });
-
-// ==================== INTERACTIONS ====================
-try {
-    const interactionPath = path.join(__dirname, "src/events/interactionCreate.js");
-    if (fs.existsSync(interactionPath)) {
-        require(interactionPath)(client);
-        console.log("✅ Interações carregadas");
-    }
-} catch (e) {
-    console.warn("⚠️ Erro interações:", e.message);
-}
-
-// ==================== INICIAR ====================
-app.listen(port, () => console.log(`🌐 Site na porta ${port}`));
-
-// LOGIN DO BOT - VERIFICAÇÃO ROBUSTA
-const TOKEN = process.env.DISCORD_TOKEN;
-
-console.log("⏳ Iniciando...");
-
-if (!TOKEN) {
-    console.error("❌ ERRO: DISCORD_TOKEN não definido!");
-    process.exit(1);
-}
-
-// Verificar formato do token (deve ter pelo menos 2 pontos)
-const partes = TOKEN.split('.');
-if (partes.length !== 3 || TOKEN.length < 50) {
-    console.error("❌ ERRO: Token com formato inválido!");
-    console.error("🔍 Partes encontradas:", partes.length);
-    process.exit(1);
-}
-
-console.log("🔍 Token válido, a fazer login...");
-
-client.login(TOKEN)
-    .then(() => console.log("📡 Login enviado"))
-    .catch(err => {
-        console.error("❌ FALHA NO LOGIN:", err.message);
-        process.exit(1);
-    });
