@@ -63,7 +63,7 @@ module.exports = async (client) => {
     const statusList = [
         { name: "Jordan Shop | discord.gg/6hhZeqb7Qk", type: ActivityType.Competing },
         { name: "Os melhores preços!", type: ActivityType.Watching },
-        { name: "Jordan Shop #100", type: ActivityType.Listening },
+        { name: "Jordan Shop #150", type: ActivityType.Listening },
         { name: "MELHOR LOJA DE CHE4TS DE PORTUGAL!!!", type: ActivityType.Playing }
     ];
 
