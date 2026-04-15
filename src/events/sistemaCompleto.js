@@ -18,7 +18,7 @@ const path = require('path');
 
 // IDs dos canais
 const CANAL_VOZ_ID = "1492521949736472757";
-const CANAL_TICKET_ID = "1393946650128679092";
+const CANAL_TICKET_ID = "1457415165380268134";
 const CANAL_FORMULARIO_ID = "1490783323780419664";
 const CATEGORIA_TICKETS_ID = "1490783459470475414"; // ← CATEGORIA ATUALIZADA
 
@@ -145,8 +145,7 @@ async function enviarEmbedSuporte(client) {
                 `${EMOJIS.en} **Support option**`
             )
             .setColor('#8b0000')
-            .setFooter({ text: 'Jordan Shop | Sistema de Suporte' })
-            .setTimestamp();
+            .setFooter({ text: 'Jordan Shop | Sistema de Suporte' };
 
         const menu = new StringSelectMenuBuilder()
             .setCustomId('menu_suporte_idioma')
@@ -197,8 +196,7 @@ async function enviarFormularios(client) {
                 `⭐ **Avaliar Bot** - Dá-nos a tua opinião (1-5 estrelas)`
             )
             .setColor('#8b0000')
-            .setFooter({ text: 'A tua opinião é importante!' })
-            .setTimestamp();
+            .setFooter({ text: 'A tua opinião é importante!' });
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
@@ -301,7 +299,7 @@ async function criarTicket(interaction, tipo, idioma) {
             .setTitle(t.titulo)
             .setDescription(t.desc)
             .setColor('#8b0000')
-            .setTimestamp();
+      ;
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
