@@ -145,7 +145,7 @@ async function enviarEmbedSuporte(client) {
                 `${EMOJIS.en} **Support option**`
             )
             .setColor('#8b0000')
-            .setFooter({ text: 'Jordan Shop | Sistema de Suporte' };
+            .setFooter({ text: 'Jordan Shop | Sistema de Suporte' });
 
         const menu = new StringSelectMenuBuilder()
             .setCustomId('menu_suporte_idioma')
@@ -369,7 +369,7 @@ async function handleFormBug(interaction) {
     const input2 = new TextInputBuilder()
         .setCustomId('canal_bug')
         .setLabel('Canal onde ocorreu (opcional)')
-        .setPlaceholder('Ex: #geral ou ID do canal')
+        .setPlaceholder('Ex: geral ou #geral ou ID do canal')
         .setStyle(TextInputStyle.Short)
         .setRequired(false)
         .setMaxLength(100);
@@ -401,7 +401,7 @@ async function handleFormIdeia(interaction) {
 
 async function handleFormAvaliar(interaction) {
     const embed = new EmbedBuilder()
-        .setTitle('⭐ Avalia o Jordan Shop')
+        .setTitle('⭐ Avalia o Jordan Shop Bot')
         .setDescription('Quantas estrelas dás ao nosso serviço (bot)?')
         .setColor('#FFD700');
 
