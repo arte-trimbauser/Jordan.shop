@@ -13,10 +13,10 @@ const {
 
 // CONFIGURAÇÕES - ALTERAR ESTES IDs
 const CONFIG = {
-    CANAL_VERIFICACAO_ID: 'ID_DO_CANAL_VERIFICACAO',      // Canal onde fica o botão de verificar
+    CANAL_VERIFICACAO_ID: '1393690238903128115',      // Canal onde fica o botão de verificar
     CANAL_LOGS_ID: '1437076921627181228',                    // Canal de logs (já tens este)
-    CARGO_NAO_VERIFICADO_ID: 'ID_CARGO_NAO_VERIFICADO',     // Cargo para novos membros
-    CARGO_VERIFICADO_ID: 'ID_CARGO_VERIFICADO',             // Cargo que dá acesso à loja
+    CARGO_NAO_VERIFICADO_ID: '1393658218722623529',     // Cargo para novos membros
+    CARGO_VERIFICADO_ID: '1393658270996234351',             // Cargo que dá acesso à loja
     PALAVRA_CHAVE: 'JORDAN',                                 // Código para verificar
     MINUTO_ESPERA: 0                                         // Minutos de espera antes de verificar (0 = imediato)
 };
