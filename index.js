@@ -10,13 +10,20 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const { registrarComandoChamar, handleChamarCommand } = require('./src/commands/chamarCommand');
 
-// ADICIONAR NO TOPO DO index.js (depois dos requires existentes)
+// Requires do sistemaCompleto
 const { 
     entrarCanalVoz, 
     enviarEmbedSuporte, 
     enviarFormularios,
     handleSistemaInteraction 
 } = require('./src/events/sistemaCompleto');
+
+// Requires do sistemaVerificacao
+const { 
+    enviarVerificacao,
+    inicializarSistemaVerificacao,
+    handleVerificacaoInteraction
+} = require('./src/events/sistemaVerificacao');
 
 const {
     Client,
@@ -25,7 +32,8 @@ const {
     EmbedBuilder,
     ActionRowBuilder,
     StringSelectMenuBuilder,
-    Events
+    Events,
+    MessageFlags
 } = require("discord.js");
 
 const client = new Client({
@@ -33,14 +41,15 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildVoiceStates // ← ESSENCIAL PARA ÁUDIO!
     ]
 });
 
-// Carrinho global (necessário)
+// Carrinho global
 const carrinhos = new Map();
 
-// ✅ ADICIONA ISTO AQUI
+// Staff autorizado
 const staffAutorizado = {
     "924344854232834068": "Jordan Costa",
     "996454465555136675": "Arteex26",
@@ -61,25 +70,17 @@ const supabase = createClient(
 const app = express();
 const port = process.env.PORT || 10000;
 
-// ✅ MUDANÇA 1: Removido primeiro helmet() duplicado (linhas 54-64)
-// ✅ Fica só este, o completo:
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: [
-                "'self'",
-                "'unsafe-inline'",
-                "fonts.googleapis.com",
-                "cdn.jsdelivr.net",
-                "cdnjs.cloudflare.com"
-            ],
+            scriptSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "cdn.jsdelivr.net", "cdnjs.cloudflare.com"],
             scriptSrcAttr: ["'unsafe-inline'"],
             styleSrc: ["'self'", "'unsafe-inline'", "fonts.googleapis.com", "fonts.gstatic.com"],
             fontSrc: ["'self'", "fonts.googleapis.com", "fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "https://i.postimg.cc", "https://cdn.discordapp.com", "https://cdnjs.cloudflare.com"],
             connectSrc: ["'self'"],
-            frameSrc: ["'self'"]  // ← CORRIGIDO: permitir iframes do mesmo site
+            frameSrc: ["'self'"]
         }
     }
 }));
@@ -88,18 +89,17 @@ app.use(express.json({ limit: "1mb" }));
 
 const limiter = rateLimit({ 
     windowMs: 60 * 1000, 
-    max: 1000  // ← Aumentar de 120 para 1000
+    max: 1000
 });
 app.use(limiter);
 
 app.use(express.static(path.join(__dirname, "site"), { index: false }));
 
-// Rotas Login
+// Rotas
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "site", "login.html"));
 });
 
-// ✅ ADICIONAR ISTO — Listar transcripts do Supabase
 app.get("/api/list-transcripts", async (req, res) => {
     const { data, error } = await supabase.storage
         .from("transcripts")
@@ -112,9 +112,6 @@ app.get("/api/list-transcripts", async (req, res) => {
     res.json(data || []);
 });
 
-
-// ✅ MUDANÇA 2: Removida primeira rota /transcripts/:id duplicada (linhas 95-103)
-// ✅ MUDANÇA 3: Corrigido caminho — era transcripts/transcripts/, agora é transcripts/
 app.get("/transcripts/:id", async (req, res) => {
     const id = req.params.id.replace('.html', '');
     const { data, error } = await supabase.storage
@@ -156,7 +153,6 @@ app.post("/api/login-manual", async (req, res) => {
     res.json({ success: true, user: username, token: tokenSessao });
 });
 
-// Callback Discord (mantido igual)
 app.get("/callback", async (req, res) => {
     const code = req.query.code;
     if (!code) return res.redirect("/login.html?error=no_code");
@@ -190,7 +186,6 @@ app.get("/callback", async (req, res) => {
     }
 });
 
-// Enviar Embed (mantido igual)
 app.post("/api/enviar-embed", async (req, res) => {
     const { titulo, desc, cor, canalId, produtos } = req.body;
     if (!titulo || !desc || !canalId)
@@ -200,35 +195,33 @@ app.post("/api/enviar-embed", async (req, res) => {
         const canal = await client.channels.fetch(canalId);
         if (!canal) return res.status(404).send("Canal não encontrado.");
 
-    const embed = new EmbedBuilder()
-    .setTitle(titulo)
-    .setDescription(desc)
-    .setColor(cor || "#8b0000");
+        const embed = new EmbedBuilder()
+            .setTitle(titulo)
+            .setDescription(desc)
+            .setColor(cor || "#8b0000");
 
-const components = [];
-if (produtos?.length) {
-    const selectMenu = new StringSelectMenuBuilder()
-        .setCustomId("menu_produtos")
-        .setPlaceholder("Escolhe uma opção")
-        .addOptions(produtos.map((p, i) => ({
-            label: p.nome,
-            description: `Preço: ${p.preco}`,
-            value: `prod_${p.nome.replace(/\s+/g, "_").toLowerCase()}_${i}`
-        })));
-    components.push(new ActionRowBuilder().addComponents(selectMenu));
-}
+        const components = [];
+        if (produtos?.length) {
+            const selectMenu = new StringSelectMenuBuilder()
+                .setCustomId("menu_produtos")
+                .setPlaceholder("Escolhe uma opção")
+                .addOptions(produtos.map((p, i) => ({
+                    label: p.nome,
+                    description: `Preço: ${p.preco}`,
+                    value: `prod_${p.nome.replace(/\s+/g, "_").toLowerCase()}_${i}`
+                })));
+            components.push(new ActionRowBuilder().addComponents(selectMenu));
+        }
 
-await canal.send({ embeds: [embed], components });
-res.send("✅ Enviado!");
-// ✅ MUDANÇA 4: Removido }); solitário (linhas 172-173)
-} catch (error) {
-    console.error(error);
-    res.status(500).send("Erro ao comunicar com o Discord.");
-}
-
+        await canal.send({ embeds: [embed], components });
+        res.send("✅ Enviado!");
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Erro ao comunicar com o Discord.");
+    }
 });
 
-// Inicialização
+// Inicialização do bot
 const inicializarBot = () => {
     try {
         const interactionPath = path.join(__dirname, "src/events/interactionCreate.js");
@@ -258,20 +251,15 @@ if (!TOKEN) {
     process.exit(1);
 }
 
-// ✅ MUDANÇA 5: Movido app.listen para fora do client.once, antes do client.login
 app.listen(port, () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
 });
-
-
 
 client.login(TOKEN)
     .then(() => console.log("✅ Pedido de login enviado ao Discord"))
     .catch(err => console.error("❌ ERRO NO LOGIN:", err));
 
-// ==================== EVENTO READY ====================
-// SUBSTITUIR o client.once(Events.ClientReady, ...) atual por este:
-
+// Evento Ready
 client.once(Events.ClientReady, async () => {
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
 
@@ -283,7 +271,7 @@ client.once(Events.ClientReady, async () => {
         console.error("❌ Erro ao entrar no canal de voz:", err.message);
     }
 
-    // 2. Enviar embed de suporte (3 idiomas)
+    // 2. Enviar embed de suporte
     try {
         await enviarEmbedSuporte(client);
         console.log("✅ Embed de suporte enviado");
@@ -299,7 +287,16 @@ client.once(Events.ClientReady, async () => {
         console.error("❌ Erro ao enviar formulários:", err.message);
     }
 
-    // 4. Registrar comando /chamar
+    // 4. Inicializar sistema de verificação
+    try {
+        await enviarVerificacao(client);
+        inicializarSistemaVerificacao(client);
+        console.log("✅ Sistema de verificação inicializado");
+    } catch (err) {
+        console.error("❌ Erro ao inicializar verificação:", err.message);
+    }
+
+    // 5. Registrar comando /chamar
     try {
         await registrarComandoChamar(client);
         console.log("✅ Comando /chamar registado");
