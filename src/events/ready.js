@@ -1,11 +1,20 @@
 // src/events/ready.js
 const { EmbedBuilder, ActivityType, REST, Routes } = require("discord.js");
 const { registrarComandoChamar } = require('../commands/chamarCommand');
+
+// Requires do sistemaCompleto (áudio + tickets + formulários)
 const { 
     entrarCanalVoz, 
     enviarEmbedSuporte, 
-    enviarFormularios 
+    enviarFormularios,
+    registrarComandoAudio
 } = require('./sistemaCompleto');
+
+// Requires do sistemaVerificacao (verificação anti-spam - INDEPENDENTE)
+const { 
+    enviarVerificacao,
+    inicializarSistemaVerificacao
+} = require('./sistemaVerificacao');
 
 module.exports = async (client) => {
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
@@ -39,6 +48,15 @@ module.exports = async (client) => {
         console.error("❌ Erro ao registar slash commands:", err);
     }
 
+    // ==================== REGISTAR COMANDO /AUDIO ====================
+    console.log("🎵 A registar comando /audio...");
+    try {
+        await registrarComandoAudio(client);
+        console.log("✅ Comando /audio registado com sucesso!");
+    } catch (err) {
+        console.error("❌ Erro ao registar /audio:", err);
+    }
+
     // ==================== REGISTAR COMANDO /CHAMAR ====================
     console.log("📞 A registar comando /chamar...");
     try {
@@ -57,6 +75,16 @@ module.exports = async (client) => {
         console.log("✅ Sistemas adicionais inicializados!");
     } catch (err) {
         console.error("❌ Erro ao inicializar sistemas adicionais:", err);
+    }
+
+    // ==================== INICIALIZAR SISTEMA DE VERIFICAÇÃO ====================
+    console.log("🛡️ A inicializar sistema de verificação...");
+    try {
+        await enviarVerificacao(client);
+        inicializarSistemaVerificacao(client);
+        console.log("✅ Sistema de verificação inicializado!");
+    } catch (err) {
+        console.error("❌ Erro ao inicializar verificação:", err);
     }
 
     // ==================== STATUS ROTATIVO ====================
