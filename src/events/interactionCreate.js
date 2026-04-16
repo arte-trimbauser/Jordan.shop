@@ -1,3 +1,4 @@
+// src/events/interactionCreate.js
 const {
     EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle,
     PermissionsBitField, StringSelectMenuBuilder, ChannelType
@@ -5,12 +6,11 @@ const {
 const config = require("../config");
 const isStaff = require("../helpers/isStaff");
 const sendTranscript = require("../helpers/sendTranscript");
-const menus = require("../menus"); // ✅ CORRIGIDO: menus agora está importado
+const menus = require("../menus");
 const cooldowns = new Map();
 const { handleChamarCommand, handleFecharTicketSaida } = require("../commands/chamarCommand");
-const { handleSistemaInteraction } = require("./sistemaCompleto"); 
-// Nota: Garante que o nome do ficheiro (sistemaCompleto) está correto
-
+const { handleSistemaInteraction } = require("./sistemaCompleto");
+const { handleVerificacaoInteraction } = require("./sistemaVerificacao"); // ← NOVO
 
 const emojisPagamento = {
     "MBWay": "<:mbway:1464608251516813446>",
@@ -28,11 +28,15 @@ module.exports = (client) => {
     client.on("interactionCreate", async (interaction) => {
         if (!interaction.guild) return;
         
-        // 1. Chamar o sistema de idiomas/voz
+        // 1. Chamar o sistema de idiomas/voz/tickets/formulários
         const processadoPeloSistema = await handleSistemaInteraction(interaction, client);
-        if (processadoPeloSistema) return; 
+        if (processadoPeloSistema) return;
 
-        // 2. Definir as variáveis para o resto do código
+        // 2. Chamar o sistema de verificação (NOVO - independente)
+        const processadoPeloSistemaVerificacao = await handleVerificacaoInteraction(interaction, client);
+        if (processadoPeloSistemaVerificacao) return;
+
+        // 3. Definir as variáveis para o resto do código
         const { guild, channel, user, member, customId: cid } = interaction;
 
         try {
