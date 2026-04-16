@@ -65,9 +65,7 @@ async function enviarVerificacao(client) {
                 '**Ao verificares, concordas com as regras do servidor.**'
             )
             .setColor('#5865F2')
-            .setImage('https://i.postimg.cc/YCmc9zyY/sucesso-no-neg-cio-61850034.webp')
-            .setFooter({ text: 'Sistema de Proteção Anti-Bot' })
-            .setTimestamp();
+            .setFooter({ text: 'Sistema de Proteção Anti-Bot' });
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
