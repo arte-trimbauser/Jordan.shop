@@ -1,4 +1,4 @@
-// src/events/sistemaCompleto.js - VERSÃO COMPLETA COM ÁUDIO
+// src/events/sistemaCompleto.js - SISTEMA DE ÁUDIO + EMBEDS + TICKETS + FORMULÁRIOS
 const { 
     EmbedBuilder, 
     ActionRowBuilder, 
@@ -19,10 +19,15 @@ const {
     createAudioPlayer,
     createAudioResource,
     AudioPlayerStatus,
-    StreamType
+    StreamType,
+    NoSubscriberBehavior
 } = require('@discordjs/voice');
 const fs = require('fs');
 const path = require('path');
+
+// FFmpeg static para funcionar no Render
+const ffmpegPath = require('ffmpeg-static');
+console.log('📁 FFmpeg path:', ffmpegPath);
 
 // IDs dos canais
 const CANAL_VOZ_ID = "1492521949736472757";
@@ -95,7 +100,11 @@ async function tocarAudioLoopInfinito(audioPath) {
 
         // Criar player se não existir
         if (!audioPlayer) {
-            audioPlayer = createAudioPlayer();
+            audioPlayer = createAudioPlayer({
+                behaviors: {
+                    noSubscriber: NoSubscriberBehavior.Play
+                }
+            });
             
             // QUANDO TERMINA, VOLTA A TOCAR (LOOP INFINITO)
             audioPlayer.on(AudioPlayerStatus.Idle, () => {
@@ -113,7 +122,7 @@ async function tocarAudioLoopInfinito(audioPath) {
             });
         }
 
-        // Criar recurso de áudio
+        // Criar recurso de áudio com FFmpeg
         currentResource = createAudioResource(audioPath, {
             inputType: StreamType.Arbitrary,
             inlineVolume: true
@@ -155,7 +164,6 @@ function pararAudio() {
 }
 
 function ajustarVolume(nivel) {
-    // nivel de 0 a 100
     currentVolume = Math.max(0, Math.min(100, nivel)) / 100;
     
     if (currentResource && currentResource.volume) {
@@ -217,7 +225,7 @@ async function handleAudioCommand(interaction) {
             if (sucesso) {
                 await interaction.reply('🎵 JordanShop.mp3 em loop infinito!');
             } else {
-                await interaction.reply('❌ Erro ao tocar ficheiro');
+                await interaction.reply('❌ Erro ao tocar ficheiro. Verifica se o ficheiro existe na pasta /audio/');
             }
             break;
 
@@ -258,7 +266,6 @@ async function enviarEmbedSuporte(client) {
         const canal = await client.channels.fetch(CANAL_TICKET_ID);
         if (!canal) return console.log('❌ Canal de suporte não encontrado');
 
-        // Verificar se já existe
         const mensagens = await canal.messages.fetch({ limit: 10 });
         const jaExiste = mensagens.some(m => 
             m.author.id === client.user.id && 
@@ -330,7 +337,6 @@ async function enviarFormularios(client) {
         const canal = await client.channels.fetch(CANAL_FORMULARIO_ID);
         if (!canal) return console.log('❌ Canal de formulários não encontrado');
 
-        // Verificar se já existe
         const mensagens = await canal.messages.fetch({ limit: 10 });
         const jaExiste = mensagens.some(m => 
             m.author.id === client.user.id && 
@@ -379,11 +385,25 @@ async function enviarFormularios(client) {
 }
 
 // ============================================================================
-// 7. CRIAR TICKET (COM CATEGORIA)
+// 7. CRIAR TICKET (CORRIGIDO - COM DEFER E ANTI-DUPLICADO)
 // ============================================================================
+
+// Mapa para controlar tickets em criação (evita duplicados)
+const ticketsEmCriacao = new Map();
 
 async function criarTicket(interaction, tipo, idioma) {
     const { guild, user, member } = interaction;
+    
+    // Verificar se já está a criar um ticket (anti-duplicado)
+    if (ticketsEmCriacao.has(user.id)) {
+        return interaction.reply({
+            content: '⏳ Já estás a criar um ticket. Aguarda um momento...',
+            flags: [64]
+        });
+    }
+    
+    // Marcar como em criação
+    ticketsEmCriacao.set(user.id, true);
     
     const nomes = {
         pt: { suporte: 'suporte', compra: 'compra', tecnico: 'tecnico' },
@@ -395,6 +415,9 @@ async function criarTicket(interaction, tipo, idioma) {
     const nomeCanal = `ticket-${prefixo}-${user.username}`.toLowerCase().replace(/[^a-z0-9-]/g, '');
 
     try {
+        // DEFER - Responder imediatamente para evitar "Unknown interaction"
+        await interaction.deferReply({ flags: [64] });
+        
         // Verificar se já existe ticket aberto
         const ticketExistente = guild.channels.cache.find(ch => 
             ch.name.includes(`ticket-${prefixo}-${user.username.toLowerCase()}`) &&
@@ -402,9 +425,9 @@ async function criarTicket(interaction, tipo, idioma) {
         );
 
         if (ticketExistente) {
-            return interaction.reply({
-                content: `❌ Já tens um ticket aberto: ${ticketExistente}`,
-                flags: [64]
+            ticketsEmCriacao.delete(user.id);
+            return interaction.editReply({
+                content: `❌ Já tens um ticket aberto: ${ticketExistente}`
             });
         }
 
@@ -466,17 +489,28 @@ async function criarTicket(interaction, tipo, idioma) {
 
         await ticketChannel.send({ content: `<@${user.id}>`, embeds: [embed], components: [row] });
 
-        await interaction.reply({
-            content: `✅ Ticket criado: ${ticketChannel}`,
-            flags: [64]
+        // Responder com editReply (por causa do defer)
+        await interaction.editReply({
+            content: `✅ Ticket criado: ${ticketChannel}`
         });
 
     } catch (err) {
         console.error('❌ Erro ao criar ticket:', err);
-        await interaction.reply({
-            content: '❌ Erro ao criar ticket. Contacta um administrador.',
-            flags: [64]
-        });
+        
+        // Se ainda não respondeu, responder com reply
+        if (interaction.deferred) {
+            await interaction.editReply({
+                content: '❌ Erro ao criar ticket. Contacta um administrador.'
+            });
+        } else {
+            await interaction.reply({
+                content: '❌ Erro ao criar ticket. Contacta um administrador.',
+                flags: [64]
+            });
+        }
+    } finally {
+        // Limpar o mapa de criação
+        ticketsEmCriacao.delete(user.id);
     }
 }
 
@@ -592,7 +626,6 @@ async function handleAvaliacaoEstrelas(interaction, estrelas) {
 async function handleModalSubmit(interaction) {
     const { customId, fields, user } = interaction;
     
-    // Enviar para canal de logs
     const LOG_ID = process.env.LOG_CHANNEL_ID || "1437076921627181228";
     const logChannel = await interaction.guild.channels.fetch(LOG_ID).catch(() => null);
     
