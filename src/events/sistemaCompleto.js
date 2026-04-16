@@ -11,7 +11,8 @@ const {
     StringSelectMenuOptionBuilder,
     ChannelType,
     PermissionFlagsBits,
-    SlashCommandBuilder
+    SlashCommandBuilder,
+    MessageFlags
 } = require('discord.js');
 const { 
     joinVoiceChannel, 
@@ -75,6 +76,8 @@ async function entrarCanalVoz(client) {
             
             // Tocar JordanShop.mp3 em loop infinito
             const audioPath = path.join(__dirname, '..', '..', 'audio', 'JordanShop.mp3');
+            console.log('🎵 A procurar ficheiro:', audioPath);
+            console.log('🎵 Ficheiro existe:', fs.existsSync(audioPath));
             tocarAudioLoopInfinito(audioPath);
         });
 
@@ -98,6 +101,8 @@ async function tocarAudioLoopInfinito(audioPath) {
             return false;
         }
 
+        console.log('🎵 A iniciar reprodução de:', path.basename(audioPath));
+
         // Criar player se não existir
         if (!audioPlayer) {
             audioPlayer = createAudioPlayer({
@@ -114,6 +119,10 @@ async function tocarAudioLoopInfinito(audioPath) {
 
             audioPlayer.on(AudioPlayerStatus.Playing, () => {
                 console.log("🎵 A tocar:", path.basename(audioPath));
+            });
+
+            audioPlayer.on(AudioPlayerStatus.Buffering, () => {
+                console.log("⏳ A bufferizar...");
             });
 
             audioPlayer.on('error', (err) => {
@@ -139,6 +148,7 @@ async function tocarAudioLoopInfinito(audioPath) {
         // Subscrever à conexão
         if (voiceConnection) {
             voiceConnection.subscribe(audioPlayer);
+            console.log('✅ Player subscrito à conexão de voz');
         }
 
         return true;
@@ -223,26 +233,26 @@ async function handleAudioCommand(interaction) {
         case 'play':
             const sucesso = await tocarAudioLoopInfinito(audioPath);
             if (sucesso) {
-                await interaction.reply('🎵 JordanShop.mp3 em loop infinito!');
+                await interaction.reply({ content: '🎵 JordanShop.mp3 em loop infinito!', flags: MessageFlags.Ephemeral });
             } else {
-                await interaction.reply('❌ Erro ao tocar ficheiro. Verifica se o ficheiro existe na pasta /audio/');
+                await interaction.reply({ content: '❌ Erro ao tocar ficheiro. Verifica se o ficheiro existe na pasta /audio/', flags: MessageFlags.Ephemeral });
             }
             break;
 
         case 'stop':
             if (pararAudio()) {
-                await interaction.reply('🛑 Áudio parado');
+                await interaction.reply({ content: '🛑 Áudio parado', flags: MessageFlags.Ephemeral });
             } else {
-                await interaction.reply('❌ Nenhum áudio a tocar');
+                await interaction.reply({ content: '❌ Nenhum áudio a tocar', flags: MessageFlags.Ephemeral });
             }
             break;
 
         case 'volume':
             const nivel = interaction.options.getInteger('nivel');
             if (ajustarVolume(nivel)) {
-                await interaction.reply(`🔊 Volume ajustado para ${nivel}%`);
+                await interaction.reply({ content: `🔊 Volume ajustado para ${nivel}%`, flags: MessageFlags.Ephemeral });
             } else {
-                await interaction.reply('❌ Não foi possível ajustar volume');
+                await interaction.reply({ content: '❌ Não foi possível ajustar volume', flags: MessageFlags.Ephemeral });
             }
             break;
     }
@@ -398,7 +408,7 @@ async function criarTicket(interaction, tipo, idioma) {
     if (ticketsEmCriacao.has(user.id)) {
         return interaction.reply({
             content: '⏳ Já estás a criar um ticket. Aguarda um momento...',
-            flags: [64]
+            flags: MessageFlags.Ephemeral
         });
     }
     
@@ -416,7 +426,7 @@ async function criarTicket(interaction, tipo, idioma) {
 
     try {
         // DEFER - Responder imediatamente para evitar "Unknown interaction"
-        await interaction.deferReply({ flags: [64] });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         
         // Verificar se já existe ticket aberto
         const ticketExistente = guild.channels.cache.find(ch => 
@@ -505,7 +515,7 @@ async function criarTicket(interaction, tipo, idioma) {
         } else {
             await interaction.reply({
                 content: '❌ Erro ao criar ticket. Contacta um administrador.',
-                flags: [64]
+                flags: MessageFlags.Ephemeral
             });
         }
     } finally {
@@ -540,7 +550,7 @@ async function handleMenuSuporte(interaction) {
         new ButtonBuilder().setCustomId(`ticket_tecnico_${idioma}`).setLabel(t.tecnico).setStyle(ButtonStyle.Danger)
     );
 
-    await interaction.reply({ embeds: [embed], components: [row], flags: [64] });
+    await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
 }
 
 async function handleFormBug(interaction) {
@@ -603,7 +613,7 @@ async function handleFormAvaliar(interaction) {
         new ButtonBuilder().setCustomId('avaliar_5').setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary)
     );
 
-    await interaction.reply({ embeds: [embed], components: [row], flags: [64] });
+    await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
 }
 
 async function handleAvaliacaoEstrelas(interaction, estrelas) {
@@ -646,7 +656,7 @@ async function handleModalSubmit(interaction) {
             await logChannel.send({ embeds: [embed] });
         }
         
-        await interaction.reply({ content: '✅ Bug reportado com sucesso! Obrigado.', flags: [64] });
+        await interaction.reply({ content: '✅ Bug reportado com sucesso! Obrigado.', flags: MessageFlags.Ephemeral });
     }
     else if (customId === 'modal_ideia') {
         const ideia = fields.getTextInputValue('descricao_ideia');
@@ -663,7 +673,7 @@ async function handleModalSubmit(interaction) {
             await logChannel.send({ embeds: [embed] });
         }
         
-        await interaction.reply({ content: '💡 Obrigado pela tua sugestão!', flags: [64] });
+        await interaction.reply({ content: '💡 Obrigado pela tua sugestão!', flags: MessageFlags.Ephemeral });
     }
     else if (customId.startsWith('modal_avaliacao_')) {
         const estrelas = customId.split('_')[2];
@@ -684,7 +694,7 @@ async function handleModalSubmit(interaction) {
         
         await interaction.reply({ 
             content: `⭐ Obrigado pela tua avaliação de ${estrelas} estrelas!`, 
-            flags: [64] 
+            flags: MessageFlags.Ephemeral 
         });
     }
 }
@@ -720,9 +730,9 @@ async function handleSistemaInteraction(interaction, client) {
     if (interaction.isButton() && interaction.customId === 'fechar_ticket') {
         const { channel } = interaction;
         if (!channel.name.startsWith('ticket-')) {
-            return interaction.reply({ content: '❌ Este não é um canal de ticket.', flags: [64] });
+            return interaction.reply({ content: '❌ Este não é um canal de ticket.', flags: MessageFlags.Ephemeral });
         }
-        await interaction.reply('🔒 A fechar ticket em 5 segundos...');
+        await interaction.reply({ content: '🔒 A fechar ticket em 5 segundos...', flags: MessageFlags.Ephemeral });
         setTimeout(() => channel.delete().catch(() => {}), 5000);
         return true;
     }
