@@ -1,4 +1,4 @@
-// src/events/sistemaVerificacao.js - SISTEMA DE VERIFICAÇAO ANTI-SPAM (CORRIGIDO)
+// src/events/sistemaVerificacao.js - SISTEMA DE VERIFICACAO ANTI-SPAM (CORRIGIDO)
 
 const { 
     EmbedBuilder, 
@@ -61,12 +61,11 @@ async function enviarVerificacao(client) {
 
         const embed = new EmbedBuilder()
             .setTitle('Verificacao de Seguranca - Jordan Shop')
-            .setDescription(
-                '**Bem-vindo a Jordan Shop!**\n\n' +
-                'Para acederes a loja e garantires que nao es um bot de spam, ' +
-                'clica no botao abaixo e insere o codigo de verificacao.\n\n' +
-                '**Ao verificares, concordas com as regras do servidor.**'
-            )
+            .setDescription(`**Bem-vindo a Jordan Shop!**
+
+Para acederes a loja e garantires que nao es um bot de spam, clica no botao abaixo e insere o codigo de verificacao.
+
+**Ao verificares, concordas com as regras do servidor.**`)
             .setColor('#5865F2')
             .setImage('https://i.postimg.cc/YCmc9zyY/sucesso-no-neg-cio-61850034.webp')
             .setFooter({ text: 'Sistema de Protecao Anti-Bot' })
@@ -106,11 +105,10 @@ function setupGuildMemberAdd(client) {
             console.log(`${member.user.tag} entrou e recebeu cargo nao verificado`);
 
             try {
-                await member.send(
-                    'Bem-vindo a Jordan Shop!\n\n' +
-                    'Para acederes a loja, passa pela verificacao no canal #verificacao.\n' +
-                    'Isto protege a nossa comunidade contra bots de spam.'
-                );
+                await member.send(`Bem-vindo a Jordan Shop!
+
+Para acederes a loja, passa pela verificacao no canal #verificacao.
+Isto protege a nossa comunidade contra bots de spam.`);
             } catch {
                 // DM fechada, ignorar
             }
@@ -207,7 +205,8 @@ async function handleVerificacaoInteraction(interaction, client) {
                 if (logChannel) {
                     const embedLog = new EmbedBuilder()
                         .setTitle('Novo Membro Verificado')
-                        .setDescription(`**Utilizador:** <@${user.id}>\n**Conta criada:** <t:${Math.floor(user.createdAt.getTime()/1000)}:R>`)
+                        .setDescription(`**Utilizador:** <@${user.id}>
+**Conta criada:** <t:${Math.floor(user.createdAt.getTime()/1000)}:R>`)
                         .setColor('#00ff00')
                         .setTimestamp();
                     await logChannel.send({ embeds: [embedLog] });
@@ -215,7 +214,9 @@ async function handleVerificacaoInteraction(interaction, client) {
 
                 // SO O USER VE A CONFIRMACAO - O BOTAO DO SERVIDOR CONTINUA ATIVO PARA OUTROS
                 return interaction.reply({
-                    content: 'Verificacao concluida!\n\nAgora tens acesso a loja.',
+                    content: `Verificacao concluida!
+
+Agora tens acesso a loja.`,
                     flags: MessageFlags.Ephemeral
                 });
 
@@ -275,12 +276,10 @@ function setupAntiSpam(client) {
                 if (logChannel) {
                     const embedAlerta = new EmbedBuilder()
                         .setTitle('SPAM DETETADO E BLOQUEADO')
-                        .setDescription(
-                            `**Utilizador:** <@${message.author.id}> (${message.author.tag})\n` +
-                            `**Canal:** ${channel}\n` +
-                            `**Motivo:** ${temEveryone ? '@everyone/@here' : 'Link proibido'}\n` +
-                            `**Mensagem:** ||${content.substring(0, 100)}||`
-                        )
+                        .setDescription(`**Utilizador:** <@${message.author.id}> (${message.author.tag})
+**Canal:** ${channel}
+**Motivo:** ${temEveryone ? '@everyone/@here' : 'Link proibido'}
+**Mensagem:** ||${content.substring(0, 100)}||`)
                         .setColor('#ff0000')
                         .setTimestamp();
                     await logChannel.send({ embeds: [embedAlerta] });
