@@ -334,7 +334,8 @@ async function handlePanicoCommand(interaction) {
 
     } catch (err) {
         console.error(err);
-        interaction.reply('❌ Erro ao alterar permissões.', flags: [64]);
+        // ✅ CORRIGIDO: Adicionadas chavetas e await
+        await interaction.reply({ content: '❌ Erro ao alterar permissões.', flags: [64] });
     }
 
     return true;
