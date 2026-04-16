@@ -1,4 +1,4 @@
-// src/events/sistemaVerificacao.js - SISTEMA DE VERIFICAÇÃO ANTI-SPAM (INDEPENDENTE)
+// src/events/sistemaVerificacao.js - SISTEMA DE VERIFICAÇÃO ANTI-SPAM (CORRIGIDO)
 
 const { 
     EmbedBuilder, 
@@ -94,7 +94,7 @@ function setupGuildMemberAdd(client) {
         try {
             const contaIdade = Date.now() - member.user.createdAt;
             const dias = contaIdade / (1000 * 60 * 60 * 24);
-            
+
             if (dias < 7) {
                 console.log(`⚠️ Conta muito recente: ${member.user.tag} (${dias.toFixed(1)} dias)`);
             }
@@ -119,49 +119,31 @@ function setupGuildMemberAdd(client) {
 }
 
 // ============================================================================
-// 3. HANDLER DE INTERAÇÕES (BOTÃO E MODAL) - BOTÃO DESATIVA APÓS VERIFICAR
+// 3. HANDLER DE INTERAÇÕES (BOTÃO E MODAL) - CORRIGIDO
 // ============================================================================
 
 async function handleVerificacaoInteraction(interaction, client) {
-    const { customId, member, user, guild, message } = interaction;
+    const { customId, member, user, guild } = interaction;
 
     if (customId === 'iniciar_verificacao') {
+        // ⭐ IMPORTANTE: Defer imediatamente para evitar "Unknown Interaction"
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
         const tempoNoServidor = Date.now() - member.joinedAt;
         const minutosNoServidor = tempoNoServidor / (1000 * 60);
-        
+
         if (minutosNoServidor < CONFIG.MINUTO_ESPERA) {
             const minutosRestantes = Math.ceil(CONFIG.MINUTO_ESPERA - minutosNoServidor);
-            return interaction.reply({
-                content: `⏳ Aguarda ${minutosRestantes} minuto(s) antes de te verificares.`,
-                flags: MessageFlags.Ephemeral
+            return interaction.editReply({
+                content: `⏳ Aguarda ${minutosRestantes} minuto(s) antes de te verificares.`
             });
         }
 
-        // Verificar se já está verificado
+        // Verificar se já está verificado - SÓ MOSTRA PARA O USER (EPHEMERAL)
         if (member.roles.cache.has(CONFIG.CARGO_VERIFICADO_ID)) {
-            // ✅ BOTÃO FICA NÃO CLICÁVEL - Desativar o botão na mensagem original
-            try {
-                const embedVerificado = new EmbedBuilder()
-                    .setTitle('✅ Já Verificado')
-                    .setDescription('Já completaste a verificação anteriormente.')
-                    .setColor('#00ff00');
-                
-                const rowDesativado = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId('iniciar_verificacao')
-                        .setLabel('✅ Verificado')
-                        .setStyle(ButtonStyle.Success)
-                        .setDisabled(true)
-                );
-                
-                await message.edit({ embeds: [embedVerificado], components: [rowDesativado] });
-            } catch (err) {
-                console.error('Erro ao atualizar mensagem:', err);
-            }
-            
-            return interaction.reply({
-                content: '✅ Já estás verificado!',
-                flags: MessageFlags.Ephemeral
+            // ⭐ SÓ O USER VÊ ESTA MENSAGEM - O BOTÃO DO SERVIDOR CONTINUA ATIVO
+            return interaction.editReply({
+                content: '✅ Já estás verificado!'
             });
         }
 
@@ -178,7 +160,12 @@ async function handleVerificacaoInteraction(interaction, client) {
             .setMaxLength(20);
 
         modal.addComponents(new ActionRowBuilder().addComponents(input));
-        return interaction.showModal(modal);
+
+        // Usar followUp em vez de reply porque já fizemos defer
+        return interaction.followUp({
+            content: '🔐 Abre o modal acima para te verificares!',
+            flags: MessageFlags.Ephemeral
+        }).then(() => interaction.showModal(modal));
     }
 
     if (interaction.isModalSubmit() && customId === 'modal_verificacao') {
@@ -200,39 +187,9 @@ async function handleVerificacaoInteraction(interaction, client) {
                     await logChannel.send({ embeds: [embedLog] });
                 }
 
-                // ✅ DESATIVAR O BOTÃO NA MENSAGEM ORIGINAL
-                try {
-                    const embedSucesso = new EmbedBuilder()
-                        .setTitle('✅ Verificação Concluída')
-                        .setDescription(
-                            '**Verificação concluída com sucesso!**\n\n' +
-                            'Agora tens acesso à loja da Jordan Shop.\n' +
-                            'Bem-vindo à comunidade! 🎉'
-                        )
-                        .setColor('#00ff00')
-                        .setImage('https://i.postimg.cc/YCmc9zyY/sucesso-no-neg-cio-61850034.webp')
-                        .setFooter({ text: 'Verificação concluída' })
-                        .setTimestamp();
-
-                    const rowDesativado = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder()
-                            .setCustomId('verificacao_concluida')
-                            .setLabel('✅ Verificado')
-                            .setStyle(ButtonStyle.Success)
-                            .setDisabled(true)
-                    );
-
-                    // Atualizar a mensagem original para mostrar que foi verificado
-                    await interaction.message.edit({ 
-                        embeds: [embedSucesso], 
-                        components: [rowDesativado] 
-                    });
-                } catch (err) {
-                    console.error('Erro ao atualizar mensagem de verificação:', err);
-                }
-
+                // ⭐ SÓ O USER VÊ A CONFIRMAÇÃO - O BOTÃO DO SERVIDOR CONTINUA ATIVO PARA OUTROS
                 return interaction.reply({
-                    content: '✅ **Verificação concluída!**\n\nAgora tens acesso à loja. O canal de verificação desaparecerá para ti em breve.',
+                    content: '✅ **Verificação concluída!**\n\nAgora tens acesso à loja.',
                     flags: MessageFlags.Ephemeral
                 });
 
@@ -245,7 +202,7 @@ async function handleVerificacaoInteraction(interaction, client) {
             }
         } else {
             return interaction.reply({
-                content: '❌ Código incorreto! Tenta novamente.',
+                content: '❌ Código incorreto! Tenta novamente clicando no botão.',
                 flags: MessageFlags.Ephemeral
             });
         }
@@ -295,118 +252,4 @@ function setupAntiSpam(client) {
                         .setDescription(
                             `**Utilizador:** <@${message.author.id}> (${message.author.tag})\n` +
                             `**Canal:** ${channel}\n` +
-                            `**Motivo:** ${temEveryone ? '@everyone/@here' : 'Link proibido'}\n` +
-                            `**Mensagem:** ||${content.substring(0, 100)}||`
-                        )
-                        .setColor('#ff0000')
-                        .setTimestamp();
-                    await logChannel.send({ embeds: [embedAlerta] });
-                }
-
-                console.log(`🚨 Spam bloqueado de ${message.author.tag}`);
-
-            } catch (err) {
-                console.error('❌ Erro ao processar spam:', err);
-            }
-        }
-    });
-
-    const mensagensRecentes = new Map();
-
-    client.on('messageCreate', async (message) => {
-        if (message.author.bot || !message.guild) return;
-        if (message.member.permissions.has(PermissionFlagsBits.Administrator)) return;
-
-        const userId = message.author.id;
-        const content = message.content;
-        const now = Date.now();
-
-        if (!mensagensRecentes.has(userId)) {
-            mensagensRecentes.set(userId, { count: 1, lastMessage: content, firstTime: now });
-            setTimeout(() => mensagensRecentes.delete(userId), 10000);
-        } else {
-            const dados = mensagensRecentes.get(userId);
-            
-            if (dados.lastMessage === content) {
-                dados.count++;
-                
-                if (dados.count >= 3) {
-                    try {
-                        await message.member.timeout(2 * 60 * 60 * 1000, 'Raid/Spam repetido');
-                        
-                        const canal = message.channel;
-                        const mensagens = await canal.messages.fetch({ limit: 20 });
-                        const doUser = mensagens.filter(m => m.author.id === userId);
-                        await canal.bulkDelete(doUser, true).catch(() => {});
-
-                        const logChannel = await client.channels.fetch(CONFIG.CANAL_LOGS_ID).catch(() => null);
-                        if (logChannel) {
-                            logChannel.send(`🚨 **RAID DETETADO:** ${message.author.tag} enviou 3+ mensagens iguais. Timeout de 2h aplicado.`);
-                        }
-
-                        mensagensRecentes.delete(userId);
-                    } catch (err) {
-                        console.error('Erro anti-raid:', err);
-                    }
-                }
-            }
-        }
-    });
-}
-
-// ============================================================================
-// 5. COMANDO DE PANICO
-// ============================================================================
-
-async function handlePanicoCommand(interaction) {
-    if (!interaction.isChatInputCommand()) return false;
-    if (interaction.commandName !== 'panico') return false;
-
-    const { member, guild } = interaction;
-    
-    if (!member.permissions.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: '❌ Apenas administradores.', flags: MessageFlags.Ephemeral });
-    }
-
-    const modo = interaction.options.getString('modo');
-
-    try {
-        const cargoVerificado = await guild.roles.fetch(CONFIG.CARGO_VERIFICADO_ID);
-        
-        if (modo === 'on') {
-            await cargoVerificado.setPermissions([]);
-            await interaction.reply('🚨 **MODO PÂNICO ATIVADO!** Todos os verificados perderam acesso ao chat.');
-        } else {
-            await cargoVerificado.setPermissions([
-                PermissionFlagsBits.ViewChannel,
-                PermissionFlagsBits.SendMessages,
-                PermissionFlagsBits.ReadMessageHistory
-            ]);
-            await interaction.reply('✅ **Modo pânico desativado.** Acesso restaurado.');
-        }
-
-    } catch (err) {
-        console.error(err);
-        await interaction.reply({ content: '❌ Erro ao alterar permissões.', flags: MessageFlags.Ephemeral });
-    }
-
-    return true;
-}
-
-// ============================================================================
-// INICIALIZAÇÃO
-// ============================================================================
-
-function inicializarSistemaVerificacao(client) {
-    setupGuildMemberAdd(client);
-    setupAntiSpam(client);
-    console.log('✅ Sistema de verificação e anti-spam inicializado');
-}
-
-module.exports = {
-    enviarVerificacao,
-    handleVerificacaoInteraction,
-    handlePanicoCommand,
-    inicializarSistemaVerificacao,
-    CONFIG
-};
+                            <response clipped><NOTE>Result is longer than **10000 characters**, will be **truncated**.</NOTE>
