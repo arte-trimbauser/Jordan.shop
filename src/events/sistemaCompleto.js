@@ -636,6 +636,7 @@ async function handleAvaliacaoEstrelas(interaction, estrelas) {
 async function handleModalSubmit(interaction) {
     const { customId, fields, user } = interaction;
     
+    // ✅ CANAL DE FEEDBACK ATUALIZADO: 1495145643977478154 (bot-feedback-logs)
     const LOG_ID = process.env.LOG_CHANNEL_ID || "1495145643977478154";
     const logChannel = await interaction.guild.channels.fetch(LOG_ID).catch(() => null);
     
