@@ -636,7 +636,7 @@ async function handleAvaliacaoEstrelas(interaction, estrelas) {
 async function handleModalSubmit(interaction) {
     const { customId, fields, user } = interaction;
     
-    const LOG_ID = process.env.LOG_CHANNEL_ID || "1437076921627181228";
+    const LOG_ID = process.env.LOG_CHANNEL_ID || "1495145643977478154";
     const logChannel = await interaction.guild.channels.fetch(LOG_ID).catch(() => null);
     
     if (customId === 'modal_bug') {
