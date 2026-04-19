@@ -67,7 +67,6 @@ Para acederes a loja e garantires que nao es um bot de spam, clica no botao abai
 
 **Ao verificares, concordas com as regras do servidor.**`)
             .setColor('#5865F2')
-            .setImage('https://i.postimg.cc/YCmc9zyY/sucesso-no-neg-cio-61850034.webp')
             .setFooter({ text: 'Sistema de Protecao Anti-Bot' })
             .setTimestamp();
 
