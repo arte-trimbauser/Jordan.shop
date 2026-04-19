@@ -553,7 +553,11 @@ async function handleMenuSuporte(interaction) {
     await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
 }
 
+// CORRIGIDO: Adicionado deferReply para evitar timeout
 async function handleFormBug(interaction) {
+    // Defer imediatamente para evitar timeout
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    
     const modal = new ModalBuilder()
         .setCustomId('modal_bug')
         .setTitle('🐛 Reportar Bug');
@@ -579,10 +583,16 @@ async function handleFormBug(interaction) {
         new ActionRowBuilder().addComponents(input2)
     );
     
+    // Usar followUp para mostrar modal depois do defer
+    await interaction.followUp({ content: 'Abre o modal abaixo!', flags: MessageFlags.Ephemeral });
     await interaction.showModal(modal);
 }
 
+// CORRIGIDO: Adicionado deferReply para evitar timeout
 async function handleFormIdeia(interaction) {
+    // Defer imediatamente para evitar timeout
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    
     const modal = new ModalBuilder()
         .setCustomId('modal_ideia')
         .setTitle('💡 Sugestão');
@@ -596,10 +606,15 @@ async function handleFormIdeia(interaction) {
         .setMaxLength(2000);
 
     modal.addComponents(new ActionRowBuilder().addComponents(input));
+    await interaction.followUp({ content: 'Abre o modal abaixo!', flags: MessageFlags.Ephemeral });
     await interaction.showModal(modal);
 }
 
+// CORRIGIDO: Adicionado deferReply para evitar timeout
 async function handleFormAvaliar(interaction) {
+    // Defer imediatamente para evitar timeout
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    
     const embed = new EmbedBuilder()
         .setTitle('⭐ Avalia o Jordan Shop Bot')
         .setDescription('Quantas estrelas dás ao nosso serviço (bot)?')
@@ -613,10 +628,14 @@ async function handleFormAvaliar(interaction) {
         new ButtonBuilder().setCustomId('avaliar_5').setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary)
     );
 
-    await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ embeds: [embed], components: [row] });
 }
 
+// CORRIGIDO: Adicionado deferReply para evitar timeout
 async function handleAvaliacaoEstrelas(interaction, estrelas) {
+    // Defer imediatamente para evitar timeout
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    
     const modal = new ModalBuilder()
         .setCustomId(`modal_avaliacao_${estrelas}`)
         .setTitle(`⭐ Avaliação: ${estrelas} Estrelas`);
@@ -630,13 +649,17 @@ async function handleAvaliacaoEstrelas(interaction, estrelas) {
         .setMaxLength(1000);
 
     modal.addComponents(new ActionRowBuilder().addComponents(input));
+    await interaction.followUp({ content: 'Abre o modal abaixo!', flags: MessageFlags.Ephemeral });
     await interaction.showModal(modal);
 }
 
+// CORRIGIDO: Adicionado deferReply no início e mudado para editReply
 async function handleModalSubmit(interaction) {
     const { customId, fields, user } = interaction;
     
-    // ✅ CANAL DE FEEDBACK ATUALIZADO: 1495145643977478154 (bot-feedback-logs)
+    // Defer imediatamente para evitar timeout
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    
     const LOG_ID = process.env.LOG_CHANNEL_ID || "1495145643977478154";
     const logChannel = await interaction.guild.channels.fetch(LOG_ID).catch(() => null);
     
@@ -657,7 +680,7 @@ async function handleModalSubmit(interaction) {
             await logChannel.send({ embeds: [embed] });
         }
         
-        await interaction.reply({ content: '✅ Bug reportado com sucesso! Obrigado.', flags: MessageFlags.Ephemeral });
+        await interaction.editReply({ content: '✅ Bug reportado com sucesso! Obrigado.' });
     }
     else if (customId === 'modal_ideia') {
         const ideia = fields.getTextInputValue('descricao_ideia');
@@ -674,7 +697,7 @@ async function handleModalSubmit(interaction) {
             await logChannel.send({ embeds: [embed] });
         }
         
-        await interaction.reply({ content: '💡 Obrigado pela tua sugestão!', flags: MessageFlags.Ephemeral });
+        await interaction.editReply({ content: '💡 Obrigado pela tua sugestão!' });
     }
     else if (customId.startsWith('modal_avaliacao_')) {
         const estrelas = customId.split('_')[2];
@@ -693,10 +716,7 @@ async function handleModalSubmit(interaction) {
             await logChannel.send({ embeds: [embed] });
         }
         
-        await interaction.reply({ 
-            content: `⭐ Obrigado pela tua avaliação de ${estrelas} estrelas!`, 
-            flags: MessageFlags.Ephemeral 
-        });
+        await interaction.editReply({ content: `⭐ Obrigado pela tua avaliação de ${estrelas} estrelas!` });
     }
 }
 
