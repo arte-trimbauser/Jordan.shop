@@ -68,6 +68,7 @@ Para acederes a loja e garantires que nao es um bot de spam, clica no botao abai
 **Ao verificares, concordas com as regras do servidor.**`)
             .setColor('#5865F2')
             .setFooter({ text: 'Sistema de Protecao Anti-Bot' })
+            .setThumbnail('https://media.discordapp.net/attachments/1405525830796443698/1495409662965579886/Ola_User.png?ex=69e62447&is=69e4d2c7&hm=8fc8e3377883af78de38a2573039773ce747d8c6b6657a68ff7dbc4e92a6ce91&=&format=webp&quality=lossless&width=800&height=800')
             .setTimestamp();
 
         const row = new ActionRowBuilder().addComponents(
@@ -91,6 +92,13 @@ Para acederes a loja e garantires que nao es um bot de spam, clica no botao abai
 // ============================================================================
 
 function setupGuildMemberAdd(client) {
+    // LIMPAR ESTADO QUANDO MEMBRO SAI (evita bug ao voltar a entrar)
+    client.on('guildMemberRemove', (member) => {
+        usuariosComModalAberto.delete(member.user.id);
+        usuariosVerificados.delete(member.user.id);
+        console.log(`Estado limpo para ${member.user.tag} (saiu do servidor)`);
+    });
+
     client.on('guildMemberAdd', async (member) => {
         try {
             const contaIdade = Date.now() - member.user.createdAt;
@@ -121,74 +129,51 @@ Isto protege a nossa comunidade contra bots de spam.`);
 // ============================================================================
 // 3. HANDLER DE INTERACOES (BOTAO E MODAL) - CORRIGIDO
 // ============================================================================
-
 async function handleVerificacaoInteraction(interaction, client) {
-    const { customId, member, user, guild } = interaction;
+    const { customId, member, user } = interaction;
 
     if (customId === 'iniciar_verificacao') {
-        // IMPORTANTE: Defer imediatamente para evitar "Unknown Interaction"
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
+        // 1. Verificar tempo no servidor (Impedir bots instantâneos)
         const tempoNoServidor = Date.now() - member.joinedAt;
         const minutosNoServidor = tempoNoServidor / (1000 * 60);
 
         if (minutosNoServidor < CONFIG.MINUTO_ESPERA) {
             const minutosRestantes = Math.ceil(CONFIG.MINUTO_ESPERA - minutosNoServidor);
-            return interaction.editReply({
-                content: `Aguarda ${minutosRestantes} minuto(s) antes de te verificares.`
+            return interaction.reply({
+                content: `Aguarda ${minutosRestantes} minuto(s) antes de te verificares.`,
+                flags: MessageFlags.Ephemeral
             });
         }
 
-        // Verificar se ja esta verificado - SO MOSTRA PARA O USER (EPHEMERAL)
-        if (member.roles.cache.has(CONFIG.CARGO_VERIFICADO_ID) || usuariosVerificados.has(user.id)) {
-            // SO O USER VE ESTA MENSAGEM - O BOTAO DO SERVIDOR CONTINUA ATIVO
-            return interaction.editReply({
-                content: 'Ja estas verificado!'
+        // 2. Verificar se já está verificado
+        if (member.roles.cache.has(CONFIG.CARGO_VERIFICADO_ID)) {
+            return interaction.reply({
+                content: 'Já estás verificado!',
+                flags: MessageFlags.Ephemeral
             });
         }
 
-        // Verificar se ja tem modal aberto (anti-spam de cliques)
-        if (usuariosComModalAberto.has(user.id)) {
-            return interaction.editReply({
-                content: 'Ja tens um modal aberto. Completa-o primeiro!'
-            });
-        }
-
+        // 3. CRIAR E MOSTRAR O MODAL (Sem fazer deferReply antes!)
         const modal = new ModalBuilder()
             .setCustomId('modal_verificacao')
-            .setTitle('Verificacao Jordan Shop');
+            .setTitle('Verificação Jordan Shop');
 
         const input = new TextInputBuilder()
             .setCustomId('codigo_verificacao')
-            .setLabel(`Insere o codigo: ${CONFIG.PALAVRA_CHAVE}`)
+            .setLabel(`Insere o código: ${CONFIG.PALAVRA_CHAVE}`)
             .setStyle(TextInputStyle.Short)
-            .setPlaceholder('Escreve aqui o codigo...')
+            .setPlaceholder('Escreve aqui o código...')
             .setRequired(true)
             .setMaxLength(20);
 
         modal.addComponents(new ActionRowBuilder().addComponents(input));
 
-        // Marcar que usuario tem modal aberto
-        usuariosComModalAberto.add(user.id);
-
-        // Auto-remover apos 5 minutos (timeout do modal)
-        setTimeout(() => {
-            usuariosComModalAberto.delete(user.id);
-        }, 5 * 60 * 1000);
-
-        // Usar followUp em vez de reply porque ja fizemos defer
-        await interaction.followUp({
-            content: 'Abre o modal acima para te verificares!',
-            flags: MessageFlags.Ephemeral
-        });
-
+        // IMPORTANTE: showModal tem de ser a PRIMEIRA resposta à interação
         return interaction.showModal(modal);
     }
 
+    // 4. PROCESSAR O ENVIO DO MODAL
     if (interaction.isModalSubmit() && customId === 'modal_verificacao') {
-        // Remover do set de modais abertos
-        usuariosComModalAberto.delete(user.id);
-
         const codigo = interaction.fields.getTextInputValue('codigo_verificacao');
 
         if (codigo.toUpperCase() === CONFIG.PALAVRA_CHAVE) {
@@ -196,45 +181,36 @@ async function handleVerificacaoInteraction(interaction, client) {
                 await member.roles.remove(CONFIG.CARGO_NAO_VERIFICADO_ID);
                 await member.roles.add(CONFIG.CARGO_VERIFICADO_ID);
 
-                // MARCAR COMO VERIFICADO NO SET
-                usuariosVerificados.add(user.id);
-
-                // Log
+                // Log para a Staff
                 const logChannel = await client.channels.fetch(CONFIG.CANAL_LOGS_ID).catch(() => null);
                 if (logChannel) {
                     const embedLog = new EmbedBuilder()
-                        .setTitle('Novo Membro Verificado')
-                        .setDescription(`**Utilizador:** <@${user.id}>
-**Conta criada:** <t:${Math.floor(user.createdAt.getTime()/1000)}:R>`)
+                        .setTitle('✅ Novo Membro Verificado')
+                        .setDescription(`**Utilizador:** <@${user.id}>\n**Conta criada:** <t:${Math.floor(user.createdAt.getTime()/1000)}:R>`)
                         .setColor('#00ff00')
                         .setTimestamp();
                     await logChannel.send({ embeds: [embedLog] });
                 }
 
-                // SO O USER VE A CONFIRMACAO - O BOTAO DO SERVIDOR CONTINUA ATIVO PARA OUTROS
                 return interaction.reply({
-                    content: `Verificacao concluida!
-
-Agora tens acesso a loja.`,
+                    content: '✅ Verificação concluída! Agora tens acesso à loja.',
                     flags: MessageFlags.Ephemeral
                 });
 
             } catch (err) {
                 console.error('Erro ao trocar cargos:', err);
                 return interaction.reply({
-                    content: 'Erro ao processar verificacao. Contacta um administrador.',
+                    content: '❌ Erro ao processar cargos. Verifica a hierarquia do bot.',
                     flags: MessageFlags.Ephemeral
                 });
             }
         } else {
             return interaction.reply({
-                content: 'Codigo incorreto! Tenta novamente clicando no botao.',
+                content: '❌ Código incorreto! Tenta novamente.',
                 flags: MessageFlags.Ephemeral
             });
         }
     }
-
-    return false;
 }
 
 // ============================================================================
