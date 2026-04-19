@@ -583,8 +583,7 @@ async function handleFormBug(interaction) {
         new ActionRowBuilder().addComponents(input2)
     );
     
-    // Usar followUp para mostrar modal depois do defer
-    await interaction.followUp({ content: 'Abre o modal abaixo!', flags: MessageFlags.Ephemeral });
+    await interaction.followUp({ content: 'Abre o modal acima!', flags: MessageFlags.Ephemeral });
     await interaction.showModal(modal);
 }
 
@@ -606,7 +605,7 @@ async function handleFormIdeia(interaction) {
         .setMaxLength(2000);
 
     modal.addComponents(new ActionRowBuilder().addComponents(input));
-    await interaction.followUp({ content: 'Abre o modal abaixo!', flags: MessageFlags.Ephemeral });
+    await interaction.followUp({ content: 'Abre o modal acima!', flags: MessageFlags.Ephemeral });
     await interaction.showModal(modal);
 }
 
@@ -649,7 +648,7 @@ async function handleAvaliacaoEstrelas(interaction, estrelas) {
         .setMaxLength(1000);
 
     modal.addComponents(new ActionRowBuilder().addComponents(input));
-    await interaction.followUp({ content: 'Abre o modal abaixo!', flags: MessageFlags.Ephemeral });
+    await interaction.followUp({ content: 'Abre o modal acima!', flags: MessageFlags.Ephemeral });
     await interaction.showModal(modal);
 }
 
@@ -657,9 +656,10 @@ async function handleAvaliacaoEstrelas(interaction, estrelas) {
 async function handleModalSubmit(interaction) {
     const { customId, fields, user } = interaction;
     
-    // Defer imediatamente para evitar timeout
+    // Defer imediatamente para evitar timeout e marcar como processado
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     
+    // ✅ CANAL DE FEEDBACK ATUALIZADO: 1495145643977478154 (bot-feedback-logs)
     const LOG_ID = process.env.LOG_CHANNEL_ID || "1495145643977478154";
     const logChannel = await interaction.guild.channels.fetch(LOG_ID).catch(() => null);
     
