@@ -15,7 +15,8 @@ const {
     entrarCanalVoz, 
     enviarEmbedSuporte, 
     enviarFormularios,
-    handleSistemaInteraction 
+    handleSistemaInteraction,
+    registrarComandosVoz  // ← ADICIONAR ISTO
 } = require('./src/events/sistemaCompleto');
 
 // Requires do sistemaVerificacao
@@ -271,6 +272,14 @@ client.once(Events.ClientReady, async () => {
         console.error("❌ Erro ao entrar no canal de voz:", err.message);
     }
 
+    // 1.5. Registrar comandos de voz (/entrar, /sair, /reiniciar, /audio)  // ← ADICIONAR ISTO
+    try {
+        await registrarComandosVoz(client);
+        console.log("✅ Comandos de voz registados (/entrar, /sair, /reiniciar, /audio)");
+    } catch (err) {
+        console.error("❌ Erro ao registar comandos de voz:", err.message);
+    }
+    
     // 2. Enviar embed de suporte
     try {
         await enviarEmbedSuporte(client);
