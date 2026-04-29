@@ -16,6 +16,7 @@ const {
 } = require('discord.js');
 const { 
     joinVoiceChannel, 
+    getVoiceConnection,
     VoiceConnectionStatus,
     createAudioPlayer,
     createAudioResource,
@@ -49,9 +50,12 @@ let voiceConnection = null;
 let audioPlayer = null;
 let currentResource = null;
 let currentVolume = 0.5;
+let isPlaying = false;
+let currentAudioPath = null;
+let currentFormat = null;
 
 // ============================================================================
-// 1. BOT ENTRA NO CANAL DE VOZ E TOCA OGG EM LOOP INFINITO
+// 1. BOT ENTRA NO CANAL DE VOZ E TOCA ÁUDIO EM LOOP INFINITO
 // ============================================================================
 
 async function entrarCanalVoz(client) {
@@ -61,6 +65,13 @@ async function entrarCanalVoz(client) {
 
         if (!canal || canal.type !== ChannelType.GuildVoice) {
             console.log('❌ Canal de voz não encontrado');
+            return;
+        }
+
+        // Verificar se já está no canal
+        const existingConnection = getVoiceConnection(guild.id);
+        if (existingConnection) {
+            console.log('ℹ️ Bot já está num canal de voz');
             return;
         }
 
@@ -74,12 +85,12 @@ async function entrarCanalVoz(client) {
 
         voiceConnection.on(VoiceConnectionStatus.Ready, () => {
             console.log('✅ Bot entrou no canal de voz:', canal.name);
+            iniciarAudioAutomatico();
+        });
 
-            // Tocar JordanShop.ogg em loop infinito (Ogg Opus - não precisa de encoder)
-            const audioPath = path.join(__dirname, '..', '..', 'audio', 'JordanShop.ogg');
-            console.log('🎵 A procurar ficheiro:', audioPath);
-            console.log('🎵 Ficheiro existe:', fs.existsSync(audioPath));
-            tocarAudioLoopInfinito(audioPath);
+        voiceConnection.on(VoiceConnectionStatus.Disconnected, async () => {
+            console.log('⚠️ Bot desconectado do canal de voz');
+            isPlaying = false;
         });
 
         voiceConnection.on('error', (err) => {
@@ -92,19 +103,41 @@ async function entrarCanalVoz(client) {
 }
 
 // ============================================================================
-// 2. ÁUDIO EM LOOP INFINITO (OGG OPUS - SEM DEPENDÊNCIAS DE ENCODER)
+// 2. INICIAR ÁUDIO AUTOMATICO (OGG OU MP3)
 // ============================================================================
 
-async function tocarAudioLoopInfinito(audioPath) {
+function iniciarAudioAutomatico() {
+    const oggPath = path.join(__dirname, '..', '..', 'audio', 'JordanShop.ogg');
+    const mp3Path = path.join(__dirname, '..', '..', 'audio', 'JordanShop.mp3');
+
+    if (fs.existsSync(oggPath)) {
+        currentAudioPath = oggPath;
+        currentFormat = 'ogg';
+        tocarAudioLoopInfinito(oggPath, 'ogg');
+    } else if (fs.existsSync(mp3Path)) {
+        currentAudioPath = mp3Path;
+        currentFormat = 'mp3';
+        tocarAudioLoopInfinito(mp3Path, 'mp3');
+    } else {
+        console.error('❌ Nenhum ficheiro de áudio encontrado na pasta /audio/');
+    }
+}
+
+// ============================================================================
+// 3. ÁUDIO EM LOOP INFINITO
+// ============================================================================
+
+async function tocarAudioLoopInfinito(audioPath, format = 'ogg') {
     try {
         if (!fs.existsSync(audioPath)) {
             console.error(`❌ Ficheiro não encontrado: ${audioPath}`);
             return false;
         }
 
-        console.log('🎵 A iniciar reprodução de:', path.basename(audioPath));
+        if (isPlaying) return true;
 
-        // Criar player se não existir
+        isPlaying = true;
+
         if (!audioPlayer) {
             audioPlayer = createAudioPlayer({
                 behaviors: {
@@ -112,10 +145,10 @@ async function tocarAudioLoopInfinito(audioPath) {
                 }
             });
 
-            // QUANDO TERMINA, VOLTA A TOCAR (LOOP INFINITO)
             audioPlayer.on(AudioPlayerStatus.Idle, () => {
-                console.log("🎵 Música terminou, reiniciando loop infinito...");
-                tocarAudioLoopInfinito(audioPath);
+                if (currentAudioPath) {
+                    tocarAudioLoopInfinito(currentAudioPath, currentFormat);
+                }
             });
 
             audioPlayer.on(AudioPlayerStatus.Playing, () => {
@@ -123,52 +156,64 @@ async function tocarAudioLoopInfinito(audioPath) {
             });
 
             audioPlayer.on(AudioPlayerStatus.Buffering, () => {
-                console.log("⏳ A bufferizar...");
+                // Silencioso
             });
 
             audioPlayer.on('error', (err) => {
                 console.error("❌ Erro no player:", err.message);
-                setTimeout(() => tocarAudioLoopInfinito(audioPath), 5000);
+                isPlaying = false;
+                setTimeout(() => {
+                    if (currentAudioPath) {
+                        tocarAudioLoopInfinito(currentAudioPath, currentFormat);
+                    }
+                }, 5000);
             });
         }
 
-        // ✅ ALTERAÇÃO: Usar StreamType.OggOpus para ficheiros Ogg Opus
-        // Não precisa de @discordjs/opus, opusscript, nem FFmpeg no pipeline!
-        const stream = createReadStream(audioPath);
-        currentResource = createAudioResource(stream, {
-            inputType: StreamType.OggOpus
-        });
+        if (format === 'ogg') {
+            const stream = createReadStream(audioPath);
+            currentResource = createAudioResource(stream, {
+                inputType: StreamType.OggOpus
+            });
+        } else {
+            currentResource = createAudioResource(audioPath, {
+                inputType: StreamType.Arbitrary,
+                inlineVolume: true
+            });
+        }
 
-        // Ajustar volume
         if (currentResource.volume) {
             currentResource.volume.setVolume(currentVolume);
         }
 
-        // Tocar
         audioPlayer.play(currentResource);
 
-        // Subscrever à conexão
         if (voiceConnection) {
             voiceConnection.subscribe(audioPlayer);
-            console.log('✅ Player subscrito à conexão de voz');
         }
 
         return true;
 
     } catch (err) {
         console.error("❌ Erro ao tocar áudio:", err);
-        setTimeout(() => tocarAudioLoopInfinito(audioPath), 10000);
+        isPlaying = false;
+        setTimeout(() => {
+            if (currentAudioPath) {
+                tocarAudioLoopInfinito(currentAudioPath, currentFormat);
+            }
+        }, 10000);
         return false;
     }
 }
 
 // ============================================================================
-// 3. CONTROLO DO ÁUDIO (STOP, VOLUME, ETC)
+// 4. CONTROLO DO ÁUDIO (STOP, VOLUME, ETC)
 // ============================================================================
 
 function pararAudio() {
     if (audioPlayer) {
         audioPlayer.stop();
+        isPlaying = false;
         console.log("🛑 Áudio parado");
         return true;
     }
@@ -187,17 +232,35 @@ function ajustarVolume(nivel) {
 }
 
 // ============================================================================
-// 4. COMANDO SLASH /AUDIO
+// 5. COMANDOS SLASH (/entrar, /sair, /reiniciar, /audio)
 // ============================================================================
 
-async function registrarComandoAudio(client) {
+async function registrarComandosVoz(client) {
     try {
-        const comando = new SlashCommandBuilder()
+        const guild = await client.guilds.fetch("1393629457599828040");
+
+        // Comando /entrar
+        const comandoEntrar = new SlashCommandBuilder()
+            .setName('entrar')
+            .setDescription('🔊 Entrar no canal de voz e tocar música');
+
+        // Comando /sair
+        const comandoSair = new SlashCommandBuilder()
+            .setName('sair')
+            .setDescription('🔇 Sair do canal de voz');
+
+        // Comando /reiniciar
+        const comandoReiniciar = new SlashCommandBuilder()
+            .setName('reiniciar')
+            .setDescription('🔄 Reiniciar a música no canal de voz');
+
+        // Comando /audio
+        const comandoAudio = new SlashCommandBuilder()
             .setName('audio')
             .setDescription('🎵 Controlar música no canal de voz')
             .addSubcommand(sub =>
                 sub.setName('play')
-                   .setDescription('Tocar JordanShop.ogg')
+                   .setDescription('Tocar música')
             )
             .addSubcommand(sub =>
                 sub.setName('stop')
@@ -215,28 +278,184 @@ async function registrarComandoAudio(client) {
                    )
             );
 
-        const guild = await client.guilds.fetch("1393629457599828040");
-        await guild.commands.create(comando);
-        console.log('✅ Comando /audio registado');
+        await guild.commands.create(comandoEntrar);
+        await guild.commands.create(comandoSair);
+        await guild.commands.create(comandoReiniciar);
+        await guild.commands.create(comandoAudio);
+
+        console.log('✅ Comandos de voz registados: /entrar, /sair, /reiniciar, /audio');
 
     } catch (err) {
-        console.error('❌ Erro ao registar /audio:', err);
+        console.error('❌ Erro ao registar comandos de voz:', err);
     }
 }
 
-async function handleAudioCommand(interaction) {
+async function handleComandoVoz(interaction) {
     if (!interaction.isChatInputCommand()) return false;
-    if (interaction.commandName !== 'audio') return false;
 
+    const { commandName, guild, member } = interaction;
+
+    // Comando /entrar
+    if (commandName === 'entrar') {
+        const voiceChannel = member.voice.channel;
+
+        if (!voiceChannel) {
+            await interaction.reply({ 
+                content: '❌ Precisas de estar num canal de voz primeiro!', 
+                flags: MessageFlags.Ephemeral 
+            });
+            return true;
+        }
+
+        try {
+            // Verificar se já está num canal
+            const existingConnection = getVoiceConnection(guild.id);
+            if (existingConnection) {
+                await interaction.reply({ 
+                    content: 'ℹ️ Bot já está num canal de voz. Usa `/reiniciar` para reiniciar o áudio.', 
+                    flags: MessageFlags.Ephemeral 
+                });
+                return true;
+            }
+
+            voiceConnection = joinVoiceChannel({
+                channelId: voiceChannel.id,
+                guildId: guild.id,
+                adapterCreator: guild.voiceAdapterCreator,
+                selfDeaf: false,
+                selfMute: false
+            });
+
+            voiceConnection.on(VoiceConnectionStatus.Ready, () => {
+                console.log('✅ Bot entrou no canal de voz:', voiceChannel.name);
+                iniciarAudioAutomatico();
+            });
+
+            voiceConnection.on('error', (err) => {
+                console.error('❌ Erro na conexão de voz:', err);
+            });
+
+            await interaction.reply({ 
+                content: `🔊 A entrar no canal **${voiceChannel.name}**...`, 
+                flags: MessageFlags.Ephemeral 
+            });
+
+        } catch (err) {
+            console.error('❌ Erro ao entrar:', err);
+            await interaction.reply({ 
+                content: '❌ Erro ao entrar no canal de voz.', 
+                flags: MessageFlags.Ephemeral 
+            });
+        }
+        return true;
+    }
+
+    // Comando /sair
+    if (commandName === 'sair') {
+        try {
+            const connection = getVoiceConnection(guild.id);
+
+            if (!connection) {
+                await interaction.reply({ 
+                    content: '❌ Bot não está em nenhum canal de voz.', 
+                    flags: MessageFlags.Ephemeral 
+                });
+                return true;
+            }
+
+            // Parar áudio primeiro
+            pararAudio();
+
+            // Destruir conexão
+            connection.destroy();
+            voiceConnection = null;
+
+            await interaction.reply({ 
+                content: '🔇 Bot saiu do canal de voz.', 
+                flags: MessageFlags.Ephemeral 
+            });
+
+        } catch (err) {
+            console.error('❌ Erro ao sair:', err);
+            await interaction.reply({ 
+                content: '❌ Erro ao sair do canal de voz.', 
+                flags: MessageFlags.Ephemeral 
+            });
+        }
+        return true;
+    }
+
+    // Comando /reiniciar
+    if (commandName === 'reiniciar') {
+        try {
+            const connection = getVoiceConnection(guild.id);
+
+            if (!connection) {
+                await interaction.reply({ 
+                    content: '❌ Bot não está em nenhum canal de voz. Usa `/entrar` primeiro.', 
+                    flags: MessageFlags.Ephemeral 
+                });
+                return true;
+            }
+
+            // Parar áudio atual
+            pararAudio();
+
+            // Pequeno delay para garantir que para
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Reiniciar
+            isPlaying = false;
+            if (currentAudioPath) {
+                tocarAudioLoopInfinito(currentAudioPath, currentFormat);
+            } else {
+                iniciarAudioAutomatico();
+            }
+
+            await interaction.reply({ 
+                content: '🔄 Áudio reiniciado!', 
+                flags: MessageFlags.Ephemeral 
+            });
+
+        } catch (err) {
+            console.error('❌ Erro ao reiniciar:', err);
+            await interaction.reply({ 
+                content: '❌ Erro ao reiniciar o áudio.', 
+                flags: MessageFlags.Ephemeral 
+            });
+        }
+        return true;
+    }
+
+    // Comando /audio
+    if (commandName === 'audio') {
+        return await handleAudioCommand(interaction);
+    }
+
+    return false;
+}
+
+async function handleAudioCommand(interaction) {
     const subcommand = interaction.options.getSubcommand();
-    // ✅ ALTERAÇÃO: Caminho atualizado para .ogg
-    const audioPath = path.join(__dirname, '..', '..', 'audio', 'JordanShop.ogg');
+
+    const oggPath = path.join(__dirname, '..', '..', 'audio', 'JordanShop.ogg');
+    const mp3Path = path.join(__dirname, '..', '..', 'audio', 'JordanShop.mp3');
+
+    let audioPath, format;
+    if (fs.existsSync(oggPath)) {
+        audioPath = oggPath;
+        format = 'ogg';
+    } else {
+        audioPath = mp3Path;
+        format = 'mp3';
+    }
 
     switch (subcommand) {
         case 'play':
-            const sucesso = await tocarAudioLoopInfinito(audioPath);
+            isPlaying = false;
+            const sucesso = await tocarAudioLoopInfinito(audioPath, format);
             if (sucesso) {
-                await interaction.reply({ content: '🎵 JordanShop.ogg em loop infinito!', flags: MessageFlags.Ephemeral });
+                await interaction.reply({ content: '🎵 Música em loop infinito!', flags: MessageFlags.Ephemeral });
             } else {
                 await interaction.reply({ content: '❌ Erro ao tocar ficheiro. Verifica se o ficheiro existe na pasta /audio/', flags: MessageFlags.Ephemeral });
             }
@@ -264,7 +483,7 @@ async function handleAudioCommand(interaction) {
 }
 
 // ============================================================================
-// 5. EMBED DE SUPORTE (3 IDIOMAS) - SÓ ENVIA UMA VEZ
+// 6. EMBED DE SUPORTE (3 IDIOMAS) - SÓ ENVIA UMA VEZ
 // ============================================================================
 
 const embedsEnviados = new Set();
@@ -337,7 +556,7 @@ async function enviarEmbedSuporte(client) {
 }
 
 // ============================================================================
-// 6. FORMULÁRIOS - SÓ ENVIA UMA VEZ
+// 7. FORMULÁRIOS - SÓ ENVIA UMA VEZ
 // ============================================================================
 
 async function enviarFormularios(client) {
@@ -398,16 +617,14 @@ async function enviarFormularios(client) {
 }
 
 // ============================================================================
-// 7. CRIAR TICKET (CORRIGIDO - COM DEFER E ANTI-DUPLICADO)
+// 8. CRIAR TICKET (CORRIGIDO - COM DEFER E ANTI-DUPLICADO)
 // ============================================================================
 
-// Mapa para controlar tickets em criação (evita duplicados)
 const ticketsEmCriacao = new Map();
 
 async function criarTicket(interaction, tipo, idioma) {
     const { guild, user, member } = interaction;
 
-    // Verificar se já está a criar um ticket (anti-duplicado)
     if (ticketsEmCriacao.has(user.id)) {
         return interaction.reply({
             content: '⏳ Já estás a criar um ticket. Aguarda um momento...',
@@ -415,7 +632,6 @@ async function criarTicket(interaction, tipo, idioma) {
         });
     }
 
-    // Marcar como em criação
     ticketsEmCriacao.set(user.id, true);
 
     const nomes = {
@@ -428,10 +644,8 @@ async function criarTicket(interaction, tipo, idioma) {
     const nomeCanal = `ticket-${prefixo}-${user.username}`.toLowerCase().replace(/[^a-z0-9-]/g, '');
 
     try {
-        // DEFER - Responder imediatamente para evitar "Unknown interaction"
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        // Verificar se já existe ticket aberto
         const ticketExistente = guild.channels.cache.find(ch => 
             ch.name.includes(`ticket-${prefixo}-${user.username.toLowerCase()}`) &&
             ch.parentId === CATEGORIA_TICKETS_ID
@@ -444,7 +658,6 @@ async function criarTicket(interaction, tipo, idioma) {
             });
         }
 
-        // Criar canal de ticket
         const ticketChannel = await guild.channels.create({
             name: nomeCanal,
             type: ChannelType.GuildText,
@@ -467,7 +680,6 @@ async function criarTicket(interaction, tipo, idioma) {
             ]
         });
 
-        // Textos por idioma
         const textos = {
             pt: {
                 titulo: '🎫 Ticket de Suporte',
@@ -502,7 +714,6 @@ async function criarTicket(interaction, tipo, idioma) {
 
         await ticketChannel.send({ content: `<@${user.id}>`, embeds: [embed], components: [row] });
 
-        // Responder com editReply (por causa do defer)
         await interaction.editReply({
             content: `✅ Ticket criado: ${ticketChannel}`
         });
@@ -510,7 +721,6 @@ async function criarTicket(interaction, tipo, idioma) {
     } catch (err) {
         console.error('❌ Erro ao criar ticket:', err);
 
-        // Se ainda não respondeu, responder com reply
         if (interaction.deferred) {
             await interaction.editReply({
                 content: '❌ Erro ao criar ticket. Contacta um administrador.'
@@ -522,13 +732,12 @@ async function criarTicket(interaction, tipo, idioma) {
             });
         }
     } finally {
-        // Limpar o mapa de criação
         ticketsEmCriacao.delete(user.id);
     }
 }
 
 // ============================================================================
-// 8. HANDLERS DE INTERAÇÃO
+// 9. HANDLERS DE INTERAÇÃO
 // ============================================================================
 
 async function handleMenuSuporte(interaction) {
@@ -556,9 +765,7 @@ async function handleMenuSuporte(interaction) {
     await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
 }
 
-// CORRIGIDO: Adicionado deferReply para evitar timeout
 async function handleFormBug(interaction) {
-    // Defer imediatamente para evitar timeout
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const modal = new ModalBuilder()
@@ -590,9 +797,7 @@ async function handleFormBug(interaction) {
     await interaction.showModal(modal);
 }
 
-// CORRIGIDO: Adicionado deferReply para evitar timeout
 async function handleFormIdeia(interaction) {
-    // Defer imediatamente para evitar timeout
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const modal = new ModalBuilder()
@@ -612,9 +817,7 @@ async function handleFormIdeia(interaction) {
     await interaction.showModal(modal);
 }
 
-// CORRIGIDO: Adicionado deferReply para evitar timeout
 async function handleFormAvaliar(interaction) {
-    // Defer imediatamente para evitar timeout
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const embed = new EmbedBuilder()
@@ -633,9 +836,7 @@ async function handleFormAvaliar(interaction) {
     await interaction.editReply({ embeds: [embed], components: [row] });
 }
 
-// CORRIGIDO: Adicionado deferReply para evitar timeout
 async function handleAvaliacaoEstrelas(interaction, estrelas) {
-    // Defer imediatamente para evitar timeout
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const modal = new ModalBuilder()
@@ -655,14 +856,11 @@ async function handleAvaliacaoEstrelas(interaction, estrelas) {
     await interaction.showModal(modal);
 }
 
-// CORRIGIDO: Adicionado deferReply no início e mudado para editReply
 async function handleModalSubmit(interaction) {
     const { customId, fields, user } = interaction;
 
-    // Defer imediatamente para evitar timeout e marcar como processado
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    // ✅ CANAL DE FEEDBACK ATUALIZADO: 1495145643977478154 (bot-feedback-logs)
     const LOG_ID = process.env.LOG_CHANNEL_ID || "1495145643977478154";
     const logChannel = await interaction.guild.channels.fetch(LOG_ID).catch(() => null);
 
@@ -724,14 +922,17 @@ async function handleModalSubmit(interaction) {
 }
 
 // ============================================================================
-// 9. HANDLER PRINCIPAL
+// 10. HANDLER PRINCIPAL
 // ============================================================================
 
 async function handleSistemaInteraction(interaction, client) {
-    // Comando /audio
-    if (interaction.isChatInputCommand() && interaction.commandName === 'audio') {
-        await handleAudioCommand(interaction);
-        return true;
+    // Comandos de voz (/entrar, /sair, /reiniciar, /audio)
+    if (interaction.isChatInputCommand()) {
+        const vozCommands = ['entrar', 'sair', 'reiniciar', 'audio'];
+        if (vozCommands.includes(interaction.commandName)) {
+            await handleComandoVoz(interaction);
+            return true;
+        }
     }
 
     // Menu de idioma
@@ -740,7 +941,7 @@ async function handleSistemaInteraction(interaction, client) {
         return true;
     }
 
-    // Botões de ticket (suporte, compra, tecnico)
+    // Botões de ticket
     if (interaction.isButton() && interaction.customId.startsWith('ticket_')) {
         const parts = interaction.customId.split('_');
         const tipo = parts[1];
@@ -800,6 +1001,6 @@ module.exports = {
     enviarEmbedSuporte,
     enviarFormularios,
     handleSistemaInteraction,
-    registrarComandoAudio,
+    registrarComandosVoz,
     handleAudioCommand,
 };
