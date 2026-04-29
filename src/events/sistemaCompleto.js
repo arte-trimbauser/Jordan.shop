@@ -25,6 +25,7 @@ const {
 } = require('@discordjs/voice');
 const fs = require('fs');
 const path = require('path');
+const { createReadStream } = require('node:fs');
 
 // FFmpeg static para funcionar no Render
 const ffmpegPath = require('ffmpeg-static');
@@ -50,14 +51,14 @@ let currentResource = null;
 let currentVolume = 0.5;
 
 // ============================================================================
-// 1. BOT ENTRA NO CANAL DE VOZ E TOCA MP3 EM LOOP INFINITO
+// 1. BOT ENTRA NO CANAL DE VOZ E TOCA OGG EM LOOP INFINITO
 // ============================================================================
 
 async function entrarCanalVoz(client) {
     try {
         const guild = client.guilds.cache.first();
         const canal = await guild.channels.fetch(CANAL_VOZ_ID);
-        
+
         if (!canal || canal.type !== ChannelType.GuildVoice) {
             console.log('❌ Canal de voz não encontrado');
             return;
@@ -73,9 +74,9 @@ async function entrarCanalVoz(client) {
 
         voiceConnection.on(VoiceConnectionStatus.Ready, () => {
             console.log('✅ Bot entrou no canal de voz:', canal.name);
-            
-            // Tocar JordanShop.mp3 em loop infinito
-            const audioPath = path.join(__dirname, '..', '..', 'audio', 'JordanShop.mp3');
+
+            // Tocar JordanShop.ogg em loop infinito (Ogg Opus - não precisa de encoder)
+            const audioPath = path.join(__dirname, '..', '..', 'audio', 'JordanShop.ogg');
             console.log('🎵 A procurar ficheiro:', audioPath);
             console.log('🎵 Ficheiro existe:', fs.existsSync(audioPath));
             tocarAudioLoopInfinito(audioPath);
@@ -91,7 +92,7 @@ async function entrarCanalVoz(client) {
 }
 
 // ============================================================================
-// 2. ÁUDIO EM LOOP INFINITO (QUANDO TERMINA, VOLTA A TOCAR)
+// 2. ÁUDIO EM LOOP INFINITO (OGG OPUS - SEM DEPENDÊNCIAS DE ENCODER)
 // ============================================================================
 
 async function tocarAudioLoopInfinito(audioPath) {
@@ -110,7 +111,7 @@ async function tocarAudioLoopInfinito(audioPath) {
                     noSubscriber: NoSubscriberBehavior.Play
                 }
             });
-            
+
             // QUANDO TERMINA, VOLTA A TOCAR (LOOP INFINITO)
             audioPlayer.on(AudioPlayerStatus.Idle, () => {
                 console.log("🎵 Música terminou, reiniciando loop infinito...");
@@ -131,10 +132,11 @@ async function tocarAudioLoopInfinito(audioPath) {
             });
         }
 
-        // Criar recurso de áudio com FFmpeg
-        currentResource = createAudioResource(audioPath, {
-            inputType: StreamType.Arbitrary,
-            inlineVolume: true
+        // ✅ ALTERAÇÃO: Usar StreamType.OggOpus para ficheiros Ogg Opus
+        // Não precisa de @discordjs/opus, opusscript, nem FFmpeg no pipeline!
+        const stream = createReadStream(audioPath);
+        currentResource = createAudioResource(stream, {
+            inputType: StreamType.OggOpus
         });
 
         // Ajustar volume
@@ -144,7 +146,7 @@ async function tocarAudioLoopInfinito(audioPath) {
 
         // Tocar
         audioPlayer.play(currentResource);
-        
+
         // Subscrever à conexão
         if (voiceConnection) {
             voiceConnection.subscribe(audioPlayer);
@@ -175,7 +177,7 @@ function pararAudio() {
 
 function ajustarVolume(nivel) {
     currentVolume = Math.max(0, Math.min(100, nivel)) / 100;
-    
+
     if (currentResource && currentResource.volume) {
         currentResource.volume.setVolume(currentVolume);
         console.log(`🔊 Volume ajustado para ${Math.round(currentVolume * 100)}%`);
@@ -195,7 +197,7 @@ async function registrarComandoAudio(client) {
             .setDescription('🎵 Controlar música no canal de voz')
             .addSubcommand(sub =>
                 sub.setName('play')
-                   .setDescription('Tocar JordanShop.mp3')
+                   .setDescription('Tocar JordanShop.ogg')
             )
             .addSubcommand(sub =>
                 sub.setName('stop')
@@ -227,13 +229,14 @@ async function handleAudioCommand(interaction) {
     if (interaction.commandName !== 'audio') return false;
 
     const subcommand = interaction.options.getSubcommand();
-    const audioPath = path.join(__dirname, '..', '..', 'audio', 'JordanShop.mp3');
+    // ✅ ALTERAÇÃO: Caminho atualizado para .ogg
+    const audioPath = path.join(__dirname, '..', '..', 'audio', 'JordanShop.ogg');
 
     switch (subcommand) {
         case 'play':
             const sucesso = await tocarAudioLoopInfinito(audioPath);
             if (sucesso) {
-                await interaction.reply({ content: '🎵 JordanShop.mp3 em loop infinito!', flags: MessageFlags.Ephemeral });
+                await interaction.reply({ content: '🎵 JordanShop.ogg em loop infinito!', flags: MessageFlags.Ephemeral });
             } else {
                 await interaction.reply({ content: '❌ Erro ao tocar ficheiro. Verifica se o ficheiro existe na pasta /audio/', flags: MessageFlags.Ephemeral });
             }
@@ -403,7 +406,7 @@ const ticketsEmCriacao = new Map();
 
 async function criarTicket(interaction, tipo, idioma) {
     const { guild, user, member } = interaction;
-    
+
     // Verificar se já está a criar um ticket (anti-duplicado)
     if (ticketsEmCriacao.has(user.id)) {
         return interaction.reply({
@@ -411,10 +414,10 @@ async function criarTicket(interaction, tipo, idioma) {
             flags: MessageFlags.Ephemeral
         });
     }
-    
+
     // Marcar como em criação
     ticketsEmCriacao.set(user.id, true);
-    
+
     const nomes = {
         pt: { suporte: 'suporte', compra: 'compra', tecnico: 'tecnico' },
         es: { suporte: 'soporte', compra: 'compra', tecnico: 'tecnico' },
@@ -427,7 +430,7 @@ async function criarTicket(interaction, tipo, idioma) {
     try {
         // DEFER - Responder imediatamente para evitar "Unknown interaction"
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        
+
         // Verificar se já existe ticket aberto
         const ticketExistente = guild.channels.cache.find(ch => 
             ch.name.includes(`ticket-${prefixo}-${user.username.toLowerCase()}`) &&
@@ -506,7 +509,7 @@ async function criarTicket(interaction, tipo, idioma) {
 
     } catch (err) {
         console.error('❌ Erro ao criar ticket:', err);
-        
+
         // Se ainda não respondeu, responder com reply
         if (interaction.deferred) {
             await interaction.editReply({
@@ -530,7 +533,7 @@ async function criarTicket(interaction, tipo, idioma) {
 
 async function handleMenuSuporte(interaction) {
     const idioma = interaction.values[0];
-    
+
     const textos = {
         pt: { titulo: '🎫 Criar Ticket', desc: 'Escolhe o tipo de suporte:', suporte: 'Suporte Geral', compra: 'Ajuda com Compra', tecnico: 'Problema Técnico' },
         es: { titulo: '🎫 Crear Ticket', desc: 'Elige el tipo de soporte:', suporte: 'Soporte General', compra: 'Ayuda con Compra', tecnico: 'Problema Técnico' },
@@ -557,7 +560,7 @@ async function handleMenuSuporte(interaction) {
 async function handleFormBug(interaction) {
     // Defer imediatamente para evitar timeout
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    
+
     const modal = new ModalBuilder()
         .setCustomId('modal_bug')
         .setTitle('🐛 Reportar Bug');
@@ -582,7 +585,7 @@ async function handleFormBug(interaction) {
         new ActionRowBuilder().addComponents(input1),
         new ActionRowBuilder().addComponents(input2)
     );
-    
+
     await interaction.followUp({ content: 'Abre o modal acima!', flags: MessageFlags.Ephemeral });
     await interaction.showModal(modal);
 }
@@ -591,7 +594,7 @@ async function handleFormBug(interaction) {
 async function handleFormIdeia(interaction) {
     // Defer imediatamente para evitar timeout
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    
+
     const modal = new ModalBuilder()
         .setCustomId('modal_ideia')
         .setTitle('💡 Sugestão');
@@ -613,7 +616,7 @@ async function handleFormIdeia(interaction) {
 async function handleFormAvaliar(interaction) {
     // Defer imediatamente para evitar timeout
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    
+
     const embed = new EmbedBuilder()
         .setTitle('⭐ Avalia o Jordan Shop Bot')
         .setDescription('Quantas estrelas dás ao nosso serviço (bot)?')
@@ -634,7 +637,7 @@ async function handleFormAvaliar(interaction) {
 async function handleAvaliacaoEstrelas(interaction, estrelas) {
     // Defer imediatamente para evitar timeout
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    
+
     const modal = new ModalBuilder()
         .setCustomId(`modal_avaliacao_${estrelas}`)
         .setTitle(`⭐ Avaliação: ${estrelas} Estrelas`);
@@ -655,18 +658,18 @@ async function handleAvaliacaoEstrelas(interaction, estrelas) {
 // CORRIGIDO: Adicionado deferReply no início e mudado para editReply
 async function handleModalSubmit(interaction) {
     const { customId, fields, user } = interaction;
-    
+
     // Defer imediatamente para evitar timeout e marcar como processado
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    
+
     // ✅ CANAL DE FEEDBACK ATUALIZADO: 1495145643977478154 (bot-feedback-logs)
     const LOG_ID = process.env.LOG_CHANNEL_ID || "1495145643977478154";
     const logChannel = await interaction.guild.channels.fetch(LOG_ID).catch(() => null);
-    
+
     if (customId === 'modal_bug') {
         const descricao = fields.getTextInputValue('descricao_bug');
         const canal = fields.getTextInputValue('canal_bug') || 'Não especificado';
-        
+
         if (logChannel) {
             const embed = new EmbedBuilder()
                 .setTitle('🐛 Novo Bug Reportado')
@@ -679,12 +682,12 @@ async function handleModalSubmit(interaction) {
                 .setTimestamp();
             await logChannel.send({ embeds: [embed] });
         }
-        
+
         await interaction.editReply({ content: '✅ Bug reportado com sucesso! Obrigado.' });
     }
     else if (customId === 'modal_ideia') {
         const ideia = fields.getTextInputValue('descricao_ideia');
-        
+
         if (logChannel) {
             const embed = new EmbedBuilder()
                 .setTitle('💡 Nova Sugestão')
@@ -696,13 +699,13 @@ async function handleModalSubmit(interaction) {
                 .setTimestamp();
             await logChannel.send({ embeds: [embed] });
         }
-        
+
         await interaction.editReply({ content: '💡 Obrigado pela tua sugestão!' });
     }
     else if (customId.startsWith('modal_avaliacao_')) {
         const estrelas = customId.split('_')[2];
         const motivo = fields.getTextInputValue('motivo_avaliacao') || 'Sem comentário';
-        
+
         if (logChannel) {
             const embed = new EmbedBuilder()
                 .setTitle('⭐ Nova Avaliação')
@@ -715,7 +718,7 @@ async function handleModalSubmit(interaction) {
                 .setTimestamp();
             await logChannel.send({ embeds: [embed] });
         }
-        
+
         await interaction.editReply({ content: `⭐ Obrigado pela tua avaliação de ${estrelas} estrelas!` });
     }
 }
@@ -730,23 +733,23 @@ async function handleSistemaInteraction(interaction, client) {
         await handleAudioCommand(interaction);
         return true;
     }
-    
+
     // Menu de idioma
     if (interaction.isStringSelectMenu() && interaction.customId === 'menu_suporte_idioma') {
         await handleMenuSuporte(interaction);
         return true;
     }
-    
+
     // Botões de ticket (suporte, compra, tecnico)
     if (interaction.isButton() && interaction.customId.startsWith('ticket_')) {
         const parts = interaction.customId.split('_');
         const tipo = parts[1];
         const idioma = parts[2];
-        
+
         await criarTicket(interaction, tipo, idioma);
         return true;
     }
-    
+
     // Botão fechar ticket
     if (interaction.isButton() && interaction.customId === 'fechar_ticket') {
         const { channel } = interaction;
@@ -757,7 +760,7 @@ async function handleSistemaInteraction(interaction, client) {
         setTimeout(() => channel.delete().catch(() => {}), 5000);
         return true;
     }
-    
+
     // Botões de formulário
     if (interaction.isButton()) {
         if (interaction.customId === 'form_bug') {
@@ -778,13 +781,13 @@ async function handleSistemaInteraction(interaction, client) {
             return true;
         }
     }
-    
+
     // Modais
     if (interaction.isModalSubmit()) {
         await handleModalSubmit(interaction);
         return true;
     }
-    
+
     return false;
 }
 
