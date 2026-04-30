@@ -10,14 +10,17 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const { registrarComandoChamar, handleChamarCommand } = require('./src/commands/chamarCommand');
 
-// Requires do sistemaCompleto
+// No require (adicionar registrarComandosVoz):
 const { 
     entrarCanalVoz, 
     enviarEmbedSuporte, 
     enviarFormularios,
     handleSistemaInteraction,
-    registrarComandosVoz  // ← ADICIONAR ISTO
+    registrarComandosVoz  // ← ADICIONAR
 } = require('./src/events/sistemaCompleto');
+
+// No evento ready (adicionar):
+await registrarComandosVoz(client);
 
 // Requires do sistemaVerificacao
 const { 
