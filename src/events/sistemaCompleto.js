@@ -22,7 +22,8 @@ const {
     createAudioResource,
     AudioPlayerStatus,
     StreamType,
-    NoSubscriberBehavior
+    NoSubscriberBehavior,
+    demuxProbe
 } = require('@discordjs/voice');
 const fs = require('fs');
 const path = require('path');
@@ -52,7 +53,6 @@ let currentResource = null;
 let currentVolume = 0.5;
 let isPlaying = false;
 let currentAudioPath = null;
-let currentFormat = null;
 
 // ============================================================================
 // 1. BOT ENTRA NO CANAL DE VOZ E TOCA ÁUDIO EM LOOP INFINITO
@@ -91,6 +91,15 @@ async function entrarCanalVoz(client) {
         voiceConnection.on(VoiceConnectionStatus.Disconnected, async () => {
             console.log('⚠️ Bot desconectado do canal de voz');
             isPlaying = false;
+            try {
+                await Promise.race([
+                    entersState(voiceConnection, VoiceConnectionStatus.Signalling, 5_000),
+                    entersState(voiceConnection, VoiceConnectionStatus.Connecting, 5_000),
+                ]);
+            } catch (error) {
+                voiceConnection.destroy();
+                voiceConnection = null;
+            }
         });
 
         voiceConnection.on('error', (err) => {
@@ -103,31 +112,32 @@ async function entrarCanalVoz(client) {
 }
 
 // ============================================================================
-// 2. INICIAR ÁUDIO AUTOMATICO (OGG OU MP3)
+// 2. INICIAR ÁUDIO AUTOMATICO (COM DEMUX PROBE)
 // ============================================================================
 
-function iniciarAudioAutomatico() {
+async function iniciarAudioAutomatico() {
     const oggPath = path.join(__dirname, '..', '..', 'audio', 'JordanShop.ogg');
     const mp3Path = path.join(__dirname, '..', '..', 'audio', 'JordanShop.mp3');
 
+    let audioPath;
     if (fs.existsSync(oggPath)) {
-        currentAudioPath = oggPath;
-        currentFormat = 'ogg';
-        tocarAudioLoopInfinito(oggPath, 'ogg');
+        audioPath = oggPath;
     } else if (fs.existsSync(mp3Path)) {
-        currentAudioPath = mp3Path;
-        currentFormat = 'mp3';
-        tocarAudioLoopInfinito(mp3Path, 'mp3');
+        audioPath = mp3Path;
     } else {
         console.error('❌ Nenhum ficheiro de áudio encontrado na pasta /audio/');
+        return;
     }
+
+    currentAudioPath = audioPath;
+    await tocarAudioLoopInfinito(audioPath);
 }
 
 // ============================================================================
-// 3. ÁUDIO EM LOOP INFINITO
+// 3. ÁUDIO EM LOOP INFINITO (COM DEMUX PROBE - MAIS FIÁVEL)
 // ============================================================================
 
-async function tocarAudioLoopInfinito(audioPath, format = 'ogg') {
+async function tocarAudioLoopInfinito(audioPath) {
     try {
         if (!fs.existsSync(audioPath)) {
             console.error(`❌ Ficheiro não encontrado: ${audioPath}`);
@@ -136,8 +146,9 @@ async function tocarAudioLoopInfinito(audioPath, format = 'ogg') {
 
         if (isPlaying) return true;
 
-        isPlaying = true;
+        console.log('🎵 A preparar reprodução de:', path.basename(audioPath));
 
+        // Criar player se não existir
         if (!audioPlayer) {
             audioPlayer = createAudioPlayer({
                 behaviors: {
@@ -145,9 +156,12 @@ async function tocarAudioLoopInfinito(audioPath, format = 'ogg') {
                 }
             });
 
+            // Loop infinito quando termina
             audioPlayer.on(AudioPlayerStatus.Idle, () => {
+                console.log("🎵 Música terminou, reiniciando...");
+                isPlaying = false;
                 if (currentAudioPath) {
-                    tocarAudioLoopInfinito(currentAudioPath, currentFormat);
+                    setTimeout(() => tocarAudioLoopInfinito(currentAudioPath), 1000);
                 }
             });
 
@@ -155,42 +169,41 @@ async function tocarAudioLoopInfinito(audioPath, format = 'ogg') {
                 console.log("🎵 A tocar:", path.basename(audioPath));
             });
 
-            audioPlayer.on(AudioPlayerStatus.Buffering, () => {
-                // Silencioso
-            });
-
             audioPlayer.on('error', (err) => {
                 console.error("❌ Erro no player:", err.message);
                 isPlaying = false;
                 setTimeout(() => {
                     if (currentAudioPath) {
-                        tocarAudioLoopInfinito(currentAudioPath, currentFormat);
+                        tocarAudioLoopInfinito(currentAudioPath);
                     }
                 }, 5000);
             });
         }
 
-        if (format === 'ogg') {
-            const stream = createReadStream(audioPath);
-            currentResource = createAudioResource(stream, {
-                inputType: StreamType.OggOpus
-            });
-        } else {
-            currentResource = createAudioResource(audioPath, {
-                inputType: StreamType.Arbitrary,
-                inlineVolume: true
-            });
-        }
+        // ✅ CORREÇÃO: Usar demuxProbe para detetar formato automaticamente
+        const stream = createReadStream(audioPath);
+        const { stream: probedStream, type } = await demuxProbe(stream);
 
+        console.log(`🔍 Formato detetado: ${type}`);
+
+        currentResource = createAudioResource(probedStream, {
+            inputType: type,
+            inlineVolume: true
+        });
+
+        // Ajustar volume
         if (currentResource.volume) {
             currentResource.volume.setVolume(currentVolume);
         }
 
-        audioPlayer.play(currentResource);
-
+        // ✅ CORREÇÃO: Subscrever ANTES de tocar
         if (voiceConnection) {
             voiceConnection.subscribe(audioPlayer);
         }
+
+        // Tocar
+        audioPlayer.play(currentResource);
+        isPlaying = true;
 
         return true;
 
@@ -199,7 +212,7 @@ async function tocarAudioLoopInfinito(audioPath, format = 'ogg') {
         isPlaying = false;
         setTimeout(() => {
             if (currentAudioPath) {
-                tocarAudioLoopInfinito(currentAudioPath, currentFormat);
+                tocarAudioLoopInfinito(currentAudioPath);
             }
         }, 10000);
         return false;
@@ -239,22 +252,18 @@ async function registrarComandosVoz(client) {
     try {
         const guild = await client.guilds.fetch("1393629457599828040");
 
-        // Comando /entrar
         const comandoEntrar = new SlashCommandBuilder()
             .setName('entrar')
             .setDescription('🔊 Entrar no canal de voz e tocar música');
 
-        // Comando /sair
         const comandoSair = new SlashCommandBuilder()
             .setName('sair')
             .setDescription('🔇 Sair do canal de voz');
 
-        // Comando /reiniciar
         const comandoReiniciar = new SlashCommandBuilder()
             .setName('reiniciar')
             .setDescription('🔄 Reiniciar a música no canal de voz');
 
-        // Comando /audio
         const comandoAudio = new SlashCommandBuilder()
             .setName('audio')
             .setDescription('🎵 Controlar música no canal de voz')
@@ -308,7 +317,6 @@ async function handleComandoVoz(interaction) {
         }
 
         try {
-            // Verificar se já está num canal
             const existingConnection = getVoiceConnection(guild.id);
             if (existingConnection) {
                 await interaction.reply({ 
@@ -317,6 +325,8 @@ async function handleComandoVoz(interaction) {
                 });
                 return true;
             }
+
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
             voiceConnection = joinVoiceChannel({
                 channelId: voiceChannel.id,
@@ -335,16 +345,14 @@ async function handleComandoVoz(interaction) {
                 console.error('❌ Erro na conexão de voz:', err);
             });
 
-            await interaction.reply({ 
-                content: `🔊 A entrar no canal **${voiceChannel.name}**...`, 
-                flags: MessageFlags.Ephemeral 
+            await interaction.editReply({ 
+                content: `🔊 Entrei no canal **${voiceChannel.name}** e estou a tocar música!` 
             });
 
         } catch (err) {
             console.error('❌ Erro ao entrar:', err);
-            await interaction.reply({ 
-                content: '❌ Erro ao entrar no canal de voz.', 
-                flags: MessageFlags.Ephemeral 
+            await interaction.editReply({ 
+                content: '❌ Erro ao entrar no canal de voz.' 
             });
         }
         return true;
@@ -363,15 +371,12 @@ async function handleComandoVoz(interaction) {
                 return true;
             }
 
-            // Parar áudio primeiro
             pararAudio();
-
-            // Destruir conexão
             connection.destroy();
             voiceConnection = null;
 
             await interaction.reply({ 
-                content: '🔇 Bot saiu do canal de voz.', 
+                content: '🔇 Saí do canal de voz.', 
                 flags: MessageFlags.Ephemeral 
             });
 
@@ -398,30 +403,26 @@ async function handleComandoVoz(interaction) {
                 return true;
             }
 
-            // Parar áudio atual
-            pararAudio();
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-            // Pequeno delay para garantir que para
+            pararAudio();
             await new Promise(resolve => setTimeout(resolve, 500));
 
-            // Reiniciar
             isPlaying = false;
             if (currentAudioPath) {
-                tocarAudioLoopInfinito(currentAudioPath, currentFormat);
+                await tocarAudioLoopInfinito(currentAudioPath);
             } else {
-                iniciarAudioAutomatico();
+                await iniciarAudioAutomatico();
             }
 
-            await interaction.reply({ 
-                content: '🔄 Áudio reiniciado!', 
-                flags: MessageFlags.Ephemeral 
+            await interaction.editReply({ 
+                content: '🔄 Áudio reiniciado!' 
             });
 
         } catch (err) {
             console.error('❌ Erro ao reiniciar:', err);
-            await interaction.reply({ 
-                content: '❌ Erro ao reiniciar o áudio.', 
-                flags: MessageFlags.Ephemeral 
+            await interaction.editReply({ 
+                content: '❌ Erro ao reiniciar o áudio.' 
             });
         }
         return true;
@@ -438,43 +439,43 @@ async function handleComandoVoz(interaction) {
 async function handleAudioCommand(interaction) {
     const subcommand = interaction.options.getSubcommand();
 
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     const oggPath = path.join(__dirname, '..', '..', 'audio', 'JordanShop.ogg');
     const mp3Path = path.join(__dirname, '..', '..', 'audio', 'JordanShop.mp3');
 
-    let audioPath, format;
+    let audioPath;
     if (fs.existsSync(oggPath)) {
         audioPath = oggPath;
-        format = 'ogg';
     } else {
         audioPath = mp3Path;
-        format = 'mp3';
     }
 
     switch (subcommand) {
         case 'play':
             isPlaying = false;
-            const sucesso = await tocarAudioLoopInfinito(audioPath, format);
+            const sucesso = await tocarAudioLoopInfinito(audioPath);
             if (sucesso) {
-                await interaction.reply({ content: '🎵 Música em loop infinito!', flags: MessageFlags.Ephemeral });
+                await interaction.editReply({ content: '🎵 Música em loop infinito!' });
             } else {
-                await interaction.reply({ content: '❌ Erro ao tocar ficheiro. Verifica se o ficheiro existe na pasta /audio/', flags: MessageFlags.Ephemeral });
+                await interaction.editReply({ content: '❌ Erro ao tocar ficheiro. Verifica se o ficheiro existe na pasta /audio/' });
             }
             break;
 
         case 'stop':
             if (pararAudio()) {
-                await interaction.reply({ content: '🛑 Áudio parado', flags: MessageFlags.Ephemeral });
+                await interaction.editReply({ content: '🛑 Áudio parado' });
             } else {
-                await interaction.reply({ content: '❌ Nenhum áudio a tocar', flags: MessageFlags.Ephemeral });
+                await interaction.editReply({ content: '❌ Nenhum áudio a tocar' });
             }
             break;
 
         case 'volume':
             const nivel = interaction.options.getInteger('nivel');
             if (ajustarVolume(nivel)) {
-                await interaction.reply({ content: `🔊 Volume ajustado para ${nivel}%`, flags: MessageFlags.Ephemeral });
+                await interaction.editReply({ content: `🔊 Volume ajustado para ${nivel}%` });
             } else {
-                await interaction.reply({ content: '❌ Não foi possível ajustar volume', flags: MessageFlags.Ephemeral });
+                await interaction.editReply({ content: '❌ Não foi possível ajustar volume' });
             }
             break;
     }
