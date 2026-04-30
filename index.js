@@ -10,19 +10,14 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const { registrarComandoChamar, handleChamarCommand } = require('./src/commands/chamarCommand');
 
-// No require (adicionar registrarComandosVoz):
+// Requires do sistemaCompleto
 const { 
     entrarCanalVoz, 
     enviarEmbedSuporte, 
     enviarFormularios,
     handleSistemaInteraction,
-    registrarComandosVoz  // ← ADICIONAR
+    registrarComandosVoz
 } = require('./src/events/sistemaCompleto');
-
-// ✅ CERTO — dentro do evento ready que é async:
-client.once(Events.ClientReady, async () => {
-    await registrarComandosVoz(client);  // ← AQUI FUNCIONA
-});
 
 // Requires do sistemaVerificacao
 const { 
@@ -42,13 +37,14 @@ const {
     MessageFlags
 } = require("discord.js");
 
+// CRIAR CLIENT PRIMEIRO
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildVoiceStates // ← ESSENCIAL PARA ÁUDIO!
+        GatewayIntentBits.GuildVoiceStates
     ]
 });
 
@@ -265,7 +261,7 @@ client.login(TOKEN)
     .then(() => console.log("✅ Pedido de login enviado ao Discord"))
     .catch(err => console.error("❌ ERRO NO LOGIN:", err));
 
-// Evento Ready
+// Evento Ready - TUDO AQUI DENTRO
 client.once(Events.ClientReady, async () => {
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
 
@@ -277,15 +273,15 @@ client.once(Events.ClientReady, async () => {
         console.error("❌ Erro ao entrar no canal de voz:", err.message);
     }
 
-    // 1.5. Registrar comandos de voz (/entrar, /sair, /reiniciar, /audio)  // ← ADICIONAR ISTO
+    // 2. Registrar comandos de voz
     try {
         await registrarComandosVoz(client);
-        console.log("✅ Comandos de voz registados (/entrar, /sair, /reiniciar, /audio)");
+        console.log("✅ Comandos de voz registados");
     } catch (err) {
         console.error("❌ Erro ao registar comandos de voz:", err.message);
     }
-    
-    // 2. Enviar embed de suporte
+
+    // 3. Enviar embed de suporte
     try {
         await enviarEmbedSuporte(client);
         console.log("✅ Embed de suporte enviado");
@@ -293,7 +289,7 @@ client.once(Events.ClientReady, async () => {
         console.error("❌ Erro ao enviar embed de suporte:", err.message);
     }
 
-    // 3. Enviar formulários
+    // 4. Enviar formulários
     try {
         await enviarFormularios(client);
         console.log("✅ Formulários enviados");
@@ -301,7 +297,7 @@ client.once(Events.ClientReady, async () => {
         console.error("❌ Erro ao enviar formulários:", err.message);
     }
 
-    // 4. Inicializar sistema de verificação
+    // 5. Inicializar sistema de verificação
     try {
         await enviarVerificacao(client);
         inicializarSistemaVerificacao(client);
@@ -310,7 +306,7 @@ client.once(Events.ClientReady, async () => {
         console.error("❌ Erro ao inicializar verificação:", err.message);
     }
 
-    // 5. Registrar comando /chamar
+    // 6. Registrar comando /chamar
     try {
         await registrarComandoChamar(client);
         console.log("✅ Comando /chamar registado");
