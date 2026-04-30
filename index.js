@@ -19,8 +19,10 @@ const {
     registrarComandosVoz  // ← ADICIONAR
 } = require('./src/events/sistemaCompleto');
 
-// No evento ready (adicionar):
-await registrarComandosVoz(client);
+// ✅ CERTO — dentro do evento ready que é async:
+client.once(Events.ClientReady, async () => {
+    await registrarComandosVoz(client);  // ← AQUI FUNCIONA
+});
 
 // Requires do sistemaVerificacao
 const { 
