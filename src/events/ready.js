@@ -7,7 +7,7 @@ const {
     entrarCanalVoz, 
     enviarEmbedSuporte, 
     enviarFormularios,
-    registrarComandoAudio
+    registrarComandosVoz  // ← ALTERADO: usar a nova função
 } = require('./sistemaCompleto');
 
 // Requires do sistemaVerificacao (verificação anti-spam - INDEPENDENTE)
@@ -48,13 +48,13 @@ module.exports = async (client) => {
         console.error("❌ Erro ao registar slash commands:", err);
     }
 
-    // ==================== REGISTAR COMANDO /AUDIO ====================
-    console.log("🎵 A registar comando /audio...");
+    // ==================== REGISTAR COMANDOS DE VOZ ====================
+    console.log("🎵 A registar comandos de voz...");
     try {
-        await registrarComandoAudio(client);
-        console.log("✅ Comando /audio registado com sucesso!");
+        await registrarComandosVoz(client);  // ← ALTERADO: nova função que regista /entrar, /sair, /reiniciar, /audio
+        console.log("✅ Comandos de voz registados com sucesso!");
     } catch (err) {
-        console.error("❌ Erro ao registar /audio:", err);
+        console.error("❌ Erro ao registar comandos de voz:", err);
     }
 
     // ==================== REGISTAR COMANDO /CHAMAR ====================
