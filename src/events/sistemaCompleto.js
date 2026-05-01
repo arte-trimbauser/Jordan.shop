@@ -52,7 +52,19 @@ let audioPlayer = null;
 let currentResource = null;
 let currentVolume = 0.5;
 let isPlaying = false;
-let currentAudioPath = null;
+
+// Caminho do áudio - detetar automaticamente
+function getAudioPath() {
+    const oggPath = path.join(__dirname, '..', '..', 'audio', 'JordanShop.ogg');
+    const mp3Path = path.join(__dirname, '..', '..', 'audio', 'JordanShop.mp3');
+
+    if (fs.existsSync(oggPath)) {
+        return oggPath;
+    } else if (fs.existsSync(mp3Path)) {
+        return mp3Path;
+    }
+    return null;
+}
 
 // ============================================================================
 // 1. BOT ENTRA NO CANAL DE VOZ E TOCA ÁUDIO EM LOOP INFINITO
@@ -91,15 +103,6 @@ async function entrarCanalVoz(client) {
         voiceConnection.on(VoiceConnectionStatus.Disconnected, async () => {
             console.log('⚠️ Bot desconectado do canal de voz');
             isPlaying = false;
-            try {
-                await Promise.race([
-                    entersState(voiceConnection, VoiceConnectionStatus.Signalling, 5_000),
-                    entersState(voiceConnection, VoiceConnectionStatus.Connecting, 5_000),
-                ]);
-            } catch (error) {
-                voiceConnection.destroy();
-                voiceConnection = null;
-            }
         });
 
         voiceConnection.on('error', (err) => {
@@ -112,39 +115,36 @@ async function entrarCanalVoz(client) {
 }
 
 // ============================================================================
-// 2. INICIAR ÁUDIO AUTOMATICO (COM DEMUX PROBE)
+// 2. INICIAR ÁUDIO AUTOMATICO
 // ============================================================================
 
 async function iniciarAudioAutomatico() {
-    const oggPath = path.join(__dirname, '..', '..', 'audio', 'JordanShop.ogg');
-    const mp3Path = path.join(__dirname, '..', '..', 'audio', 'JordanShop.mp3');
+    const audioPath = getAudioPath();
 
-    let audioPath;
-    if (fs.existsSync(oggPath)) {
-        audioPath = oggPath;
-    } else if (fs.existsSync(mp3Path)) {
-        audioPath = mp3Path;
-    } else {
+    if (!audioPath) {
         console.error('❌ Nenhum ficheiro de áudio encontrado na pasta /audio/');
         return;
     }
 
-    currentAudioPath = audioPath;
+    console.log('🎵 Ficheiro encontrado:', path.basename(audioPath));
     await tocarAudioLoopInfinito(audioPath);
 }
 
 // ============================================================================
-// 3. ÁUDIO EM LOOP INFINITO (COM DEMUX PROBE - MAIS FIÁVEL)
+// 3. ÁUDIO EM LOOP INFINITO (COM DEMUX PROBE)
 // ============================================================================
 
 async function tocarAudioLoopInfinito(audioPath) {
     try {
-        if (!fs.existsSync(audioPath)) {
+        if (!audioPath || !fs.existsSync(audioPath)) {
             console.error(`❌ Ficheiro não encontrado: ${audioPath}`);
             return false;
         }
 
-        if (isPlaying) return true;
+        if (isPlaying) {
+            console.log('ℹ️ Áudio já está a tocar');
+            return true;
+        }
 
         console.log('🎵 A preparar reprodução de:', path.basename(audioPath));
 
@@ -160,8 +160,9 @@ async function tocarAudioLoopInfinito(audioPath) {
             audioPlayer.on(AudioPlayerStatus.Idle, () => {
                 console.log("🎵 Música terminou, reiniciando...");
                 isPlaying = false;
-                if (currentAudioPath) {
-                    setTimeout(() => tocarAudioLoopInfinito(currentAudioPath), 1000);
+                const pathAtual = getAudioPath();
+                if (pathAtual) {
+                    setTimeout(() => tocarAudioLoopInfinito(pathAtual), 1000);
                 }
             });
 
@@ -169,18 +170,23 @@ async function tocarAudioLoopInfinito(audioPath) {
                 console.log("🎵 A tocar:", path.basename(audioPath));
             });
 
+            audioPlayer.on(AudioPlayerStatus.Buffering, () => {
+                // Silencioso
+            });
+
             audioPlayer.on('error', (err) => {
                 console.error("❌ Erro no player:", err.message);
                 isPlaying = false;
                 setTimeout(() => {
-                    if (currentAudioPath) {
-                        tocarAudioLoopInfinito(currentAudioPath);
+                    const pathAtual = getAudioPath();
+                    if (pathAtual) {
+                        tocarAudioLoopInfinito(pathAtual);
                     }
                 }, 5000);
             });
         }
 
-        // ✅ CORREÇÃO: Usar demuxProbe para detetar formato automaticamente
+        // Usar demuxProbe para detetar formato automaticamente
         const stream = createReadStream(audioPath);
         const { stream: probedStream, type } = await demuxProbe(stream);
 
@@ -196,7 +202,7 @@ async function tocarAudioLoopInfinito(audioPath) {
             currentResource.volume.setVolume(currentVolume);
         }
 
-        // ✅ CORREÇÃO: Subscrever ANTES de tocar
+        // Subscrever ANTES de tocar
         if (voiceConnection) {
             voiceConnection.subscribe(audioPlayer);
         }
@@ -211,8 +217,9 @@ async function tocarAudioLoopInfinito(audioPath) {
         console.error("❌ Erro ao tocar áudio:", err);
         isPlaying = false;
         setTimeout(() => {
-            if (currentAudioPath) {
-                tocarAudioLoopInfinito(currentAudioPath);
+            const pathAtual = getAudioPath();
+            if (pathAtual) {
+                tocarAudioLoopInfinito(pathAtual);
             }
         }, 10000);
         return false;
@@ -409,15 +416,18 @@ async function handleComandoVoz(interaction) {
             await new Promise(resolve => setTimeout(resolve, 500));
 
             isPlaying = false;
-            if (currentAudioPath) {
-                await tocarAudioLoopInfinito(currentAudioPath);
-            } else {
-                await iniciarAudioAutomatico();
-            }
+            const audioPath = getAudioPath();
 
-            await interaction.editReply({ 
-                content: '🔄 Áudio reiniciado!' 
-            });
+            if (audioPath) {
+                const sucesso = await tocarAudioLoopInfinito(audioPath);
+                if (sucesso) {
+                    await interaction.editReply({ content: '🔄 Áudio reiniciado!' });
+                } else {
+                    await interaction.editReply({ content: '❌ Erro ao reiniciar áudio.' });
+                }
+            } else {
+                await interaction.editReply({ content: '❌ Ficheiro de áudio não encontrado.' });
+            }
 
         } catch (err) {
             console.error('❌ Erro ao reiniciar:', err);
@@ -441,18 +451,14 @@ async function handleAudioCommand(interaction) {
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const oggPath = path.join(__dirname, '..', '..', 'audio', 'JordanShop.ogg');
-    const mp3Path = path.join(__dirname, '..', '..', 'audio', 'JordanShop.mp3');
-
-    let audioPath;
-    if (fs.existsSync(oggPath)) {
-        audioPath = oggPath;
-    } else {
-        audioPath = mp3Path;
-    }
+    const audioPath = getAudioPath();
 
     switch (subcommand) {
         case 'play':
+            if (!audioPath) {
+                await interaction.editReply({ content: '❌ Ficheiro de áudio não encontrado na pasta /audio/' });
+                return true;
+            }
             isPlaying = false;
             const sucesso = await tocarAudioLoopInfinito(audioPath);
             if (sucesso) {
