@@ -240,6 +240,17 @@ const inicializarBot = () => {
                 console.log("✅ Evento Ready configurado.");
             }
         }
+
+        // === REGISTAR messageCreate ===
+        const messageCreatePath = path.join(__dirname, "src/events/messageCreate.js");
+        if (fs.existsSync(messageCreatePath)) {
+            const messageCreateEvent = require(messageCreatePath);
+            client.on("messageCreate", (message) => messageCreateEvent(client, message));
+            console.log("✅ Evento messageCreate configurado.");
+        } else {
+            console.warn("⚠️ messageCreate.js nao encontrado.");
+        }
+
     } catch (e) {
         console.warn("⚠️ Erro ao configurar eventos:", e.message);
     }
