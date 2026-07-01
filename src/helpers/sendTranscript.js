@@ -1,4 +1,4 @@
-const supabase = require('../../database/supabase'); 
+const supabase = require('../../database/supabase');
 const discordTranscripts = require('discord-html-transcripts');
 const { EmbedBuilder } = require('discord.js');
 
