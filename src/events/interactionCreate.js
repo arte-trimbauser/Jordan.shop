@@ -10,7 +10,7 @@ const menus = require("../menus");
 const cooldowns = new Map();
 const { handleChamarCommand, handleFecharTicketSaida } = require("../commands/chamarCommand");
 const { handleSistemaInteraction } = require("./sistemaCompleto");
-const { handleVerificacaoInteraction } = require("./sistemaVerificacao"); // ← NOVO
+const { handleVerificacaoInteraction } = require("./sistemaVerificacao");
 
 const emojisPagamento = {
     "MBWay": "<:mbway:1464608251516813446>",
@@ -22,75 +22,81 @@ const emojisPagamento = {
     "ReferenciaMultibanco": "<:multibanco:1464609317926735902>"
 };
 
+// ========== ANTI-DUPLICADOS PARA LOGS DE TICKET ==========
+const recentTicketLogs = new Map();
+const LOG_COOLDOWN_MS = 5000;
+
+function isDuplicateTicketLog(userId, action, channelId) {
+    const key = `${userId}-${action}-${channelId}`;
+    const now = Date.now();
+    const lastSent = recentTicketLogs.get(key);
+    if (lastSent && (now - lastSent) < LOG_COOLDOWN_MS) {
+        return true;
+    }
+    recentTicketLogs.set(key, now);
+    if (recentTicketLogs.size > 1000) {
+        const cutoff = now - 600000;
+        for (const [k, v] of recentTicketLogs) {
+            if (v < cutoff) recentTicketLogs.delete(k);
+        }
+    }
+    return false;
+}
+
 module.exports = (client) => {
     if (!client.carrinhos) client.carrinhos = new Map();
 
     client.on("interactionCreate", async (interaction) => {
         if (!interaction.guild) return;
-        
-        // 1. Chamar o sistema de idiomas/voz/tickets/formulários
+
         const processadoPeloSistema = await handleSistemaInteraction(interaction, client);
         if (processadoPeloSistema) return;
 
-        // 2. Chamar o sistema de verificação (NOVO - independente)
         const processadoPeloSistemaVerificacao = await handleVerificacaoInteraction(interaction, client);
         if (processadoPeloSistemaVerificacao) return;
 
-        // 3. Definir as variáveis para o resto do código
         const { guild, channel, user, member, customId: cid } = interaction;
 
         try {
 
-/* ================= SLASH COMMANDS ================= */
-if (interaction.isChatInputCommand()) {
-
-    // /chamar - Staff chamar cliente
-    if (interaction.commandName === "chamar") {
-    return await handleChamarCommand(interaction, client);
-}
-                // /adicionar
+            if (interaction.isChatInputCommand()) {
+                if (interaction.commandName === "chamar") {
+                    return await handleChamarCommand(interaction, client);
+                }
                 if (interaction.commandName === "adicionar") {
                     const embed = new EmbedBuilder()
                         .setTitle("🛒 Adicionar ao Carrinho - Jordan Shop")
                         .setDescription("Escolhe o produto que queres adicionar:")
                         .setColor("#8b0000");
-
                     const selectOptions = menus.map(menu => {
                         let nomeLimpo = menu.title.replace(/[\uD83C-\uDBFF\uDC00-\uDFFF]/g, '').trim();
                         if (nomeLimpo.length > 100) nomeLimpo = nomeLimpo.slice(0, 97) + "...";
                         return {
                             label: nomeLimpo || "Produto",
-                            description: menu.options[0]?.description || "Ver opções",
+                            description: menu.options[0]?.description || "Ver opcoes",
                             value: menu.id
                         };
                     });
-
                     const select = new StringSelectMenuBuilder()
                         .setCustomId("adicionar_produto")
                         .setPlaceholder("Seleciona um produto")
                         .addOptions(selectOptions);
-
                     return interaction.reply({
                         embeds: [embed],
                         components: [new ActionRowBuilder().addComponents(select)],
                         flags: [64]
                     });
                 }
-
-                // /carrinho
                 if (interaction.commandName === "carrinho") {
                     const carrinho = client.carrinhos.get(user.id) || [];
-
                     if (carrinho.length === 0) {
                         return interaction.reply({
-                            content: "🛒 O teu carrinho está vazio!\n\nUsa `/adicionar` para adicionar produtos.",
+                            content: "🛒 O teu carrinho esta vazio!\n\nUsa `/adicionar` para adicionar produtos.",
                             flags: [64]
                         });
                     }
-
                     let descricao = "";
                     let total = 0;
-
                     carrinho.forEach((item, index) => {
                         let precoUnit = 0;
                         if (item.options && item.options.length > 0) {
@@ -102,10 +108,9 @@ if (interaction.isChatInputCommand()) {
                         total += subtotal;
                         descricao += `**${index + 1}.** ${item.titulo}\n`;
                         descricao += ` Quantidade: **${item.quantidade || 1}**\n`;
-                        descricao += ` Preço unitário: €${precoUnit.toFixed(2)}\n`;
+                        descricao += ` Preco unitario: €${precoUnit.toFixed(2)}\n`;
                         descricao += ` Subtotal: €${subtotal.toFixed(2)}\n\n`;
                     });
-
                     const embed = new EmbedBuilder()
                         .setTitle("🛒 Teu Carrinho - Jordan Shop")
                         .setDescription(descricao)
@@ -115,7 +120,6 @@ if (interaction.isChatInputCommand()) {
                         )
                         .setColor("#8b0000")
                         .setFooter({ text: "Podes adicionar mais com /adicionar" });
-
                     const row = new ActionRowBuilder().addComponents(
                         new ButtonBuilder()
                             .setCustomId("finalizar_carrinho")
@@ -126,37 +130,31 @@ if (interaction.isChatInputCommand()) {
                             .setLabel("🗑️ Limpar Carrinho")
                             .setStyle(ButtonStyle.Danger)
                     );
-
                     return interaction.reply({ embeds: [embed], components: [row], flags: [64] });
                 }
             }
 
-
-
-
-
-            /* ================= MENU DE SELECÇÃO ================= */
             if (interaction.isStringSelectMenu() && (cid === "menu_ticket" || cid === "menu_produtos")) {
                 const tipo = interaction.values[0];
                 const embed = new EmbedBuilder()
-                    .setTitle("⚖️ Termos de Serviço - Jordan Shop")
+                    .setTitle("⚖️ Termos de Servico - Jordan Shop")
                     .setDescription(
-                        "**Termos de Serviço de Reembolso**\n" +
-                        "Não oferecemos reembolsos após a conclusão de uma compra ou serviço. Em casos excepcionais, uma substituição pode ser oferecida, se possível.\n\n" +
-                        "**Termos de Serviço de Substituição**\n" +
-                        "A substituição só é possível com um voucher.\n" +
-                        "Sem voucher = sem garantia ou substituição.\n\n" +
-                        "**Termos de Serviço da Conta**\n" +
-                        "Após receber uma conta, você deverá alterar seu endereço de e-mail e senha imediatamente.\n" +
-                        "Não assumimos qualquer responsabilidade ou substituição caso você não o faça.\n\n" +
-                        "**Termos de Serviço do PayPal**\n" +
+                        "**Termos de Servico de Reembolso**\n" +
+                        "Nao oferecemos reembolsos apos a conclusao de uma compra ou servico. Em casos excepcionais, uma substituicao pode ser oferecida, se possivel.\n\n" +
+                        "**Termos de Servico de Substituicao**\n" +
+                        "A substituicao so e possivel com um voucher.\n" +
+                        "Sem voucher = sem garantia ou substituicao.\n\n" +
+                        "**Termos de Servico da Conta**\n" +
+                        "Apos receber uma conta, voce devera alterar seu endereco de e-mail e senha imediatamente.\n" +
+                        "Nao assumimos qualquer responsabilidade ou substituicao caso voce nao o faca.\n\n" +
+                        "**Termos de Servico do PayPal**\n" +
                         "Os pagamentos devem ser enviados via \"Amigos e Familiares\" – sem uma mensagem nos detalhes de pagamento.\n" +
-                        "Não nos responsabilizamos se nossa conta do PayPal for bloqueada e os fundos permanecerem lá. Não há reembolsos possíveis!\n\n" +
+                        "Nao nos responsabilizamos se nossa conta do PayPal for bloqueada e os fundos permanecerem la. Nao ha reembolsos possiveis!\n\n" +
                         "**Idioma do Ticket**\n" +
-                        "O suporte e os tickets são processados exclusivamente em Português.\n\n" +
+                        "O suporte e os tickets sao processados exclusivamente em Portugues.\n\n" +
                         "**Comportamento do Ticket**\n" +
-                        "Por favor, não envie spam ou ping várias vezes em DM ou tickets.\n" +
-                        "Aguarde pacientemente até receber seu produto ou uma response.\n\n" +
+                        "Por favor, nao envie spam ou ping varias vezes em DM ou tickets.\n" +
+                        "Aguarde pacientemente ate receber seu produto ou uma response.\n\n" +
                         "*Atenciosamente, Jordan.*"
                     )
                     .setColor("#ff0000");
@@ -167,49 +165,39 @@ if (interaction.isChatInputCommand()) {
                 return interaction.reply({ embeds: [embed], components: [row], flags: [64] });
             }
 
-            /* ================= ADICIONAR AO CARRINHO ================= */
             if (interaction.isStringSelectMenu() && cid === "adicionar_produto") {
                 const menuId = interaction.values[0];
                 const menuSelecionado = menus.find(m => m.id === menuId);
-
                 if (!menuSelecionado) {
-                    return interaction.reply({ content: "❌ Produto não encontrado.", ephemeral: true });
+                    return interaction.reply({ content: "❌ Produto nao encontrado.", ephemeral: true });
                 }
-
-                // ✅ CORRIGIDO: usa client.carrinhos em vez do Map local
                 if (!client.carrinhos.has(user.id)) {
                     client.carrinhos.set(user.id, []);
                 }
-
                 const carrinhoUser = client.carrinhos.get(user.id);
-
-                // Adiciona o menu inteiro (para depois escolher duração)
                 carrinhoUser.push({
                     menuId: menuId,
                     titulo: menuSelecionado.title,
                     embedDesc: menuSelecionado.embedDesc,
                     options: menuSelecionado.options,
-                    quantidade: 1   // começa com 1
+                    quantidade: 1
                 });
-
                 const embed = new EmbedBuilder()
                     .setTitle("✅ Produto adicionado ao carrinho!")
                     .setDescription(`**${menuSelecionado.title}** foi adicionado.\n\nAgora podes:\n• Usar \`/adicionar\` para mais produtos\n• Usar \`/carrinho\` para ver o teu carrinho`)
                     .setColor("#00ff00");
-
                 await interaction.update({
                     embeds: [embed],
                     components: []
                 });
             }
 
-            /* ================= BOTÃO RECUSAR ================= */
             if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
                 const tipoRec = cid.replace("recusar_termos_", "");
                 const canalLogs = guild.channels.cache.get(config.STAFF_LOGS_CHANNEL_ID);
                 if (canalLogs) {
                     await canalLogs.send({
-                        content: `❌ @${user.username} **não aceitou** os termos para abrir ticket de: \`${tipoRec}\` # 🔵 vpn-service`
+                        content: `❌ <@${user.id}> (${user.username}) **nao aceitou** os termos para abrir ticket de: \`${tipoRec}\` # 🔵 vpn-service`
                     }).catch(() => {});
                 }
                 return interaction.update({
@@ -219,61 +207,69 @@ if (interaction.isChatInputCommand()) {
                 });
             }
 
-            /* ================= BOTÃO ACEITAR ================= */
             if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 const tipoAceito = cid.replace("aceitar_termos_", "");
-                const canalLogs = guild.channels.cache.get(config.STAFF_LOGS_CHANNEL_ID);
-                let tagFinal = "# ⭐ produto";
-                const tipoLower = tipoAceito.toLowerCase();
-                if (tipoLower.includes("steam")) {
-                    tagFinal = "# ⭐ steam-account";
-                } else if (tipoLower.includes("vpn") || tipoLower.includes("cyberghost")) {
-                    tagFinal = "# 🔵 vpn-service";
-                } else if (tipoLower.includes("spoofer") || tipoLower.includes("sp00fer")) {
-                    tagFinal = "# 🛡️ spoofer";
-                } else if (tipoLower.includes("shark")) {
-                    tagFinal = "# 🦈 shark-menu";
-                } else if (tipoLower.includes("stan")) {
-                    tagFinal = "# 🦍 stan-menu";
-                } else if (tipoLower.includes("stellar")) {
-                    tagFinal = "# ⭐ stellar-menu";
-                } else if (tipoLower.includes("lunax")) {
-                    tagFinal = "# 🌙 lunax-menu";
-                } else if (tipoLower.includes("flyside")) {
-                    tagFinal = "# 🟣 flyside-menu";
-                } else if (tipoLower.includes("discord")) {
-                    tagFinal = "# 💬 discord-account";
-                } else if (tipoLower.includes("rockstar")) {
-                    tagFinal = "# 🎮 rockstar-account";
-                } else if (tipoLower.includes("duck")) {
-                    tagFinal = "# 🦆 duck-cleaner";
+
+                if (isDuplicateTicketLog(user.id, `aceitar_${tipoAceito}`, channel.id)) {
+                    // Ignora duplicado mas continua fluxo
+                } else {
+                    const canalLogsTicket = guild.channels.cache.get("1521916593402286191");
+                    let tagFinal = "# ⭐ produto";
+                    const tipoLower = tipoAceito.toLowerCase();
+                    if (tipoLower.includes("steam")) {
+                        tagFinal = "# ⭐ steam-account";
+                    } else if (tipoLower.includes("vpn") || tipoLower.includes("cyberghost")) {
+                        tagFinal = "# 🔵 vpn-service";
+                    } else if (tipoLower.includes("spoofer") || tipoLower.includes("sp00fer")) {
+                        tagFinal = "# 🛡️ spoofer";
+                    } else if (tipoLower.includes("shark")) {
+                        tagFinal = "# 🦈 shark-menu";
+                    } else if (tipoLower.includes("stan")) {
+                        tagFinal = "# 🦍 stan-menu";
+                    } else if (tipoLower.includes("stellar")) {
+                        tagFinal = "# ⭐ stellar-menu";
+                    } else if (tipoLower.includes("lunax")) {
+                        tagFinal = "# 🌙 lunax-menu";
+                    } else if (tipoLower.includes("flyside")) {
+                        tagFinal = "# 🟣 flyside-menu";
+                    } else if (tipoLower.includes("discord")) {
+                        tagFinal = "# 💬 discord-account";
+                    } else if (tipoLower.includes("rockstar")) {
+                        tagFinal = "# 🎮 rockstar-account";
+                    } else if (tipoLower.includes("duck")) {
+                        tagFinal = "# 🦆 duck-cleaner";
+                    }
+
+                    if (canalLogsTicket) {
+                        const embedLog = new EmbedBuilder()
+                            .setColor(0x00FF00)
+                            .setDescription(
+                                `✅ <@${user.id}> (${user.username}) aceitou os termos para abrir ticket de: **${tipoAceito}** ${tagFinal}`
+                            )
+                            .setTimestamp();
+                        await canalLogsTicket.send({ embeds: [embedLog] }).catch(() => {});
+                    }
                 }
-                if (canalLogs) {
-                    await canalLogs.send({
-                        content: `✅ @${user.username} **aceitou** os termos para abrir ticket de: \`${tipoAceito}\` ${tagFinal}`
-                    }).catch(() => {});
-                }
-                // Continua com o menu de pagamento
+
                 const menuPagamento = new StringSelectMenuBuilder()
                     .setCustomId(`pagamento_${tipoAceito}`)
-                    .setPlaceholder("💳 Escolha o método de pagamento")
+                    .setPlaceholder("💳 Escolha o metodo de pagamento")
                     .addOptions([
                         { label: "MBWay", value: "MBWay", emoji: "1464608251516813446" },
                         { label: "PayPal", value: "PayPal", emoji: "1464608396383883314" },
                         { label: "Revolut", value: "Revolut", emoji: "1464608485617565726" },
-                        { label: "Cartão de Crédito", value: "CartaoCredito", emoji: "1464608966826004676" },
+                        { label: "Cartao de Credito", value: "CartaoCredito", emoji: "1464608966826004676" },
                         { label: "Google Pay", value: "GooglePay", emoji: "1464609044315508797" },
                         { label: "Apple Pay", value: "ApplePay", emoji: "1464609102906003588" },
                         { label: "Multibanco", value: "ReferenciaMultibanco", emoji: "1464609317926735902" }
                     ]);
                 return interaction.update({
-                    content: "✅ **Termos aceites!** Agora seleciona o método de pagamento:",
+                    content: "✅ **Termos aceites!** Agora seleciona o metodo de pagamento:",
                     embeds: [],
                     components: [new ActionRowBuilder().addComponents(menuPagamento)]
                 });
             }
 
-            /* ================= CRIAR TICKET FINAL ================= */
             if (interaction.isStringSelectMenu() && cid?.startsWith("pagamento_")) {
                 await interaction.deferReply({ flags: [64] });
                 const tipoProd = cid.replace("pagamento_", "");
@@ -298,7 +294,7 @@ if (interaction.isChatInputCommand()) {
                 });
                 const embedTicket = new EmbedBuilder()
                     .setTitle("Jordan Shop | Suporte")
-                    .setDescription(`📦 **Produto:** ${tipoProd}\n🛡️ **Staff:** Aguardando...\n💳 **Método:** ${emoji} ${metodo}`)
+                    .setDescription(`📦 **Produto:** ${tipoProd}\n🛡️ **Staff:** <a:threedots:1521920058140659803> Aguardando...\n💳 **Metodo:** ${emoji} ${metodo}`)
                     .setColor("#2f3136");
                 const btns = new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId("claim_ticket").setLabel("Reivindicar").setStyle(ButtonStyle.Secondary),
@@ -322,14 +318,13 @@ if (interaction.isChatInputCommand()) {
                 });
             }
 
-            /* ================= CLAIM TICKET ================= */
             if (cid === "claim_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas Staff.", flags: [64] });
-                const [uid, met, pdr] = channel.topic?.split("|") || ["?", "Não definido", "Geral"];
+                const [uid, met, pdr] = channel.topic?.split("|") || ["?", "Nao definido", "Geral"];
                 const emj = emojisPagamento[met] || "💰";
                 const embedClaim = new EmbedBuilder()
                     .setTitle("🛡️ Ticket Reivindicado")
-                    .setDescription(`👤 **Staff:** <@${user.id}>\n**Produto:** ${pdr}\n**Método:** ${emj} ${met}`)
+                    .setDescription(`👤 **Staff:** <@${user.id}>\n**Produto:** ${pdr}\n**Metodo:** ${emj} ${met}`)
                     .setColor("#57f287");
                 return await interaction.update({
                     embeds: [embedClaim],
@@ -341,7 +336,6 @@ if (interaction.isChatInputCommand()) {
                 });
             }
 
-            /* ================= CHAMAR STAFF ================= */
             if (cid === "call_staff_list") {
                 const tempoEspera = 300000;
                 const agora = Date.now();
@@ -374,24 +368,23 @@ if (interaction.isChatInputCommand()) {
                 );
                 await target.send({ embeds: [embedDM], components: [rowL] }).catch(() => {});
                 return await interaction.update({
-                    content: `📢 <@${target.id}>, foste solicitado aqui por **${user.username}**!`,
+                    content: `📢 <@${target.id}> (${target.user.username}), foste solicitado aqui por **${user.username}**!`,
                     components: []
                 });
             }
 
-            /* ================= FECHAR TICKET ================= */
             if (cid === "close_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas staff pode fechar.", flags: [64] });
                 const messages = await channel.messages.fetch({ limit: 50 });
                 const msgCount = messages.size;
                 if (msgCount >= 5) {
-                    await interaction.reply(`🔒 Ticket com mensagens suficientes (**${msgCount}**). A gerar transcrição...`);
+                    await interaction.reply(`🔒 Ticket com mensagens suficientes (**${msgCount}**). A gerar transcricao...`);
                     await sendTranscript(channel, user.tag);
                     return setTimeout(() => channel.delete().catch(() => {}), 5000);
                 } else {
                     const embedAviso = new EmbedBuilder()
                         .setTitle("⚠️ Poucas Mensagens")
-                        .setDescription(`Este ticket tem apenas **${msgCount}** mensagens.\nQueres guardar a transcrição ou apenas fechar?`)
+                        .setDescription(`Este ticket tem apenas **${msgCount}** mensagens.\nQueres guardar a transcricao ou apenas fechar?`)
                         .setColor("#f1c40f");
                     const rowEscolha = new ActionRowBuilder().addComponents(
                         new ButtonBuilder().setCustomId("confirm_close_save").setLabel("Guardar e Fechar").setStyle(ButtonStyle.Success),
@@ -410,12 +403,11 @@ if (interaction.isChatInputCommand()) {
             if (cid === "confirm_close_silent") {
                 await interaction.update({ content: "❌ Ticket eliminado sem registo.", embeds: [], components: [] });
                 return setTimeout(() => channel.delete().catch(() => {}), 3000);
-
             }
 
             if (interaction.isButton() && interaction.customId.startsWith("fechar_ticket_saida_")) {
-    return await handleFecharTicketSaida(interaction, client);
-}
+                return await handleFecharTicketSaida(interaction, client);
+            }
 
         } catch (err) {
             console.error("❌ Erro Geral no InteractionCreate:", err);
