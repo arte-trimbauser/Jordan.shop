@@ -23,16 +23,21 @@ module.exports = async (client) => {
     console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
 
     console.log("🔄 A registar slash commands...");
+
     const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
+
     try {
         const adicionar = require("../commands/adicionar");
         const carrinho = require("../commands/carrinho");
         const commands = [adicionar, carrinho].filter(Boolean).map(cmd => cmd.data.toJSON());
+
         await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
+
         await rest.put(
             Routes.applicationGuildCommands(client.user.id, "1393629457599828040"),
             { body: commands }
         );
+
         console.log(`✅ ${commands.length} comandos registados no servidor com sucesso!`);
     } catch (err) {
         console.error("❌ Erro ao registar slash commands:", err);
@@ -79,6 +84,7 @@ module.exports = async (client) => {
         { name: "Jordan Shop #150", type: ActivityType.Listening },
         { name: "MELHOR LOJA DE CHE4TS DE PORTUGAL!!!", type: ActivityType.Playing }
     ];
+
     let i = 0;
     const updateStatus = () => {
         client.user.setPresence({
@@ -91,6 +97,7 @@ module.exports = async (client) => {
     setInterval(updateStatus, 5000);
 
     const LOG_ID = "1437076921627181228";
+
     try {
         const logChannel = await client.channels.fetch(LOG_ID).catch(() => null);
         if (logChannel) {
@@ -100,6 +107,7 @@ module.exports = async (client) => {
                 minute: '2-digit',
                 second: '2-digit'
             });
+
             const embedLog = new EmbedBuilder()
                 .setTitle("✅ Bot esta online!")
                 .setDescription(
@@ -112,6 +120,7 @@ module.exports = async (client) => {
                 .setColor("#00ff00")
                 .setFooter({ text: "Jordan Shop System", iconURL: client.user.displayAvatarURL() })
                 .setTimestamp();
+
             await logChannel.send({ embeds: [embedLog] });
         }
     } catch (err) {
