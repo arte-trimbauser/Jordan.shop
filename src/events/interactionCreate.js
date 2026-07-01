@@ -59,15 +59,19 @@ module.exports = (client) => {
 
         try {
 
+            /* ================= SLASH COMMANDS ================= */
             if (interaction.isChatInputCommand()) {
+
                 if (interaction.commandName === "chamar") {
                     return await handleChamarCommand(interaction, client);
                 }
+
                 if (interaction.commandName === "adicionar") {
                     const embed = new EmbedBuilder()
                         .setTitle("🛒 Adicionar ao Carrinho - Jordan Shop")
                         .setDescription("Escolhe o produto que queres adicionar:")
                         .setColor("#8b0000");
+
                     const selectOptions = menus.map(menu => {
                         let nomeLimpo = menu.title.replace(/[\uD83C-\uDBFF\uDC00-\uDFFF]/g, '').trim();
                         if (nomeLimpo.length > 100) nomeLimpo = nomeLimpo.slice(0, 97) + "...";
@@ -77,26 +81,32 @@ module.exports = (client) => {
                             value: menu.id
                         };
                     });
+
                     const select = new StringSelectMenuBuilder()
                         .setCustomId("adicionar_produto")
                         .setPlaceholder("Seleciona um produto")
                         .addOptions(selectOptions);
+
                     return interaction.reply({
                         embeds: [embed],
                         components: [new ActionRowBuilder().addComponents(select)],
                         flags: [64]
                     });
                 }
+
                 if (interaction.commandName === "carrinho") {
                     const carrinho = client.carrinhos.get(user.id) || [];
+
                     if (carrinho.length === 0) {
                         return interaction.reply({
                             content: "🛒 O teu carrinho esta vazio!\n\nUsa `/adicionar` para adicionar produtos.",
                             flags: [64]
                         });
                     }
+
                     let descricao = "";
                     let total = 0;
+
                     carrinho.forEach((item, index) => {
                         let precoUnit = 0;
                         if (item.options && item.options.length > 0) {
@@ -111,6 +121,7 @@ module.exports = (client) => {
                         descricao += ` Preco unitario: €${precoUnit.toFixed(2)}\n`;
                         descricao += ` Subtotal: €${subtotal.toFixed(2)}\n\n`;
                     });
+
                     const embed = new EmbedBuilder()
                         .setTitle("🛒 Teu Carrinho - Jordan Shop")
                         .setDescription(descricao)
@@ -120,6 +131,7 @@ module.exports = (client) => {
                         )
                         .setColor("#8b0000")
                         .setFooter({ text: "Podes adicionar mais com /adicionar" });
+
                     const row = new ActionRowBuilder().addComponents(
                         new ButtonBuilder()
                             .setCustomId("finalizar_carrinho")
@@ -130,10 +142,12 @@ module.exports = (client) => {
                             .setLabel("🗑️ Limpar Carrinho")
                             .setStyle(ButtonStyle.Danger)
                     );
+
                     return interaction.reply({ embeds: [embed], components: [row], flags: [64] });
                 }
             }
 
+            /* ================= MENU DE SELECCAO ================= */
             if (interaction.isStringSelectMenu() && (cid === "menu_ticket" || cid === "menu_produtos")) {
                 const tipo = interaction.values[0];
                 const embed = new EmbedBuilder()
@@ -165,16 +179,21 @@ module.exports = (client) => {
                 return interaction.reply({ embeds: [embed], components: [row], flags: [64] });
             }
 
+            /* ================= ADICIONAR AO CARRINHO ================= */
             if (interaction.isStringSelectMenu() && cid === "adicionar_produto") {
                 const menuId = interaction.values[0];
                 const menuSelecionado = menus.find(m => m.id === menuId);
+
                 if (!menuSelecionado) {
                     return interaction.reply({ content: "❌ Produto nao encontrado.", ephemeral: true });
                 }
+
                 if (!client.carrinhos.has(user.id)) {
                     client.carrinhos.set(user.id, []);
                 }
+
                 const carrinhoUser = client.carrinhos.get(user.id);
+
                 carrinhoUser.push({
                     menuId: menuId,
                     titulo: menuSelecionado.title,
@@ -182,16 +201,19 @@ module.exports = (client) => {
                     options: menuSelecionado.options,
                     quantidade: 1
                 });
+
                 const embed = new EmbedBuilder()
                     .setTitle("✅ Produto adicionado ao carrinho!")
                     .setDescription(`**${menuSelecionado.title}** foi adicionado.\n\nAgora podes:\n• Usar \`/adicionar\` para mais produtos\n• Usar \`/carrinho\` para ver o teu carrinho`)
                     .setColor("#00ff00");
+
                 await interaction.update({
                     embeds: [embed],
                     components: []
                 });
             }
 
+            /* ================= BOTAO RECUSAR ================= */
             if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
                 const tipoRec = cid.replace("recusar_termos_", "");
                 const canalLogs = guild.channels.cache.get(config.STAFF_LOGS_CHANNEL_ID);
@@ -207,12 +229,15 @@ module.exports = (client) => {
                 });
             }
 
+            /* ================= BOTAO ACEITAR ================= */
             if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 const tipoAceito = cid.replace("aceitar_termos_", "");
 
+                // ===== ANTI-DUPLICADOS =====
                 if (isDuplicateTicketLog(user.id, `aceitar_${tipoAceito}`, channel.id)) {
                     // Ignora duplicado mas continua fluxo
                 } else {
+                    // ===== LOG DE TICKET SEM DUPLICADOS =====
                     const canalLogsTicket = guild.channels.cache.get("1521916593402286191");
                     let tagFinal = "# ⭐ produto";
                     const tipoLower = tipoAceito.toLowerCase();
@@ -251,6 +276,7 @@ module.exports = (client) => {
                     }
                 }
 
+                // Continua com o menu de pagamento
                 const menuPagamento = new StringSelectMenuBuilder()
                     .setCustomId(`pagamento_${tipoAceito}`)
                     .setPlaceholder("💳 Escolha o metodo de pagamento")
@@ -270,6 +296,7 @@ module.exports = (client) => {
                 });
             }
 
+            /* ================= CRIAR TICKET FINAL ================= */
             if (interaction.isStringSelectMenu() && cid?.startsWith("pagamento_")) {
                 await interaction.deferReply({ flags: [64] });
                 const tipoProd = cid.replace("pagamento_", "");
@@ -318,6 +345,7 @@ module.exports = (client) => {
                 });
             }
 
+            /* ================= CLAIM TICKET ================= */
             if (cid === "claim_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas Staff.", flags: [64] });
                 const [uid, met, pdr] = channel.topic?.split("|") || ["?", "Nao definido", "Geral"];
@@ -336,6 +364,7 @@ module.exports = (client) => {
                 });
             }
 
+            /* ================= CHAMAR STAFF ================= */
             if (cid === "call_staff_list") {
                 const tempoEspera = 300000;
                 const agora = Date.now();
@@ -373,6 +402,7 @@ module.exports = (client) => {
                 });
             }
 
+            /* ================= FECHAR TICKET ================= */
             if (cid === "close_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas staff pode fechar.", flags: [64] });
                 const messages = await channel.messages.fetch({ limit: 50 });
