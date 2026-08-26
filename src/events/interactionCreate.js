@@ -17,7 +17,7 @@ const emojisPagamento = {
     "PayPal": "<:paypal:1464608396383883314>",
     "Revolut": "<:revolut:1464608485617565726>",
     "CartaoCredito": "<:creditcard:1464608966826004676>",
-    "GooglePay": "<:googlepay:1464609102906004676>",
+    "GooglePay": "<:googlepay:1464609044315508797>",
     "ApplePay": "<:applepay:1464609102906003588>",
     "ReferenciaMultibanco": "<:multibanco:1464609317926735902>"
 };
@@ -241,7 +241,7 @@ module.exports = (client) => {
                         { label: "PayPal", value: "PayPal", emoji: "1464608396383883314" },
                         { label: "Revolut", value: "Revolut", emoji: "1464608485617565726" },
                         { label: "Cartao de Credito", value: "CartaoCredito", emoji: "1464608966826004676" },
-                        { label: "Google Pay", value: "GooglePay", emoji: "1464609044315504676" },
+                        { label: "Google Pay", value: "GooglePay", emoji: "1464609044315508797" },
                         { label: "Apple Pay", value: "ApplePay", emoji: "1464609102906003588" },
                         { label: "Multibanco", value: "ReferenciaMultibanco", emoji: "1464609317926735902" }
                     ]);
