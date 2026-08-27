@@ -16,7 +16,7 @@ const {
     enviarFormularios,
     handleSistemaInteraction,
     registrarComandosVoz,
-    setupSuspendRoute
+    setupSuspendRoute              // <-- nova importação
 } = require('./src/events/sistemaCompleto');
 
 const { 
@@ -207,7 +207,7 @@ app.post("/api/enviar-embed", async (req, res) => {
     }
 });
 
-// Rota de suspensão
+// ========== ROTA DE SUSPENSÃO (NOVO) ==========
 setupSuspendRoute(app);
 
 const inicializarBot = () => {
