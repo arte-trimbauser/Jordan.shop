@@ -8,7 +8,7 @@ const {
     enviarFormularios,
     registrarComandosVoz,
     inicializarNotificacaoTickets,
-    iniciarMonitorizacaoInatividadeTickets   // <-- NOVO
+    iniciarMonitorizacaoInatividadeTickets
 } = require('./sistemaCompleto');
 
 const {
@@ -73,7 +73,7 @@ module.exports = async (client) => {
 
     try {
         inicializarNotificacaoTickets(client);
-        iniciarMonitorizacaoInatividadeTickets(client);   // <-- NOVO
+        iniciarMonitorizacaoInatividadeTickets(client);
         console.log("✅ Sistema de notificação de tickets e inatividade inicializado!");
     } catch (err) {
         console.error("❌ Erro ao inicializar notificação:", err);
@@ -106,13 +106,45 @@ module.exports = async (client) => {
                 minute: '2-digit',
                 second: '2-digit'
             });
-            const embedLog = new EmbedBuilder()
-                .setTitle("✅ Bot esta online!")
-                .setDescription(
-                    `O bot foi iniciado com sucesso e esta pronto para uso.\n\n` +
+            const horaNum = parseInt(agora.split(':')[0]);
+
+            let titulo = "✅ Bot está online!";
+            let descricao =
+                `O bot foi iniciado com sucesso e está pronto para uso.\n\n` +
+                `🕒 **Hora:** ${agora}\n` +
+                `🌐 **Site:** https://jordan-shop-bot-site.vercel.app/\n\n` +
+                `🔄 **Motivo:** Reinício ou deploy manual.`;
+
+            // Mensagem personalizada consoante a hora
+            if (horaNum >= 8 && horaNum <= 11) {
+                // Manhã (8h - 11h) – provável reativação programada
+                titulo = "☀️ Bom dia! O bot está online!";
+                descricao =
+                    `O bot acordou e está pronto para trabalhar durante o dia.\n\n` +
                     `🕒 **Hora:** ${agora}\n` +
-                    `🌐 **Site:** https://jordan-shop-bot-site.vercel.app/`
-                )
+                    `🌐 **Site:** https://jordan-shop-bot-site.vercel.app/\n\n` +
+                    `🔄 **Estado:** Operacional. Volta a dormir às 3:00 da manhã.`;
+            } else if (horaNum >= 0 && horaNum <= 5) {
+                // Madrugada (0h - 5h) – provável suspensão programada
+                titulo = "🌙 Boa noite! O bot vai descansar.";
+                descricao =
+                    `O bot está a encerrar as atividades e vai dormir até às 10:00.\n\n` +
+                    `🕒 **Hora:** ${agora}\n` +
+                    `🌐 **Site:** https://jordan-shop-bot-site.vercel.app/\n\n` +
+                    `😴 **Estado:** A suspender serviço. Até amanhã!`;
+            } else {
+                // Outros horários (manhã cedo, tarde, noite) – provável deploy manual ou reinício
+                titulo = "✅ Bot está online!";
+                descricao =
+                    `O bot foi iniciado com sucesso e está pronto para uso.\n\n` +
+                    `🕒 **Hora:** ${agora}\n` +
+                    `🌐 **Site:** https://jordan-shop-bot-site.vercel.app/\n\n` +
+                    `🔄 **Motivo:** Reinício ou deploy manual.`;
+            }
+
+            const embedLog = new EmbedBuilder()
+                .setTitle(titulo)
+                .setDescription(descricao)
                 .setImage("https://i.postimg.cc/YCmc9zyY/sucesso-no-neg-cio-61850034.webp")
                 .setThumbnail(client.user.displayAvatarURL())
                 .setColor("#00ff00")
