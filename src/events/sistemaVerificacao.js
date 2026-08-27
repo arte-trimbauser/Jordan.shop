@@ -1,4 +1,4 @@
-// src/events/sistemaVerificacao.js - SISTEMA DE VERIFICACAO COM /verificacao
+// src/events/sistemaVerificacao.js - SISTEMA DE VERIFICACAO COM /verificacao (COM SUPABASE)
 
 const { 
     EmbedBuilder, 
@@ -13,6 +13,9 @@ const {
     SlashCommandBuilder
 } = require('discord.js');
 
+// IMPORTAR O SUPABASE
+const supabase = require('../../database/supabase');
+
 const CONFIG = {
     CANAL_VERIFICACAO_ID: '1393690238903128115',
     CANAL_LOGS_ID: '1437076921627181228',
@@ -24,8 +27,39 @@ const CONFIG = {
 
 const usuariosVerificados = new Set();
 const usuariosComModalAberto = new Set();
-let verificacaoEnviada = false;
-let verificacaoAtiva = true;
+let verificacaoEnviada = false; // Esta pode ficar em memória (só controla envio do embed)
+
+// ================= FUNÇÕES SUPABASE =================
+async function getVerificacaoAtiva() {
+    try {
+        const { data, error } = await supabase
+            .from('config')
+            .select('verificacao_ativa')
+            .eq('id', 1)
+            .single();
+        if (error || !data) {
+            console.warn('⚠️ Erro ao buscar estado da verificação, usando true por padrão');
+            return true;
+        }
+        return data.verificacao_ativa;
+    } catch (err) {
+        console.error('❌ Erro ao ler verificacao_ativa:', err);
+        return true; // Fallback seguro
+    }
+}
+
+async function setVerificacaoAtiva(valor) {
+    try {
+        const { error } = await supabase
+            .from('config')
+            .update({ verificacao_ativa: valor, updated_at: new Date() })
+            .eq('id', 1);
+        if (error) console.error('❌ Erro ao atualizar estado da verificação:', error);
+    } catch (err) {
+        console.error('❌ Erro ao guardar verificacao_ativa:', err);
+    }
+}
+// ===================================================
 
 async function registrarComandoVerificacao(client) {
     try {
@@ -116,7 +150,9 @@ function setupGuildMemberAdd(client) {
     });
 
     client.on('guildMemberAdd', async (member) => {
-        if (!verificacaoAtiva) {
+        // ========== VERIFICAR ESTADO NA DB ==========
+        const ativa = await getVerificacaoAtiva();
+        if (!ativa) {
             console.log(`Verificacao desativada - ${member.user.tag} entrou sem verificacao`);
             return;
         }
@@ -150,35 +186,37 @@ Isto protege a nossa comunidade contra bots de spam.`);
 async function handleVerificacaoInteraction(interaction, client) {
     const { customId, member, user, commandName } = interaction;
 
+    // ================= COMANDO /VERIFICACAO =================
     if (interaction.isChatInputCommand() && commandName === 'verificacao') {
         const estado = interaction.options.getString('estado');
+        const novoValor = (estado === 'ativar');
 
-        if (estado === 'ativar') {
-            verificacaoAtiva = true;
+        // Guardar na base de dados
+        await setVerificacaoAtiva(novoValor);
 
+        if (novoValor) {
             const embed = new EmbedBuilder()
                 .setColor(0x00FF00)
                 .setTitle('✅ Verificacao Ativada')
                 .setDescription('O sistema de verificacao de novos membros foi **ativado**.\n\nNovos membros terao de se verificar para aceder ao servidor.')
                 .setTimestamp();
-
             await interaction.reply({ embeds: [embed] });
         } else {
-            verificacaoAtiva = false;
-
             const embed = new EmbedBuilder()
                 .setColor(0xFF0000)
                 .setTitle('❌ Verificacao Desativada')
                 .setDescription('O sistema de verificacao de novos membros foi **desativado**.\n\nNovos membros terao acesso automatico ao servidor.')
                 .setTimestamp();
-
             await interaction.reply({ embeds: [embed] });
         }
         return true;
     }
 
+    // ================= BOTÃO INICIAR =================
     if (customId === 'iniciar_verificacao') {
-        if (!verificacaoAtiva) {
+        // ========== VERIFICAR ESTADO NA DB ==========
+        const ativa = await getVerificacaoAtiva();
+        if (!ativa) {
             return interaction.reply({
                 content: '⚠️ O sistema de verificacao esta desativado. Podes aceder ao servidor normalmente.',
                 flags: MessageFlags.Ephemeral
@@ -220,6 +258,7 @@ async function handleVerificacaoInteraction(interaction, client) {
         return interaction.showModal(modal);
     }
 
+    // ================= MODAL =================
     if (interaction.isModalSubmit() && customId === 'modal_verificacao') {
         const codigo = interaction.fields.getTextInputValue('codigo_verificacao');
 
