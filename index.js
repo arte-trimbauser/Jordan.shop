@@ -10,16 +10,15 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const { registrarComandoChamar, handleChamarCommand } = require('./src/commands/chamarCommand');
 
-// Requires do sistemaCompleto
 const { 
     entrarCanalVoz, 
     enviarEmbedSuporte, 
     enviarFormularios,
     handleSistemaInteraction,
-    registrarComandosVoz
+    registrarComandosVoz,
+    setupSuspendRoute
 } = require('./src/events/sistemaCompleto');
 
-// Requires do sistemaVerificacao
 const { 
     enviarVerificacao,
     inicializarSistemaVerificacao,
@@ -37,7 +36,6 @@ const {
     MessageFlags
 } = require("discord.js");
 
-// CRIAR CLIENT PRIMEIRO
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -48,10 +46,8 @@ const client = new Client({
     ]
 });
 
-// Carrinho global
 const carrinhos = new Map();
 
-// Staff autorizado
 const staffAutorizado = {
     "924344854232834068": "Jordan Costa",
     "996454465555136675": "Arteex26",
@@ -62,7 +58,6 @@ const staffAutorizado = {
 
 let tokensAtivos = new Set();
 
-// --- CONFIGURAÇÃO SUPABASE ---
 const { createClient } = require("@supabase/supabase-js");
 const supabase = createClient(
     "https://fdbmhgcfhdnnpwuodxzh.supabase.co",
@@ -89,15 +84,10 @@ app.use(helmet({
 
 app.use(express.json({ limit: "1mb" }));
 
-const limiter = rateLimit({ 
-    windowMs: 60 * 1000, 
-    max: 1000
-});
+const limiter = rateLimit({ windowMs: 60 * 1000, max: 1000 });
 app.use(limiter);
-
 app.use(express.static(path.join(__dirname, "site"), { index: false }));
 
-// Rotas
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "site", "login.html"));
 });
@@ -106,7 +96,6 @@ app.get("/api/list-transcripts", async (req, res) => {
     const { data, error } = await supabase.storage
         .from("transcripts")
         .list("transcripts", { sortBy: { column: "created_at", order: "desc" } });
-
     if (error) {
         console.error("Erro Supabase list:", error.message);
         return res.status(500).json({ error: error.message });
@@ -119,9 +108,7 @@ app.get("/transcripts/:id", async (req, res) => {
     const { data, error } = await supabase.storage
         .from("transcripts")
         .download(`transcripts/${id}.html`);
-
     if (error || !data) return res.status(404).send("Transcript não encontrado.");
-
     const text = await data.text();
     res.setHeader("Content-Type", "text/html");
     res.send(text);
@@ -129,8 +116,7 @@ app.get("/transcripts/:id", async (req, res) => {
 
 app.post("/api/login-manual", async (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password)
-        return res.status(400).json({ success: false });
+    if (!username || !password) return res.status(400).json({ success: false });
 
     const loginValido =
         (username === "Jordan Costa" && password === "Jordan26Costa") ||
@@ -139,8 +125,7 @@ app.post("/api/login-manual", async (req, res) => {
         (username === "migueldodrip_09110" && password === "migueldodrip") ||
         (username === "pincher11" && password === "pincher11");
 
-    if (!loginValido)
-        return res.status(401).json({ success: false });
+    if (!loginValido) return res.status(401).json({ success: false });
 
     const tokenSessao = Math.random().toString(36).substring(2);
     tokensAtivos.add(tokenSessao);
@@ -165,7 +150,7 @@ app.get("/callback", async (req, res) => {
             client_secret: process.env.CLIENT_SECRET,
             grant_type: "authorization_code",
             code,
-            redirect_uri: "https://jordan-shop.onrender.com/callback"
+            redirect_uri: "https://jordan-shop-bot-site.vercel.app/callback"
         });
 
         const tokenRes = await axios.post("https://discord.com/api/oauth2/token", params);
@@ -190,8 +175,7 @@ app.get("/callback", async (req, res) => {
 
 app.post("/api/enviar-embed", async (req, res) => {
     const { titulo, desc, cor, canalId, produtos } = req.body;
-    if (!titulo || !desc || !canalId)
-        return res.status(400).send("Faltam campos.");
+    if (!titulo || !desc || !canalId) return res.status(400).send("Faltam campos.");
 
     try {
         const canal = await client.channels.fetch(canalId);
@@ -223,7 +207,9 @@ app.post("/api/enviar-embed", async (req, res) => {
     }
 });
 
-// Inicialização do bot
+// Rota de suspensão
+setupSuspendRoute(app);
+
 const inicializarBot = () => {
     try {
         const interactionPath = path.join(__dirname, "src/events/interactionCreate.js");
@@ -241,7 +227,6 @@ const inicializarBot = () => {
             }
         }
 
-        // === REGISTAR messageCreate ===
         const messageCreatePath = path.join(__dirname, "src/events/messageCreate.js");
         if (fs.existsSync(messageCreatePath)) {
             const messageCreateEvent = require(messageCreatePath);
@@ -250,7 +235,6 @@ const inicializarBot = () => {
         } else {
             console.warn("⚠️ messageCreate.js nao encontrado.");
         }
-
     } catch (e) {
         console.warn("⚠️ Erro ao configurar eventos:", e.message);
     }
@@ -272,11 +256,9 @@ client.login(TOKEN)
     .then(() => console.log("✅ Pedido de login enviado ao Discord"))
     .catch(err => console.error("❌ ERRO NO LOGIN:", err));
 
-// Evento Ready - TUDO AQUI DENTRO
 client.once(Events.ClientReady, async () => {
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
 
-    // 1. Entrar no canal de voz
     try {
         await entrarCanalVoz(client);
         console.log("✅ Bot entrou no canal de voz");
@@ -284,7 +266,6 @@ client.once(Events.ClientReady, async () => {
         console.error("❌ Erro ao entrar no canal de voz:", err.message);
     }
 
-    // 2. Registrar comandos de voz
     try {
         await registrarComandosVoz(client);
         console.log("✅ Comandos de voz registados");
@@ -292,7 +273,6 @@ client.once(Events.ClientReady, async () => {
         console.error("❌ Erro ao registar comandos de voz:", err.message);
     }
 
-    // 3. Enviar embed de suporte
     try {
         await enviarEmbedSuporte(client);
         console.log("✅ Embed de suporte enviado");
@@ -300,7 +280,6 @@ client.once(Events.ClientReady, async () => {
         console.error("❌ Erro ao enviar embed de suporte:", err.message);
     }
 
-    // 4. Enviar formulários
     try {
         await enviarFormularios(client);
         console.log("✅ Formulários enviados");
@@ -308,7 +287,6 @@ client.once(Events.ClientReady, async () => {
         console.error("❌ Erro ao enviar formulários:", err.message);
     }
 
-    // 5. Inicializar sistema de verificação
     try {
         await enviarVerificacao(client);
         inicializarSistemaVerificacao(client);
@@ -317,7 +295,6 @@ client.once(Events.ClientReady, async () => {
         console.error("❌ Erro ao inicializar verificação:", err.message);
     }
 
-    // 6. Registrar comando /chamar
     try {
         await registrarComandoChamar(client);
         console.log("✅ Comando /chamar registado");
