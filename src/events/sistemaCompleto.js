@@ -630,9 +630,10 @@ async function verificarInatividadeTicket(channel, client) {
 }
 
 // ============================================================================
-// 11. ROTA DE SUSPENSÃO (PARA CRON JOB)
+// 11. ROTA DE SUSPENSÃO E REATIVAÇÃO (PARA CRON JOB)
 // ============================================================================
 function setupSuspendRoute(app) {
+    // Rota para suspender
     app.post('/api/suspend', async (req, res) => {
         const token = req.query.token;
         const SECRET_TOKEN = process.env.SUSPEND_TOKEN || 'mudar_esta_chave';
@@ -660,6 +661,38 @@ function setupSuspendRoute(app) {
             }
         } catch (err) {
             console.error('Erro ao suspender:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Rota para reativar (resume)
+    app.post('/api/resume', async (req, res) => {
+        const token = req.query.token;
+        const SECRET_TOKEN = process.env.SUSPEND_TOKEN || 'mudar_esta_chave';
+        if (token !== SECRET_TOKEN) {
+            return res.status(403).json({ error: 'Token inválido' });
+        }
+        try {
+            const renderApiKey = process.env.RENDER_API_KEY;
+            const serviceId = process.env.RENDER_SERVICE_ID;
+            if (!renderApiKey || !serviceId) {
+                return res.status(500).json({ error: 'Render API key ou Service ID não configurados' });
+            }
+            const response = await fetch(`https://api.render.com/v1/services/${serviceId}/resume`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${renderApiKey}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (response.ok) {
+                res.json({ success: true, message: 'Serviço reativado com sucesso' });
+            } else {
+                const errorText = await response.text();
+                res.status(response.status).json({ error: errorText });
+            }
+        } catch (err) {
+            console.error('Erro ao reativar:', err);
             res.status(500).json({ error: err.message });
         }
     });
