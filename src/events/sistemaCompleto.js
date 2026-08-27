@@ -1,4 +1,4 @@
-// src/events/sistemaCompleto.js - SISTEMA DE ÁUDIO + EMBEDS + TICKETS + FORMULÁRIOS
+// src/events/sistemaCompleto.js - SISTEMA DE ÁUDIO + EMBEDS + TICKETS + FORMULÁRIOS + NOTIFICAÇÕES
 const { 
     EmbedBuilder, 
     ActionRowBuilder, 
@@ -28,6 +28,7 @@ const {
 const fs = require('fs');
 const path = require('path');
 const { createReadStream } = require('node:fs');
+const config = require('../config');
 
 // FFmpeg static para funcionar no Render
 const ffmpegPath = require('ffmpeg-static');
@@ -38,6 +39,7 @@ const CANAL_VOZ_ID = "1492521949736472757";
 const CANAL_TICKET_ID = "1493942678612869311";
 const CANAL_FORMULARIO_ID = "1490783323780419664";
 const CATEGORIA_TICKETS_ID = "1490783459470475414";
+const LOG_CHANNEL_ID = process.env.LOG_CHANNEL_ID || "1495145643977478154";
 
 // Emojis personalizados
 const EMOJIS = {
@@ -744,7 +746,80 @@ async function criarTicket(interaction, tipo, idioma) {
 }
 
 // ============================================================================
-// 9. HANDLERS DE INTERAÇÃO
+// 9. NOTIFICAÇÃO DE RESPOSTA DE STAFF (NOVA FUNÇÃO)
+// ============================================================================
+
+let ticketNotificationEnabled = true;
+
+function setupTicketReplyNotification(client) {
+    client.on('messageCreate', async (message) => {
+        // Ignorar bots e mensagens sem guild
+        if (message.author.bot || !message.guild) return;
+
+        // Verificar se é um canal de ticket (nome começa com "ticket-")
+        if (!message.channel.name || !message.channel.name.startsWith('ticket-')) return;
+
+        // Verificar se o autor é staff (tem algum dos cargos em config.STAFF_ROLES)
+        const member = message.member;
+        if (!member) return;
+
+        const isStaffMember = config.STAFF_ROLES.some(roleId => member.roles.cache.has(roleId));
+        if (!isStaffMember) return;
+
+        // Obter o ID do criador do ticket a partir do tópico
+        const topic = message.channel.topic;
+        if (!topic) return;
+
+        const [creatorId] = topic.split('|');
+        if (!creatorId) return;
+
+        // Evitar notificar se o próprio staff for o criador (não faz sentido)
+        if (creatorId === message.author.id) return;
+
+        // Verificar se a notificação está ativa
+        if (!ticketNotificationEnabled) return;
+
+        try {
+            const creator = await client.users.fetch(creatorId);
+            if (!creator) return;
+
+            // Construir embed da notificação
+            const embed = new EmbedBuilder()
+                .setTitle(`📩 Nova resposta no ticket`)
+                .setDescription(
+                    `Olá ${creator.username},\n\n` +
+                    `**${message.author.username}** respondeu ao teu ticket **${message.channel.name}**.\n` +
+                    `Clica no botão abaixo para ires diretamente para o ticket.`
+                )
+                .setColor('#00ff00')
+                .setTimestamp();
+
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setLabel('🔗 Ir para o Ticket')
+                    .setStyle(ButtonStyle.Link)
+                    .setURL(`https://discord.com/channels/${message.guild.id}/${message.channel.id}`)
+            );
+
+            await creator.send({ embeds: [embed], components: [row] });
+            console.log(`📩 Notificação enviada a ${creator.tag} sobre resposta de ${message.author.tag} no ticket ${message.channel.name}`);
+
+        } catch (error) {
+            console.error(`❌ Erro ao enviar notificação para ${creatorId}:`, error.message);
+        }
+    });
+
+    console.log('✅ Sistema de notificação de tickets ativo');
+}
+
+// Função para ativar/desativar (opcional)
+function toggleTicketNotification(enable) {
+    ticketNotificationEnabled = enable;
+    console.log(`📩 Notificações de ticket ${enable ? 'ativadas' : 'desativadas'}`);
+}
+
+// ============================================================================
+// 10. HANDLERS DE INTERAÇÃO (CORRIGIDOS)
 // ============================================================================
 
 async function handleMenuSuporte(interaction) {
@@ -772,7 +847,9 @@ async function handleMenuSuporte(interaction) {
     await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
 }
 
+// CORRIGIDO: Removido o followUp que causava erro
 async function handleFormBug(interaction) {
+    // Deferir a interação para dar tempo ao modal
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const modal = new ModalBuilder()
@@ -800,10 +877,11 @@ async function handleFormBug(interaction) {
         new ActionRowBuilder().addComponents(input2)
     );
 
-    await interaction.followUp({ content: 'Abre o modal acima!', flags: MessageFlags.Ephemeral });
+    // Mostrar o modal - isto substitui a resposta deferida
     await interaction.showModal(modal);
 }
 
+// CORRIGIDO: Removido o followUp que causava erro
 async function handleFormIdeia(interaction) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -820,7 +898,7 @@ async function handleFormIdeia(interaction) {
         .setMaxLength(2000);
 
     modal.addComponents(new ActionRowBuilder().addComponents(input));
-    await interaction.followUp({ content: 'Abre o modal acima!', flags: MessageFlags.Ephemeral });
+
     await interaction.showModal(modal);
 }
 
@@ -859,7 +937,7 @@ async function handleAvaliacaoEstrelas(interaction, estrelas) {
         .setMaxLength(1000);
 
     modal.addComponents(new ActionRowBuilder().addComponents(input));
-    await interaction.followUp({ content: 'Abre o modal acima!', flags: MessageFlags.Ephemeral });
+
     await interaction.showModal(modal);
 }
 
@@ -929,7 +1007,7 @@ async function handleModalSubmit(interaction) {
 }
 
 // ============================================================================
-// 10. HANDLER PRINCIPAL
+// 11. HANDLER PRINCIPAL
 // ============================================================================
 
 async function handleSistemaInteraction(interaction, client) {
@@ -1000,6 +1078,15 @@ async function handleSistemaInteraction(interaction, client) {
 }
 
 // ============================================================================
+// 12. INICIALIZAÇÃO DA NOTIFICAÇÃO (chamado no ready.js)
+// ============================================================================
+
+function inicializarNotificacaoTickets(client) {
+    setupTicketReplyNotification(client);
+    console.log('📩 Sistema de notificação de tickets inicializado!');
+}
+
+// ============================================================================
 // MODULE EXPORTS
 // ============================================================================
 
@@ -1010,4 +1097,6 @@ module.exports = {
     handleSistemaInteraction,
     registrarComandosVoz,
     handleAudioCommand,
+    inicializarNotificacaoTickets,
+    toggleTicketNotification
 };
