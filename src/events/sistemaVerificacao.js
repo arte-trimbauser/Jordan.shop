@@ -1,4 +1,4 @@
-// src/events/sistemaVerificacao.js - SISTEMA DE VERIFICACAO COM SUPABASE
+// src/events/sistemaVerificacao.js - SISTEMA DE VERIFICACAO COM SUPABASE (FINAL)
 const { 
     EmbedBuilder, 
     ActionRowBuilder, 
@@ -12,21 +12,19 @@ const {
     SlashCommandBuilder
 } = require('discord.js');
 
-// ========== CRIAR CLIENTE SUPABASE DIRETAMENTE ==========
 const { createClient } = require('@supabase/supabase-js');
 
+// ========== CONFIGURAR SUPABASE ==========
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-    console.error('❌ SUPABASE_URL ou SUPABASE_KEY não definidas no ambiente!');
+    console.error('❌ SUPABASE_URL ou SUPABASE_KEY não definidas!');
 } else {
-    console.log('✅ Supabase configurado com sucesso.');
+    console.log('✅ Supabase configurado.');
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
-
-// =========================================================
 
 const CONFIG = {
     CANAL_VERIFICACAO_ID: '1393690238903128115',
@@ -37,14 +35,42 @@ const CONFIG = {
     MINUTO_ESPERA: 0
 };
 
-const usuariosVerificados = new Set();
-const usuariosComModalAberto = new Set();
+// ================= GARANTIR QUE A TABELA CONFIG EXISTE =================
+async function garantirTabelaConfig() {
+    try {
+        // Verifica se a tabela existe e tem dados
+        const { data, error } = await supabase
+            .from('config')
+            .select('id')
+            .eq('id', 1)
+            .single();
+
+        if (error && error.code === 'PGRST116') {
+            // Tabela vazia ou não existe – vamos criar o registo
+            console.log('📝 A criar registo config (id=1) com verificacao_ativa=true...');
+            const { error: insertError } = await supabase
+                .from('config')
+                .insert({ id: 1, verificacao_ativa: true });
+            if (insertError) {
+                console.error('❌ Erro ao criar registo config:', insertError.message);
+            } else {
+                console.log('✅ Registo config criado com sucesso.');
+            }
+        } else if (error) {
+            console.error('❌ Erro ao verificar tabela config:', error.message);
+        } else {
+            console.log('✅ Tabela config já existe e tem dados.');
+        }
+    } catch (err) {
+        console.error('❌ Exceção ao garantir tabela config:', err.message);
+    }
+}
 
 // ================= FUNÇÕES SUPABASE =================
 async function getVerificacaoAtiva() {
     try {
         if (!supabaseUrl || !supabaseKey) {
-            console.error('❌ Supabase não configurado. A usar true por segurança.');
+            console.warn('⚠️ Supabase não configurado, usando true por segurança.');
             return true;
         }
 
@@ -55,24 +81,17 @@ async function getVerificacaoAtiva() {
             .single();
 
         if (error) {
-            console.error('❌ Erro ao ler verificacao_ativa do Supabase:', error.message);
-            console.error('Detalhes:', error);
-            return true; // fallback para verdadeiro
-        }
-
-        if (!data) {
-            console.warn('⚠️ Nenhum registo encontrado na tabela config. A criar registo padrão...');
-            // Tentar criar o registo
-            const { error: insertError } = await supabase
-                .from('config')
-                .insert({ id: 1, verificacao_ativa: true });
-            if (insertError) {
-                console.error('❌ Erro ao criar registo config:', insertError.message);
-            }
+            console.error('❌ Erro ao ler verificacao_ativa:', error.message);
             return true;
         }
 
-        console.log(`📊 Estado da verificação lido da BD: ${data.verificacao_ativa}`);
+        if (!data) {
+            console.warn('⚠️ Nenhum registo na tabela config. A criar com true...');
+            await supabase.from('config').insert({ id: 1, verificacao_ativa: true });
+            return true;
+        }
+
+        console.log(`📊 Estado da verificação (BD): ${data.verificacao_ativa}`);
         return data.verificacao_ativa;
 
     } catch (err) {
@@ -84,7 +103,7 @@ async function getVerificacaoAtiva() {
 async function setVerificacaoAtiva(valor) {
     try {
         if (!supabaseUrl || !supabaseKey) {
-            console.error('❌ Supabase não configurado. Não foi possível guardar estado.');
+            console.error('❌ Supabase não configurado. Não foi possível guardar.');
             return;
         }
 
@@ -94,12 +113,12 @@ async function setVerificacaoAtiva(valor) {
             .eq('id', 1);
 
         if (error) {
-            console.error('❌ Erro ao atualizar estado da verificação:', error.message);
+            console.error('❌ Erro ao atualizar estado:', error.message);
         } else {
-            console.log(`✅ Estado da verificação atualizado para: ${valor}`);
+            console.log(`✅ Estado atualizado para: ${valor}`);
         }
     } catch (err) {
-        console.error('❌ Exceção ao guardar verificacao_ativa:', err.message);
+        console.error('❌ Exceção ao guardar estado:', err.message);
     }
 }
 // ===================================================
@@ -133,16 +152,16 @@ async function registrarComandoVerificacao(client) {
 let mensagemVerificacaoEnviada = false;
 
 async function enviarVerificacao(client) {
+    // Se já enviou nesta sessão, não enviar novamente
+    if (mensagemVerificacaoEnviada) {
+        console.log('ℹ️ Mensagem de verificação já enviada nesta sessão.');
+        return;
+    }
+
     try {
-        // 1. Verifica o estado na base de dados
         const ativa = await getVerificacaoAtiva();
         if (!ativa) {
             console.log('ℹ️ Verificacao desativada na BD. Não vou enviar a mensagem.');
-            return;
-        }
-
-        if (mensagemVerificacaoEnviada) {
-            console.log('ℹ️ Mensagem já enviada nesta sessão.');
             return;
         }
 
@@ -152,7 +171,7 @@ async function enviarVerificacao(client) {
             return;
         }
 
-        // Verifica se já existe mensagem do bot no canal
+        // Verifica se já existe uma mensagem do bot no canal
         const mensagens = await canal.messages.fetch({ limit: 20 });
         const jaExiste = mensagens.some(m => 
             m.author.id === client.user.id && 
@@ -163,12 +182,12 @@ async function enviarVerificacao(client) {
         );
 
         if (jaExiste) {
-            console.log('ℹ️ Mensagem de verificacao já existe no canal. Duplicado evitado.');
+            console.log('ℹ️ Mensagem de verificação já existe no canal. Duplicado evitado.');
             mensagemVerificacaoEnviada = true;
             return;
         }
 
-        // Cria e envia
+        // Cria e envia a mensagem
         const embed = new EmbedBuilder()
             .setTitle('Verificacao de Seguranca - Jordan Shop')
             .setDescription(`**Bem-vindo a Jordan Shop!**
@@ -208,13 +227,13 @@ function setupGuildMemberAdd(client) {
     guildMemberAddListener = async (member) => {
         const ativa = await getVerificacaoAtiva();
         if (!ativa) {
-            console.log(`ℹ️ Verificacao desativada - ${member.user.tag} entrou sem verificacao`);
+            console.log(`ℹ️ Verificacao desativada - ${member.user.tag} entrou sem verificar.`);
             return;
         }
 
         try {
             await member.roles.add(CONFIG.CARGO_NAO_VERIFICADO_ID);
-            console.log(`✅ ${member.user.tag} recebeu cargo não verificado`);
+            console.log(`✅ ${member.user.tag} recebeu cargo não verificado.`);
 
             try {
                 await member.send(`Bem-vindo a Jordan Shop!
@@ -239,6 +258,7 @@ Isto protege a nossa comunidade contra bots de spam.`);
 async function handleVerificacaoInteraction(interaction, client) {
     const { customId, member, user, commandName } = interaction;
 
+    // COMANDO /verificacao
     if (interaction.isChatInputCommand() && commandName === 'verificacao') {
         const estado = interaction.options.getString('estado');
         const novoValor = (estado === 'ativar');
@@ -256,6 +276,7 @@ async function handleVerificacaoInteraction(interaction, client) {
         return true;
     }
 
+    // BOTÃO INICIAR VERIFICAÇÃO
     if (customId === 'iniciar_verificacao') {
         const ativa = await getVerificacaoAtiva();
         if (!ativa) {
@@ -288,6 +309,7 @@ async function handleVerificacaoInteraction(interaction, client) {
         return interaction.showModal(modal);
     }
 
+    // MODAL DE VERIFICAÇÃO
     if (interaction.isModalSubmit() && customId === 'modal_verificacao') {
         const codigo = interaction.fields.getTextInputValue('codigo_verificacao');
 
@@ -329,6 +351,7 @@ async function handleVerificacaoInteraction(interaction, client) {
     return false;
 }
 
+// ================= ANTI-SPAM =================
 function setupAntiSpam(client) {
     const palavrasProibidas = [
         'discord.gg', 'discord.com/invite',
@@ -373,10 +396,14 @@ function setupAntiSpam(client) {
     });
 }
 
-function inicializarSistemaVerificacao(client) {
+// ================= INICIALIZAÇÃO =================
+async function inicializarSistemaVerificacao(client) {
+    // Garantir que a tabela config existe antes de tudo
+    await garantirTabelaConfig();
+
     setupGuildMemberAdd(client);
     setupAntiSpam(client);
-    registrarComandoVerificacao(client);
+    await registrarComandoVerificacao(client);
     console.log('✅ Sistema de verificacao inicializado');
 }
 
