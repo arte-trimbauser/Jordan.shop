@@ -90,17 +90,14 @@ app.use(express.static(path.join(__dirname, "site"), { index: false }));
 
 // ================= ROTAS =================
 
-// Página inicial (login)
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "site", "login.html"));
 });
 
-// Health check para o Render
 app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
 
-// Lista de transcripts
 app.get("/api/list-transcripts", async (req, res) => {
     const { data, error } = await supabase.storage
         .from("transcripts")
@@ -112,7 +109,6 @@ app.get("/api/list-transcripts", async (req, res) => {
     res.json(data || []);
 });
 
-// Visualizar um transcript específico
 app.get("/transcripts/:id", async (req, res) => {
     const id = req.params.id.replace('.html', '');
     const { data, error } = await supabase.storage
@@ -124,7 +120,6 @@ app.get("/transcripts/:id", async (req, res) => {
     res.send(text);
 });
 
-// Login manual (username/password)
 app.post("/api/login-manual", async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ success: false });
@@ -151,7 +146,6 @@ app.post("/api/login-manual", async (req, res) => {
     res.json({ success: true, user: username, token: tokenSessao });
 });
 
-// Callback OAuth do Discord (ROTA ANTIGA – para compatibilidade, mas já não usamos)
 app.get("/callback", async (req, res) => {
     const code = req.query.code;
     if (!code) return res.redirect("/login.html?error=no_code");
@@ -185,7 +179,6 @@ app.get("/callback", async (req, res) => {
     }
 });
 
-// Enviar embed via bot
 app.post("/api/enviar-embed", async (req, res) => {
     const { titulo, desc, cor, canalId, produtos } = req.body;
     if (!titulo || !desc || !canalId) return res.status(400).send("Faltam campos.");
@@ -220,7 +213,7 @@ app.post("/api/enviar-embed", async (req, res) => {
     }
 });
 
-// ========== ROTA DE SUSPENSÃO E REATIVAÇÃO (via API do Render) ==========
+// ========== ROTA DE SUSPENSÃO E REATIVAÇÃO ==========
 setupSuspendRoute(app);
 
 // ================= INICIALIZAÇÃO DO BOT =================
@@ -263,60 +256,52 @@ if (!TOKEN) {
     process.exit(1);
 }
 
-// Iniciar servidor HTTP
+// ================= SERVIDOR HTTP =================
 app.listen(port, () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
 });
 
-// Login do bot no Discord
-client.login(TOKEN)
-    .then(() => console.log("✅ Pedido de login enviado ao Discord"))
-    .catch(err => console.error("❌ ERRO NO LOGIN:", err));
+// ================= RECONEXÃO AUTOMÁTICA =================
+function iniciarBot() {
+    client.login(TOKEN)
+        .then(() => console.log("✅ Pedido de login enviado ao Discord"))
+        .catch(err => {
+            console.error("❌ ERRO NO LOGIN:", err);
+            setTimeout(() => {
+                console.log("🔄 A tentar login novamente em 10 segundos...");
+                iniciarBot();
+            }, 10000);
+        });
+}
 
-// Evento ready (executado quando o bot está online)
-client.once(Events.ClientReady, async () => {
-    console.log(`🤖 Bot ligado como ${client.user.tag}`);
-
-    try {
-        await entrarCanalVoz(client);
-        console.log("✅ Bot entrou no canal de voz");
-    } catch (err) {
-        console.error("❌ Erro ao entrar no canal de voz:", err.message);
-    }
-
-    try {
-        await registrarComandosVoz(client);
-        console.log("✅ Comandos de voz registados");
-    } catch (err) {
-        console.error("❌ Erro ao registar comandos de voz:", err.message);
-    }
-
-    try {
-        await enviarEmbedSuporte(client);
-        console.log("✅ Embed de suporte enviado");
-    } catch (err) {
-        console.error("❌ Erro ao enviar embed de suporte:", err.message);
-    }
-
-    try {
-        await enviarFormularios(client);
-        console.log("✅ Formulários enviados");
-    } catch (err) {
-        console.error("❌ Erro ao enviar formulários:", err.message);
-    }
-
-    try {
-        await enviarVerificacao(client);
-        inicializarSistemaVerificacao(client);
-        console.log("✅ Sistema de verificação inicializado");
-    } catch (err) {
-        console.error("❌ Erro ao inicializar verificação:", err.message);
-    }
-
-    try {
-        await registrarComandoChamar(client);
-        console.log("✅ Comando /chamar registado");
-    } catch (err) {
-        console.error("❌ Erro ao registar /chamar:", err.message);
-    }
+client.on('shardDisconnect', (event, id) => {
+    console.log(`⚠️ Shard ${id} desconectado. A reconectar...`);
+    setTimeout(() => iniciarBot(), 5000);
 });
+
+client.on('shardReconnecting', (id) => {
+    console.log(`🔄 Shard ${id} a reconectar...`);
+});
+
+client.on('error', (error) => {
+    console.error('❌ Erro no client Discord:', error);
+});
+
+// Monitoriza o estado do WebSocket
+setInterval(() => {
+    if (client.ws?.status === 0) {
+        // 0 = ready, normalmente
+        // só para logging
+    } else if (client.ws?.status !== undefined) {
+        console.log(`ℹ️ WebSocket status: ${client.ws.status}`);
+    }
+}, 60 * 1000);
+
+// ================= INICIAR O BOT =================
+iniciarBot();
+
+// ================= EVENTO READY (já configurado no ready.js) =================
+// O evento ready principal está no ficheiro ready.js, que é carregado no inicializarBot()
+// Esta secção adicional (client.once) já está a ser usada no ready.js, por isso não a repetimos aqui.
+
+console.log("🔄 Sistema a iniciar...");
