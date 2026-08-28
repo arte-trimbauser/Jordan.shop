@@ -16,7 +16,7 @@ const {
     enviarFormularios,
     handleSistemaInteraction,
     registrarComandosVoz,
-    setupSuspendRoute              // <-- nova importação
+    setupSuspendRoute
 } = require('./src/events/sistemaCompleto');
 
 const { 
@@ -88,10 +88,19 @@ const limiter = rateLimit({ windowMs: 60 * 1000, max: 1000 });
 app.use(limiter);
 app.use(express.static(path.join(__dirname, "site"), { index: false }));
 
+// ================= ROTAS =================
+
+// Página inicial (login)
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "site", "login.html"));
 });
 
+// Health check para o Render
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
+
+// Lista de transcripts
 app.get("/api/list-transcripts", async (req, res) => {
     const { data, error } = await supabase.storage
         .from("transcripts")
@@ -103,6 +112,7 @@ app.get("/api/list-transcripts", async (req, res) => {
     res.json(data || []);
 });
 
+// Visualizar um transcript específico
 app.get("/transcripts/:id", async (req, res) => {
     const id = req.params.id.replace('.html', '');
     const { data, error } = await supabase.storage
@@ -114,6 +124,7 @@ app.get("/transcripts/:id", async (req, res) => {
     res.send(text);
 });
 
+// Login manual (username/password)
 app.post("/api/login-manual", async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ success: false });
@@ -140,6 +151,7 @@ app.post("/api/login-manual", async (req, res) => {
     res.json({ success: true, user: username, token: tokenSessao });
 });
 
+// Callback OAuth do Discord (ROTA ANTIGA – para compatibilidade, mas já não usamos)
 app.get("/callback", async (req, res) => {
     const code = req.query.code;
     if (!code) return res.redirect("/login.html?error=no_code");
@@ -150,7 +162,7 @@ app.get("/callback", async (req, res) => {
             client_secret: process.env.CLIENT_SECRET,
             grant_type: "authorization_code",
             code,
-            redirect_uri: "https://jordan-shop-bot-site.vercel.app/callback"
+            redirect_uri: "https://jordan-shop-bot-site.vercel.app/api/callback"
         });
 
         const tokenRes = await axios.post("https://discord.com/api/oauth2/token", params);
@@ -173,6 +185,7 @@ app.get("/callback", async (req, res) => {
     }
 });
 
+// Enviar embed via bot
 app.post("/api/enviar-embed", async (req, res) => {
     const { titulo, desc, cor, canalId, produtos } = req.body;
     if (!titulo || !desc || !canalId) return res.status(400).send("Faltam campos.");
@@ -207,8 +220,10 @@ app.post("/api/enviar-embed", async (req, res) => {
     }
 });
 
-// ========== ROTA DE SUSPENSÃO (NOVO) ==========
+// ========== ROTA DE SUSPENSÃO E REATIVAÇÃO (via API do Render) ==========
 setupSuspendRoute(app);
+
+// ================= INICIALIZAÇÃO DO BOT =================
 
 const inicializarBot = () => {
     try {
@@ -248,14 +263,17 @@ if (!TOKEN) {
     process.exit(1);
 }
 
+// Iniciar servidor HTTP
 app.listen(port, () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
 });
 
+// Login do bot no Discord
 client.login(TOKEN)
     .then(() => console.log("✅ Pedido de login enviado ao Discord"))
     .catch(err => console.error("❌ ERRO NO LOGIN:", err));
 
+// Evento ready (executado quando o bot está online)
 client.once(Events.ClientReady, async () => {
     console.log(`🤖 Bot ligado como ${client.user.tag}`);
 
