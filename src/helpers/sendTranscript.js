@@ -1,4 +1,3 @@
-```js
 // src/utils/transcript.js
 
 import { AttachmentBuilder } from "discord.js";
