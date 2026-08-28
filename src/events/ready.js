@@ -1,6 +1,7 @@
 // src/events/ready.js
 const { EmbedBuilder, ActivityType, REST, Routes } = require("discord.js");
 const { registrarComandoChamar } = require('../commands/chamarCommand');
+const { comandoVerificacao } = require('./sistemaVerificacao');
 
 const {
     entrarCanalVoz,
@@ -13,8 +14,7 @@ const {
 
 const {
     enviarVerificacao,
-    inicializarSistemaVerificacao,
-    comandoVerificacao   // <-- importa o builder do comando
+    inicializarSistemaVerificacao
 } = require('./sistemaVerificacao');
 
 module.exports = async (client) => {
@@ -27,15 +27,13 @@ module.exports = async (client) => {
 
     const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
-    // ========== REGISTO CENTRALIZADO DE COMANDOS ==========
     try {
         const adicionar = require("../commands/adicionar");
         const carrinho = require("../commands/carrinho");
-
         const commands = [
             adicionar.data.toJSON(),
             carrinho.data.toJSON(),
-            comandoVerificacao.toJSON()   // <-- adiciona /verificacao
+            comandoVerificacao.toJSON()
         ];
 
         await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
@@ -48,7 +46,6 @@ module.exports = async (client) => {
         console.error("❌ Erro ao registar slash commands:", err);
     }
 
-    // ========== VOZ ==========
     try {
         await registrarComandosVoz(client);
         console.log("✅ Comandos de voz registados com sucesso!");
@@ -56,7 +53,6 @@ module.exports = async (client) => {
         console.error("❌ Erro ao registar comandos de voz:", err);
     }
 
-    // ========== /CHAMAR ==========
     try {
         await registrarComandoChamar(client);
         console.log("✅ Comando /chamar registado com sucesso!");
@@ -64,7 +60,6 @@ module.exports = async (client) => {
         console.error("❌ Erro ao registar /chamar:", err);
     }
 
-    // ========== SISTEMAS ADICIONAIS ==========
     try {
         await entrarCanalVoz(client);
         await enviarEmbedSuporte(client);
@@ -74,7 +69,6 @@ module.exports = async (client) => {
         console.error("❌ Erro ao inicializar sistemas adicionais:", err);
     }
 
-    // ========== VERIFICAÇÃO ==========
     try {
         await enviarVerificacao(client);
         inicializarSistemaVerificacao(client);
@@ -83,7 +77,6 @@ module.exports = async (client) => {
         console.error("❌ Erro ao inicializar verificacao:", err);
     }
 
-    // ========== NOTIFICAÇÕES DE TICKET ==========
     try {
         inicializarNotificacaoTickets(client);
         iniciarMonitorizacaoInatividadeTickets(client);
@@ -92,7 +85,6 @@ module.exports = async (client) => {
         console.error("❌ Erro ao inicializar notificação:", err);
     }
 
-    // ========== STATUS ROTATIVO ==========
     const statusList = [
         { name: "Jordan Shop | discord.gg/6hhZeqb7Qk", type: ActivityType.Competing },
         { name: "Os melhores precos!", type: ActivityType.Watching },
@@ -110,7 +102,6 @@ module.exports = async (client) => {
     updateStatus();
     setInterval(updateStatus, 5000);
 
-    // ========== LOG DE INICIALIZAÇÃO (com mensagem personalizada) ==========
     const LOG_ID = "1437076921627181228";
     try {
         const logChannel = await client.channels.fetch(LOG_ID).catch(() => null);
@@ -157,6 +148,6 @@ module.exports = async (client) => {
             await logChannel.send({ embeds: [embedLog] });
         }
     } catch (err) {
-        console.error("Erro ao enviar log de inicializacao no Discord.");
+        console.error("❌ Erro ao enviar log de inicializacao no Discord.");
     }
 };
