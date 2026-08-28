@@ -1,4 +1,4 @@
-// src/events/sistemaVerificacao.js - SISTEMA DE VERIFICACAO COM SUPABASE
+// src/events/sistemaVerificacao.js - SISTEMA DE VERIFICACAO COM SUPABASE (CORRIGIDO)
 const { 
     EmbedBuilder, 
     ActionRowBuilder, 
@@ -25,7 +25,7 @@ const CONFIG = {
 
 const usuariosVerificados = new Set();
 const usuariosComModalAberto = new Set();
-let verificacaoEnviada = false; // Esta pode ficar em memória, só para evitar duplicar o embed
+let verificacaoEnviada = false; // Controla envio do embed
 
 // ================= FUNÇÕES SUPABASE =================
 async function getVerificacaoAtiva() {
@@ -59,31 +59,32 @@ async function setVerificacaoAtiva(valor) {
 }
 // ===================================================
 
+// ================= COMANDO /verificacao =================
+const comandoVerificacao = new SlashCommandBuilder()
+    .setName('verificacao')
+    .setDescription('Ativar ou desativar o sistema de verificacao de novos membros')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addStringOption(option =>
+        option.setName('estado')
+            .setDescription('Escolhe o estado da verificacao')
+            .setRequired(true)
+            .addChoices(
+                { name: 'Ativar', value: 'ativar' },
+                { name: 'Desativar', value: 'desativar' }
+            )
+    );
+
 async function registrarComandoVerificacao(client) {
     try {
         const guild = await client.guilds.fetch("1393629457599828040");
-
-        const comando = new SlashCommandBuilder()
-            .setName('verificacao')
-            .setDescription('Ativar ou desativar o sistema de verificacao de novos membros')
-            .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-            .addStringOption(option =>
-                option.setName('estado')
-                    .setDescription('Escolhe o estado da verificacao')
-                    .setRequired(true)
-                    .addChoices(
-                        { name: 'Ativar', value: 'ativar' },
-                        { name: 'Desativar', value: 'desativar' }
-                    )
-            );
-
-        await guild.commands.create(comando);
+        await guild.commands.create(comandoVerificacao);
         console.log('✅ Comando /verificacao registado');
     } catch (err) {
         console.error('❌ Erro ao registar /verificacao:', err);
     }
 }
 
+// ================= ENVIAR EMBED DE VERIFICAÇÃO =================
 async function enviarVerificacao(client) {
     try {
         if (verificacaoEnviada) {
@@ -140,15 +141,17 @@ Para acederes a loja e garantires que nao es um bot de spam, clica no botao abai
     }
 }
 
-function setupGuildMemberAdd(client) {
-    client.on('guildMemberRemove', (member) => {
-        usuariosComModalAberto.delete(member.user.id);
-        usuariosVerificados.delete(member.user.id);
-        console.log(`Estado limpo para ${member.user.tag} (saiu do servidor)`);
-    });
+// ================= EVENTO GUILD MEMBER ADD =================
+let guildMemberAddListener = null;
 
-    client.on('guildMemberAdd', async (member) => {
-        // ========== VERIFICA NA BD ==========
+function setupGuildMemberAdd(client) {
+    // Remove listener antigo se existir para evitar duplicados
+    if (guildMemberAddListener) {
+        client.removeListener('guildMemberAdd', guildMemberAddListener);
+    }
+
+    guildMemberAddListener = async (member) => {
+        // Verifica se o estado está ativo na base de dados
         const ativa = await getVerificacaoAtiva();
         if (!ativa) {
             console.log(`Verificacao desativada - ${member.user.tag} entrou sem verificacao`);
@@ -178,17 +181,27 @@ Isto protege a nossa comunidade contra bots de spam.`);
         } catch (err) {
             console.error('Erro ao processar novo membro:', err);
         }
+    };
+
+    client.on('guildMemberAdd', guildMemberAddListener);
+
+    client.on('guildMemberRemove', (member) => {
+        usuariosComModalAberto.delete(member.user.id);
+        usuariosVerificados.delete(member.user.id);
+        console.log(`Estado limpo para ${member.user.tag} (saiu do servidor)`);
     });
 }
 
+// ================= HANDLER DE INTERAÇÃO =================
 async function handleVerificacaoInteraction(interaction, client) {
     const { customId, member, user, commandName } = interaction;
 
+    // COMANDO /verificacao
     if (interaction.isChatInputCommand() && commandName === 'verificacao') {
         const estado = interaction.options.getString('estado');
         const novoValor = (estado === 'ativar');
 
-        // ========== GUARDA NA BD ==========
+        // Atualiza na base de dados
         await setVerificacaoAtiva(novoValor);
 
         if (novoValor) {
@@ -209,8 +222,9 @@ async function handleVerificacaoInteraction(interaction, client) {
         return true;
     }
 
+    // BOTÃO INICIAR VERIFICAÇÃO
     if (customId === 'iniciar_verificacao') {
-        // ========== VERIFICA NA BD ==========
+        // Verifica estado na base de dados
         const ativa = await getVerificacaoAtiva();
         if (!ativa) {
             return interaction.reply({
@@ -254,6 +268,7 @@ async function handleVerificacaoInteraction(interaction, client) {
         return interaction.showModal(modal);
     }
 
+    // MODAL DE VERIFICAÇÃO
     if (interaction.isModalSubmit() && customId === 'modal_verificacao') {
         const codigo = interaction.fields.getTextInputValue('codigo_verificacao');
 
@@ -295,6 +310,7 @@ async function handleVerificacaoInteraction(interaction, client) {
     return false;
 }
 
+// ================= ANTI-SPAM =================
 function setupAntiSpam(client) {
     const palavrasProibidas = [
         'discord.gg', 'discord.com/invite',
@@ -342,6 +358,7 @@ function setupAntiSpam(client) {
     });
 }
 
+// ================= INICIALIZAÇÃO =================
 function inicializarSistemaVerificacao(client) {
     setupGuildMemberAdd(client);
     setupAntiSpam(client);
@@ -350,6 +367,7 @@ function inicializarSistemaVerificacao(client) {
 }
 
 module.exports = {
+    comandoVerificacao, // exporta para registar no ready.js
     enviarVerificacao,
     inicializarSistemaVerificacao,
     handleVerificacaoInteraction
