@@ -213,7 +213,6 @@ app.post("/api/enviar-embed", async (req, res) => {
     }
 });
 
-// ========== ROTA DE SUSPENSÃO E REATIVAÇÃO ==========
 setupSuspendRoute(app);
 
 // ================= INICIALIZAÇÃO DO BOT =================
@@ -256,21 +255,15 @@ if (!TOKEN) {
     process.exit(1);
 }
 
-// ================= SERVIDOR HTTP =================
-app.listen(port, () => {
-    console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
-});
-
 // ================= RECONEXÃO AUTOMÁTICA =================
 function iniciarBot() {
+    console.log('🔄 Sistema a iniciar...');
     client.login(TOKEN)
         .then(() => console.log("✅ Pedido de login enviado ao Discord"))
         .catch(err => {
             console.error("❌ ERRO NO LOGIN:", err);
-            setTimeout(() => {
-                console.log("🔄 A tentar login novamente em 10 segundos...");
-                iniciarBot();
-            }, 10000);
+            console.log("🔄 A tentar login novamente em 10 segundos...");
+            setTimeout(() => iniciarBot(), 10000);
         });
 }
 
@@ -290,18 +283,65 @@ client.on('error', (error) => {
 // Monitoriza o estado do WebSocket
 setInterval(() => {
     if (client.ws?.status === 0) {
-        // 0 = ready, normalmente
-        // só para logging
-    } else if (client.ws?.status !== undefined) {
-        console.log(`ℹ️ WebSocket status: ${client.ws.status}`);
+        // 0 = ready, 1 = connecting, 2 = reconnecting, 3 = idle, 4 = disconnected
+        // Não fazer nada se estiver ready
+    } else {
+        console.warn(`⚠️ WebSocket status: ${client.ws?.status}`);
     }
 }, 60 * 1000);
 
-// ================= INICIAR O BOT =================
+// Iniciar servidor HTTP
+app.listen(port, () => {
+    console.log(`🚀 Servidor HTTP ativo na porta ${port}`);
+});
+
+// Iniciar bot
 iniciarBot();
 
-// ================= EVENTO READY (já configurado no ready.js) =================
-// O evento ready principal está no ficheiro ready.js, que é carregado no inicializarBot()
-// Esta secção adicional (client.once) já está a ser usada no ready.js, por isso não a repetimos aqui.
+// Evento ready (já configurado no inicializarBot, mas mantemos por segurança)
+client.once(Events.ClientReady, async () => {
+    console.log(`🤖 Bot ligado como ${client.user.tag}`);
 
-console.log("🔄 Sistema a iniciar...");
+    try {
+        await entrarCanalVoz(client);
+        console.log("✅ Bot entrou no canal de voz");
+    } catch (err) {
+        console.error("❌ Erro ao entrar no canal de voz:", err.message);
+    }
+
+    try {
+        await registrarComandosVoz(client);
+        console.log("✅ Comandos de voz registados");
+    } catch (err) {
+        console.error("❌ Erro ao registar comandos de voz:", err.message);
+    }
+
+    try {
+        await enviarEmbedSuporte(client);
+        console.log("✅ Embed de suporte enviado");
+    } catch (err) {
+        console.error("❌ Erro ao enviar embed de suporte:", err.message);
+    }
+
+    try {
+        await enviarFormularios(client);
+        console.log("✅ Formulários enviados");
+    } catch (err) {
+        console.error("❌ Erro ao enviar formulários:", err.message);
+    }
+
+    try {
+        await enviarVerificacao(client);
+        inicializarSistemaVerificacao(client);
+        console.log("✅ Sistema de verificação inicializado");
+    } catch (err) {
+        console.error("❌ Erro ao inicializar verificação:", err.message);
+    }
+
+    try {
+        await registrarComandoChamar(client);
+        console.log("✅ Comando /chamar registado");
+    } catch (err) {
+        console.error("❌ Erro ao registar /chamar:", err.message);
+    }
+});
