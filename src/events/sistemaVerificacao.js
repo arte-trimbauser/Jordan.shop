@@ -1,5 +1,4 @@
-// src/events/sistemaVerificacao.js - SISTEMA DE VERIFICACAO COM /verificacao (COM SUPABASE)
-
+// src/events/sistemaVerificacao.js - SISTEMA DE VERIFICACAO COM SUPABASE
 const { 
     EmbedBuilder, 
     ActionRowBuilder, 
@@ -13,7 +12,6 @@ const {
     SlashCommandBuilder
 } = require('discord.js');
 
-// IMPORTAR O SUPABASE
 const supabase = require('../../database/supabase');
 
 const CONFIG = {
@@ -27,7 +25,7 @@ const CONFIG = {
 
 const usuariosVerificados = new Set();
 const usuariosComModalAberto = new Set();
-let verificacaoEnviada = false; // Esta pode ficar em memória (só controla envio do embed)
+let verificacaoEnviada = false; // Esta pode ficar em memória, só para evitar duplicar o embed
 
 // ================= FUNÇÕES SUPABASE =================
 async function getVerificacaoAtiva() {
@@ -44,7 +42,7 @@ async function getVerificacaoAtiva() {
         return data.verificacao_ativa;
     } catch (err) {
         console.error('❌ Erro ao ler verificacao_ativa:', err);
-        return true; // Fallback seguro
+        return true;
     }
 }
 
@@ -150,7 +148,7 @@ function setupGuildMemberAdd(client) {
     });
 
     client.on('guildMemberAdd', async (member) => {
-        // ========== VERIFICAR ESTADO NA DB ==========
+        // ========== VERIFICA NA BD ==========
         const ativa = await getVerificacaoAtiva();
         if (!ativa) {
             console.log(`Verificacao desativada - ${member.user.tag} entrou sem verificacao`);
@@ -186,12 +184,11 @@ Isto protege a nossa comunidade contra bots de spam.`);
 async function handleVerificacaoInteraction(interaction, client) {
     const { customId, member, user, commandName } = interaction;
 
-    // ================= COMANDO /VERIFICACAO =================
     if (interaction.isChatInputCommand() && commandName === 'verificacao') {
         const estado = interaction.options.getString('estado');
         const novoValor = (estado === 'ativar');
 
-        // Guardar na base de dados
+        // ========== GUARDA NA BD ==========
         await setVerificacaoAtiva(novoValor);
 
         if (novoValor) {
@@ -212,9 +209,8 @@ async function handleVerificacaoInteraction(interaction, client) {
         return true;
     }
 
-    // ================= BOTÃO INICIAR =================
     if (customId === 'iniciar_verificacao') {
-        // ========== VERIFICAR ESTADO NA DB ==========
+        // ========== VERIFICA NA BD ==========
         const ativa = await getVerificacaoAtiva();
         if (!ativa) {
             return interaction.reply({
@@ -258,7 +254,6 @@ async function handleVerificacaoInteraction(interaction, client) {
         return interaction.showModal(modal);
     }
 
-    // ================= MODAL =================
     if (interaction.isModalSubmit() && customId === 'modal_verificacao') {
         const codigo = interaction.fields.getTextInputValue('codigo_verificacao');
 
@@ -312,7 +307,7 @@ function setupAntiSpam(client) {
     client.on('messageCreate', async (message) => {
         if (message.author.bot || !message.guild) return;
 
-        const { member, content, channel } = message;
+        const { member, content } = message;
         const contentLower = content.toLowerCase();
 
         if (member.permissions.has(PermissionFlagsBits.Administrator)) return;
