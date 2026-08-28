@@ -1,4 +1,4 @@
-// src/events/sistemaVerificacao.js - SISTEMA DE VERIFICACAO COM SUPABASE (CORRIGIDO)
+// src/events/sistemaVerificacao.js - SISTEMA DE VERIFICACAO COM SUPABASE
 const { 
     EmbedBuilder, 
     ActionRowBuilder, 
@@ -12,7 +12,21 @@ const {
     SlashCommandBuilder
 } = require('discord.js');
 
-const supabase = require('../../database/supabase');
+// ========== CRIAR CLIENTE SUPABASE DIRETAMENTE ==========
+const { createClient } = require('@supabase/supabase-js');
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ SUPABASE_URL ou SUPABASE_KEY não definidas no ambiente!');
+} else {
+    console.log('✅ Supabase configurado com sucesso.');
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// =========================================================
 
 const CONFIG = {
     CANAL_VERIFICACAO_ID: '1393690238903128115',
@@ -29,31 +43,63 @@ const usuariosComModalAberto = new Set();
 // ================= FUNÇÕES SUPABASE =================
 async function getVerificacaoAtiva() {
     try {
+        if (!supabaseUrl || !supabaseKey) {
+            console.error('❌ Supabase não configurado. A usar true por segurança.');
+            return true;
+        }
+
         const { data, error } = await supabase
             .from('config')
             .select('verificacao_ativa')
             .eq('id', 1)
             .single();
-        if (error || !data) {
-            console.warn('⚠️ Erro ao buscar estado da verificação, usando true por padrão');
+
+        if (error) {
+            console.error('❌ Erro ao ler verificacao_ativa do Supabase:', error.message);
+            console.error('Detalhes:', error);
+            return true; // fallback para verdadeiro
+        }
+
+        if (!data) {
+            console.warn('⚠️ Nenhum registo encontrado na tabela config. A criar registo padrão...');
+            // Tentar criar o registo
+            const { error: insertError } = await supabase
+                .from('config')
+                .insert({ id: 1, verificacao_ativa: true });
+            if (insertError) {
+                console.error('❌ Erro ao criar registo config:', insertError.message);
+            }
             return true;
         }
+
+        console.log(`📊 Estado da verificação lido da BD: ${data.verificacao_ativa}`);
         return data.verificacao_ativa;
+
     } catch (err) {
-        console.error('❌ Erro ao ler verificacao_ativa:', err);
+        console.error('❌ Exceção ao ler verificacao_ativa:', err.message);
         return true;
     }
 }
 
 async function setVerificacaoAtiva(valor) {
     try {
+        if (!supabaseUrl || !supabaseKey) {
+            console.error('❌ Supabase não configurado. Não foi possível guardar estado.');
+            return;
+        }
+
         const { error } = await supabase
             .from('config')
             .update({ verificacao_ativa: valor, updated_at: new Date() })
             .eq('id', 1);
-        if (error) console.error('❌ Erro ao atualizar estado da verificação:', error);
+
+        if (error) {
+            console.error('❌ Erro ao atualizar estado da verificação:', error.message);
+        } else {
+            console.log(`✅ Estado da verificação atualizado para: ${valor}`);
+        }
     } catch (err) {
-        console.error('❌ Erro ao guardar verificacao_ativa:', err);
+        console.error('❌ Exceção ao guardar verificacao_ativa:', err.message);
     }
 }
 // ===================================================
@@ -83,31 +129,30 @@ async function registrarComandoVerificacao(client) {
     }
 }
 
-// ================= ENVIAR EMBED DE VERIFICAÇÃO (CORRIGIDO) =================
-let mensagemVerificacaoEnviada = false; // cache para evitar envios repetidos durante a mesma sessão
+// ================= ENVIAR EMBED DE VERIFICAÇÃO =================
+let mensagemVerificacaoEnviada = false;
 
 async function enviarVerificacao(client) {
     try {
-        // 1. Verifica se a verificação está ATIVA na base de dados
+        // 1. Verifica o estado na base de dados
         const ativa = await getVerificacaoAtiva();
         if (!ativa) {
-            console.log('ℹ️ Verificacao desativada na BD. Não vou enviar a mensagem de verificação.');
+            console.log('ℹ️ Verificacao desativada na BD. Não vou enviar a mensagem.');
             return;
         }
 
-        // 2. Se já enviou nesta sessão, não enviar novamente
         if (mensagemVerificacaoEnviada) {
-            console.log('ℹ️ Mensagem de verificação já enviada nesta sessão.');
+            console.log('ℹ️ Mensagem já enviada nesta sessão.');
             return;
         }
 
         const canal = await client.channels.fetch(CONFIG.CANAL_VERIFICACAO_ID);
         if (!canal) {
-            console.error('❌ Canal de verificacao nao encontrado!');
+            console.error('❌ Canal de verificacao não encontrado!');
             return;
         }
 
-        // 3. Verifica se já existe uma mensagem de verificação no canal
+        // Verifica se já existe mensagem do bot no canal
         const mensagens = await canal.messages.fetch({ limit: 20 });
         const jaExiste = mensagens.some(m => 
             m.author.id === client.user.id && 
@@ -118,12 +163,12 @@ async function enviarVerificacao(client) {
         );
 
         if (jaExiste) {
-            console.log('ℹ️ Mensagem de verificacao já existe no canal. Não vou enviar duplicado.');
-            mensagemVerificacaoEnviada = true; // marca como enviado para evitar re-verificação
+            console.log('ℹ️ Mensagem de verificacao já existe no canal. Duplicado evitado.');
+            mensagemVerificacaoEnviada = true;
             return;
         }
 
-        // 4. Cria e envia a mensagem
+        // Cria e envia
         const embed = new EmbedBuilder()
             .setTitle('Verificacao de Seguranca - Jordan Shop')
             .setDescription(`**Bem-vindo a Jordan Shop!**
@@ -156,13 +201,11 @@ Para acederes a loja e garantires que nao es um bot de spam, clica no botao abai
 let guildMemberAddListener = null;
 
 function setupGuildMemberAdd(client) {
-    // Remove listener antigo se existir para evitar duplicados
     if (guildMemberAddListener) {
         client.removeListener('guildMemberAdd', guildMemberAddListener);
     }
 
     guildMemberAddListener = async (member) => {
-        // Verifica estado na base de dados
         const ativa = await getVerificacaoAtiva();
         if (!ativa) {
             console.log(`ℹ️ Verificacao desativada - ${member.user.tag} entrou sem verificacao`);
@@ -170,25 +213,15 @@ function setupGuildMemberAdd(client) {
         }
 
         try {
-            const contaIdade = Date.now() - member.user.createdAt;
-            const dias = contaIdade / (1000 * 60 * 60 * 24);
-
-            if (dias < 7) {
-                console.log(`📊 Conta muito recente: ${member.user.tag} (${dias.toFixed(1)} dias)`);
-            }
-
             await member.roles.add(CONFIG.CARGO_NAO_VERIFICADO_ID);
-            console.log(`✅ ${member.user.tag} entrou e recebeu cargo nao verificado`);
+            console.log(`✅ ${member.user.tag} recebeu cargo não verificado`);
 
             try {
                 await member.send(`Bem-vindo a Jordan Shop!
 
 Para acederes a loja, passa pela verificacao no canal #verificacao.
 Isto protege a nossa comunidade contra bots de spam.`);
-            } catch {
-                // DM fechada
-            }
-
+            } catch {}
         } catch (err) {
             console.error('❌ Erro ao processar novo membro:', err);
         }
@@ -199,7 +232,6 @@ Isto protege a nossa comunidade contra bots de spam.`);
     client.on('guildMemberRemove', (member) => {
         usuariosComModalAberto.delete(member.user.id);
         usuariosVerificados.delete(member.user.id);
-        console.log(`🧹 Estado limpo para ${member.user.tag} (saiu do servidor)`);
     });
 }
 
@@ -207,50 +239,28 @@ Isto protege a nossa comunidade contra bots de spam.`);
 async function handleVerificacaoInteraction(interaction, client) {
     const { customId, member, user, commandName } = interaction;
 
-    // COMANDO /verificacao
     if (interaction.isChatInputCommand() && commandName === 'verificacao') {
         const estado = interaction.options.getString('estado');
         const novoValor = (estado === 'ativar');
 
-        // Atualiza na base de dados
         await setVerificacaoAtiva(novoValor);
 
-        if (novoValor) {
-            const embed = new EmbedBuilder()
-                .setColor(0x00FF00)
-                .setTitle('✅ Verificacao Ativada')
-                .setDescription('O sistema de verificacao de novos membros foi **ativado**.\n\nNovos membros terao de se verificar para aceder ao servidor.')
-                .setTimestamp();
-            await interaction.reply({ embeds: [embed] });
-        } else {
-            const embed = new EmbedBuilder()
-                .setColor(0xFF0000)
-                .setTitle('❌ Verificacao Desativada')
-                .setDescription('O sistema de verificacao de novos membros foi **desativado**.\n\nNovos membros terao acesso automatico ao servidor.')
-                .setTimestamp();
-            await interaction.reply({ embeds: [embed] });
-        }
+        const embed = new EmbedBuilder()
+            .setColor(novoValor ? 0x00FF00 : 0xFF0000)
+            .setTitle(novoValor ? '✅ Verificacao Ativada' : '❌ Verificacao Desativada')
+            .setDescription(novoValor 
+                ? 'O sistema de verificacao de novos membros foi **ativado**.\n\nNovos membros terao de se verificar para aceder ao servidor.'
+                : 'O sistema de verificacao de novos membros foi **desativado**.\n\nNovos membros terao acesso automatico ao servidor.')
+            .setTimestamp();
+        await interaction.reply({ embeds: [embed] });
         return true;
     }
 
-    // BOTÃO INICIAR VERIFICAÇÃO
     if (customId === 'iniciar_verificacao') {
-        // Verifica estado na base de dados
         const ativa = await getVerificacaoAtiva();
         if (!ativa) {
             return interaction.reply({
                 content: '⚠️ O sistema de verificacao esta desativado. Podes aceder ao servidor normalmente.',
-                flags: MessageFlags.Ephemeral
-            });
-        }
-
-        const tempoNoServidor = Date.now() - member.joinedAt;
-        const minutosNoServidor = tempoNoServidor / (1000 * 60);
-
-        if (minutosNoServidor < CONFIG.MINUTO_ESPERA) {
-            const minutosRestantes = Math.ceil(CONFIG.MINUTO_ESPERA - minutosNoServidor);
-            return interaction.reply({
-                content: `⏳ Aguarda ${minutosRestantes} minuto(s) antes de te verificares.`,
                 flags: MessageFlags.Ephemeral
             });
         }
@@ -275,11 +285,9 @@ async function handleVerificacaoInteraction(interaction, client) {
             .setMaxLength(20);
 
         modal.addComponents(new ActionRowBuilder().addComponents(input));
-
         return interaction.showModal(modal);
     }
 
-    // MODAL DE VERIFICAÇÃO
     if (interaction.isModalSubmit() && customId === 'modal_verificacao') {
         const codigo = interaction.fields.getTextInputValue('codigo_verificacao');
 
@@ -292,7 +300,7 @@ async function handleVerificacaoInteraction(interaction, client) {
                 if (logChannel) {
                     const embedLog = new EmbedBuilder()
                         .setTitle('✅ Novo Membro Verificado')
-                        .setDescription(`**Utilizador:** <@${user.id}> (${user.username})\n**Conta criada:** <t:${Math.floor(user.createdAt.getTime()/1000)}:R>`)
+                        .setDescription(`**Utilizador:** <@${user.id}> (${user.username})`)
                         .setColor('#00ff00')
                         .setTimestamp();
                     await logChannel.send({ embeds: [embedLog] });
@@ -321,7 +329,6 @@ async function handleVerificacaoInteraction(interaction, client) {
     return false;
 }
 
-// ================= ANTI-SPAM =================
 function setupAntiSpam(client) {
     const palavrasProibidas = [
         'discord.gg', 'discord.com/invite',
@@ -333,12 +340,10 @@ function setupAntiSpam(client) {
 
     client.on('messageCreate', async (message) => {
         if (message.author.bot || !message.guild) return;
-
         const { member, content } = message;
-        const contentLower = content.toLowerCase();
-
         if (member.permissions.has(PermissionFlagsBits.Administrator)) return;
 
+        const contentLower = content.toLowerCase();
         const temEveryone = content.includes('@everyone') || content.includes('@here');
         const temLinkProibido = palavrasProibidas.some(palavra => contentLower.includes(palavra));
 
@@ -356,12 +361,11 @@ function setupAntiSpam(client) {
                 if (logChannel) {
                     const embed = new EmbedBuilder()
                         .setTitle('🛡️ Anti-Spam Ativado')
-                        .setDescription(`**Utilizador:** <@${message.author.id}> (${message.author.username})\n**Motivo:** Spam/Link proibido\n**Mensagem:** ${content.slice(0, 100)}`)
+                        .setDescription(`**Utilizador:** <@${message.author.id}>\n**Motivo:** Spam/Link proibido\n**Mensagem:** ${content.slice(0, 100)}`)
                         .setColor('#ff0000')
                         .setTimestamp();
                     await logChannel.send({ embeds: [embed] });
                 }
-
             } catch (err) {
                 console.error('❌ Erro no anti-spam:', err);
             }
@@ -369,16 +373,15 @@ function setupAntiSpam(client) {
     });
 }
 
-// ================= INICIALIZAÇÃO =================
 function inicializarSistemaVerificacao(client) {
     setupGuildMemberAdd(client);
     setupAntiSpam(client);
     registrarComandoVerificacao(client);
-    console.log('✅ Sistema de verificacao inicializado (com /verificacao)');
+    console.log('✅ Sistema de verificacao inicializado');
 }
 
 module.exports = {
-    comandoVerificacao, // exporta para registar no ready.js
+    comandoVerificacao,
     enviarVerificacao,
     inicializarSistemaVerificacao,
     handleVerificacaoInteraction
