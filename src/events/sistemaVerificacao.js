@@ -25,7 +25,6 @@ const CONFIG = {
 
 const usuariosVerificados = new Set();
 const usuariosComModalAberto = new Set();
-let verificacaoEnviada = false; // Controla envio do embed
 
 // ================= FUNÇÕES SUPABASE =================
 async function getVerificacaoAtiva() {
@@ -84,20 +83,31 @@ async function registrarComandoVerificacao(client) {
     }
 }
 
-// ================= ENVIAR EMBED DE VERIFICAÇÃO =================
+// ================= ENVIAR EMBED DE VERIFICAÇÃO (CORRIGIDO) =================
+let mensagemVerificacaoEnviada = false; // cache para evitar envios repetidos durante a mesma sessão
+
 async function enviarVerificacao(client) {
     try {
-        if (verificacaoEnviada) {
-            console.log('Mensagem de verificacao ja foi enviada anteriormente');
+        // 1. Verifica se a verificação está ATIVA na base de dados
+        const ativa = await getVerificacaoAtiva();
+        if (!ativa) {
+            console.log('ℹ️ Verificacao desativada na BD. Não vou enviar a mensagem de verificação.');
+            return;
+        }
+
+        // 2. Se já enviou nesta sessão, não enviar novamente
+        if (mensagemVerificacaoEnviada) {
+            console.log('ℹ️ Mensagem de verificação já enviada nesta sessão.');
             return;
         }
 
         const canal = await client.channels.fetch(CONFIG.CANAL_VERIFICACAO_ID);
         if (!canal) {
-            console.error('Canal de verificacao nao encontrado!');
+            console.error('❌ Canal de verificacao nao encontrado!');
             return;
         }
 
+        // 3. Verifica se já existe uma mensagem de verificação no canal
         const mensagens = await canal.messages.fetch({ limit: 20 });
         const jaExiste = mensagens.some(m => 
             m.author.id === client.user.id && 
@@ -108,11 +118,12 @@ async function enviarVerificacao(client) {
         );
 
         if (jaExiste) {
-            console.log('Mensagem de verificacao ja existe no canal');
-            verificacaoEnviada = true;
+            console.log('ℹ️ Mensagem de verificacao já existe no canal. Não vou enviar duplicado.');
+            mensagemVerificacaoEnviada = true; // marca como enviado para evitar re-verificação
             return;
         }
 
+        // 4. Cria e envia a mensagem
         const embed = new EmbedBuilder()
             .setTitle('Verificacao de Seguranca - Jordan Shop')
             .setDescription(`**Bem-vindo a Jordan Shop!**
@@ -133,11 +144,11 @@ Para acederes a loja e garantires que nao es um bot de spam, clica no botao abai
         );
 
         await canal.send({ embeds: [embed], components: [row] });
-        verificacaoEnviada = true;
-        console.log('Sistema de verificacao enviado (primeira vez)');
+        mensagemVerificacaoEnviada = true;
+        console.log('✅ Mensagem de verificação enviada com sucesso.');
 
     } catch (err) {
-        console.error('Erro ao enviar verificacao:', err.message);
+        console.error('❌ Erro ao enviar verificacao:', err.message);
     }
 }
 
@@ -151,10 +162,10 @@ function setupGuildMemberAdd(client) {
     }
 
     guildMemberAddListener = async (member) => {
-        // Verifica se o estado está ativo na base de dados
+        // Verifica estado na base de dados
         const ativa = await getVerificacaoAtiva();
         if (!ativa) {
-            console.log(`Verificacao desativada - ${member.user.tag} entrou sem verificacao`);
+            console.log(`ℹ️ Verificacao desativada - ${member.user.tag} entrou sem verificacao`);
             return;
         }
 
@@ -163,11 +174,11 @@ function setupGuildMemberAdd(client) {
             const dias = contaIdade / (1000 * 60 * 60 * 24);
 
             if (dias < 7) {
-                console.log(`Conta muito recente: ${member.user.tag} (${dias.toFixed(1)} dias)`);
+                console.log(`📊 Conta muito recente: ${member.user.tag} (${dias.toFixed(1)} dias)`);
             }
 
             await member.roles.add(CONFIG.CARGO_NAO_VERIFICADO_ID);
-            console.log(`${member.user.tag} entrou e recebeu cargo nao verificado`);
+            console.log(`✅ ${member.user.tag} entrou e recebeu cargo nao verificado`);
 
             try {
                 await member.send(`Bem-vindo a Jordan Shop!
@@ -179,7 +190,7 @@ Isto protege a nossa comunidade contra bots de spam.`);
             }
 
         } catch (err) {
-            console.error('Erro ao processar novo membro:', err);
+            console.error('❌ Erro ao processar novo membro:', err);
         }
     };
 
@@ -188,7 +199,7 @@ Isto protege a nossa comunidade contra bots de spam.`);
     client.on('guildMemberRemove', (member) => {
         usuariosComModalAberto.delete(member.user.id);
         usuariosVerificados.delete(member.user.id);
-        console.log(`Estado limpo para ${member.user.tag} (saiu do servidor)`);
+        console.log(`🧹 Estado limpo para ${member.user.tag} (saiu do servidor)`);
     });
 }
 
@@ -239,14 +250,14 @@ async function handleVerificacaoInteraction(interaction, client) {
         if (minutosNoServidor < CONFIG.MINUTO_ESPERA) {
             const minutosRestantes = Math.ceil(CONFIG.MINUTO_ESPERA - minutosNoServidor);
             return interaction.reply({
-                content: `Aguarda ${minutosRestantes} minuto(s) antes de te verificares.`,
+                content: `⏳ Aguarda ${minutosRestantes} minuto(s) antes de te verificares.`,
                 flags: MessageFlags.Ephemeral
             });
         }
 
         if (member.roles.cache.has(CONFIG.CARGO_VERIFICADO_ID)) {
             return interaction.reply({
-                content: 'Ja estas verificado!',
+                content: '✅ Ja estas verificado!',
                 flags: MessageFlags.Ephemeral
             });
         }
@@ -293,7 +304,7 @@ async function handleVerificacaoInteraction(interaction, client) {
                 });
 
             } catch (err) {
-                console.error('Erro ao trocar cargos:', err);
+                console.error('❌ Erro ao trocar cargos:', err);
                 return interaction.reply({
                     content: '❌ Erro ao processar cargos. Verifica a hierarquia do bot.',
                     flags: MessageFlags.Ephemeral
@@ -352,7 +363,7 @@ function setupAntiSpam(client) {
                 }
 
             } catch (err) {
-                console.error('Erro no anti-spam:', err);
+                console.error('❌ Erro no anti-spam:', err);
             }
         }
     });
