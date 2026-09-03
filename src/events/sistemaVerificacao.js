@@ -38,7 +38,6 @@ const CONFIG = {
 // ================= GARANTIR QUE A TABELA CONFIG EXISTE =================
 async function garantirTabelaConfig() {
     try {
-        // Tenta selecionar o registo com id=1
         const { data, error } = await supabase
             .from('config')
             .select('id')
@@ -46,7 +45,6 @@ async function garantirTabelaConfig() {
             .single();
 
         if (error && error.code === 'PGRST116') {
-            // Tabela vazia ou não existe – criar registo com true (por segurança, mas podes por false)
             console.log('📝 A criar registo config (id=1) com verificacao_ativa=true...');
             const { error: insertError } = await supabase
                 .from('config')
@@ -66,7 +64,7 @@ async function garantirTabelaConfig() {
     }
 }
 
-// ================= FUNÇÕES SUPABASE =================
+// ================= FUNÇÕES SUPABASE (CORRIGIDAS) =================
 async function getVerificacaoAtiva() {
     try {
         if (!supabaseUrl || !supabaseKey) {
@@ -151,7 +149,6 @@ async function registrarComandoVerificacao(client) {
 let mensagemVerificacaoEnviada = false;
 
 async function enviarVerificacao(client) {
-    // Se já enviou nesta sessão, não enviar novamente
     if (mensagemVerificacaoEnviada) {
         console.log('ℹ️ Mensagem de verificação já enviada nesta sessão.');
         return;
@@ -170,7 +167,6 @@ async function enviarVerificacao(client) {
             return;
         }
 
-        // Verifica se já existe uma mensagem do bot no canal
         const mensagens = await canal.messages.fetch({ limit: 20 });
         const jaExiste = mensagens.some(m => 
             m.author.id === client.user.id && 
@@ -186,7 +182,6 @@ async function enviarVerificacao(client) {
             return;
         }
 
-        // Cria e envia a mensagem
         const embed = new EmbedBuilder()
             .setTitle('Verificacao de Seguranca - Jordan Shop')
             .setDescription(`**Bem-vindo a Jordan Shop!**
@@ -257,7 +252,6 @@ Isto protege a nossa comunidade contra bots de spam.`);
 async function handleVerificacaoInteraction(interaction, client) {
     const { customId, member, user, commandName } = interaction;
 
-    // COMANDO /verificacao
     if (interaction.isChatInputCommand() && commandName === 'verificacao') {
         const estado = interaction.options.getString('estado');
         const novoValor = (estado === 'ativar');
@@ -275,7 +269,6 @@ async function handleVerificacaoInteraction(interaction, client) {
         return true;
     }
 
-    // BOTÃO INICIAR VERIFICAÇÃO
     if (customId === 'iniciar_verificacao') {
         const ativa = await getVerificacaoAtiva();
         if (!ativa) {
@@ -308,7 +301,6 @@ async function handleVerificacaoInteraction(interaction, client) {
         return interaction.showModal(modal);
     }
 
-    // MODAL DE VERIFICAÇÃO
     if (interaction.isModalSubmit() && customId === 'modal_verificacao') {
         const codigo = interaction.fields.getTextInputValue('codigo_verificacao');
 
@@ -397,9 +389,7 @@ function setupAntiSpam(client) {
 
 // ================= INICIALIZAÇÃO =================
 async function inicializarSistemaVerificacao(client) {
-    // Garantir que a tabela config existe antes de tudo
     await garantirTabelaConfig();
-
     setupGuildMemberAdd(client);
     setupAntiSpam(client);
     await registrarComandoVerificacao(client);
