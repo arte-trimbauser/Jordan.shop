@@ -1,8 +1,9 @@
 // src/helpers/sendTranscript.js
 const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
+const supabase = require('../../database/supabase'); // Ajusta o caminho se necessário
 
 // ============================================================
-// TODA A LÓGICA DE GERAÇÃO DE TRANSCRIPT (copiada do teu ficheiro)
+// TODA A LÓGICA DE GERAÇÃO DE TRANSCRIPT (cópia do teu código)
 // ============================================================
 
 function escapeHtml(value = "") {
@@ -345,7 +346,7 @@ async function gerarTranscript(channel, ticketId, additionalInfo = {}) {
 </body>
 </html>`;
 
-    // TXT
+    // TXT (continuamos a gerar mas não vamos anexar)
     let txt = "";
     txt += "═══════════════════════════════════════════════════════════════\n";
     txt += `  TRANSCRIPT - Ticket #${ticketId}\n`;
@@ -402,17 +403,15 @@ async function gerarTranscript(channel, ticketId, additionalInfo = {}) {
     txt += "═══════════════════════════════════════════════════════════════\n";
 
     const htmlAttachment = new AttachmentBuilder(Buffer.from(html, "utf-8"), { name: `transcript-${ticketId}.html` });
-    const txtAttachment = new AttachmentBuilder(Buffer.from(txt, "utf-8"), { name: `transcript-${ticketId}.txt` });
+    // Não criamos o attachment do TXT, mas mantemos a string para caso queiras usar depois
 
     return {
       attachment: htmlAttachment,
       fileName: `transcript-${ticketId}.html`,
-      txtAttachment,
-      txtFileName: `transcript-${ticketId}.txt`,
       ticketId,
       messageCount: sorted.length,
       html,
-      txt,
+      txt, // ainda retornamos, mas não usamos
     };
   } catch (err) {
     console.error(`[Transcript] Erro no ticket #${ticketId}:`, err);
@@ -421,14 +420,15 @@ async function gerarTranscript(channel, ticketId, additionalInfo = {}) {
 }
 
 // ============================================================
-// FUNÇÃO PRINCIPAL QUE É CHAMADA POR interactionCreate.js
+// FUNÇÃO PRINCIPAL – CHAMADA POR interactionCreate.js
 // ============================================================
 async function sendTranscript(channel, closedBy = 'Staff') {
   try {
-    const logChannelId = process.env.LOG_CHANNEL_ID || '1437076921627181228';
+    // CANAL DE LOGS FIXO: 1424461544317517854
+    const logChannelId = '1424461544317517854';
     const logChannel = await channel.guild.channels.fetch(logChannelId);
     if (!logChannel) {
-      console.error('❌ Canal de logs não encontrado para enviar transcript.');
+      console.error('❌ Canal de logs (1424461544317517854) não encontrado.');
       return;
     }
 
@@ -443,29 +443,66 @@ async function sendTranscript(channel, closedBy = 'Staff') {
       openedAt,
       closedBy,
       ticketLabel: produto || 'Geral',
-      claimedBy: 'Staff', // Se quiseres, podes guardar quem reivindicou
+      claimedBy: 'Staff',
     };
 
+    // Gerar o transcript (HTML + TXT interno)
     const result = await gerarTranscript(channel, ticketId, additionalInfo);
     if (!result) {
       console.error('❌ Falha ao gerar transcript.');
       return;
     }
 
+    // ============================================================
+    // UPLOAD DO HTML PARA SUPABASE STORAGE
+    // ============================================================
+    let publicUrl = null;
+    try {
+      const fileName = `transcript-${ticketId}.html`;
+      const { data, error } = await supabase.storage
+        .from('transcripts')
+        .upload(fileName, Buffer.from(result.html, 'utf-8'), {
+          contentType: 'text/html',
+          cacheControl: '3600',
+          upsert: true,
+        });
+
+      if (error) {
+        console.error('❌ Erro ao fazer upload do transcript:', error.message);
+      } else {
+        const { data: urlData } = supabase.storage
+          .from('transcripts')
+          .getPublicUrl(fileName);
+        publicUrl = urlData.publicUrl;
+        console.log(`✅ Transcript uploaded: ${publicUrl}`);
+      }
+    } catch (err) {
+      console.error('❌ Exceção no upload:', err);
+    }
+
+    // ============================================================
+    // EMBED NO FORMATO PEDIDO
+    // ============================================================
     const embed = new EmbedBuilder()
-      .setTitle(`📄 Transcript - #${channel.name}`)
-      .setDescription(`Ticket fechado por **${closedBy}**`)
+      .setTitle('📄 Transcrição Arquivada')
+      .setDescription(publicUrl ? `🔗 [Ver Online: Clique Aqui](${publicUrl})` : '🔗 Ver Online: Clique Aqui')
       .addFields(
-        { name: 'Produto', value: produto || 'N/A', inline: true },
-        { name: 'Método', value: metodo || 'N/A', inline: true },
-        { name: 'Mensagens', value: `${result.messageCount}`, inline: true }
+        { name: 'Canal', value: `#${channel.name}`, inline: true },
+        { name: 'Fechado por', value: closedBy, inline: true }
       )
       .setColor('#8b0000')
+      .setFooter({
+        text: `Jordan Shop | Transcript • ${new Date().toLocaleString('pt-PT', { timeZone: 'Europe/Lisbon' })}`,
+        iconURL: channel.guild.iconURL()
+      })
       .setTimestamp();
 
+    // ============================================================
+    // ENVIAR MENSAGEM COM O EMBED + APENAS O FICHEIRO HTML
+    // ============================================================
     await logChannel.send({
       embeds: [embed],
-      files: [result.attachment, result.txtAttachment]
+      files: [result.attachment] // apenas o HTML, sem TXT
     });
 
     console.log(`✅ Transcript enviado para o canal de logs (Ticket #${ticketId})`);
