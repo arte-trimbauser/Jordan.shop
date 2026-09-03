@@ -289,7 +289,7 @@ module.exports = (client) => {
                         .setURL(`https://discord.com/channels/${guild.id}/${ticket.id}`)
                 );
                 return await interaction.editReply({
-                    content: `✅ Ticket/Pedido criado com sucesso: <#${ticket.id}>`,
+                    content: `✅ Seu Ticket/Pedido criado com sucesso: <#${ticket.id}>`,
                     components: [rowGo]
                 });
             }
