@@ -1,4 +1,4 @@
-// src/events/sistemaVerificacao.js - SISTEMA DE VERIFICACAO COM SUPABASE (FINAL)
+// src/events/sistemaVerificacao.js - SISTEMA DE VERIFICACAO COM SUPABASE (CORRIGIDO)
 const { 
     EmbedBuilder, 
     ActionRowBuilder, 
@@ -38,7 +38,7 @@ const CONFIG = {
 // ================= GARANTIR QUE A TABELA CONFIG EXISTE =================
 async function garantirTabelaConfig() {
     try {
-        // Verifica se a tabela existe e tem dados
+        // Tenta selecionar o registo com id=1
         const { data, error } = await supabase
             .from('config')
             .select('id')
@@ -46,7 +46,7 @@ async function garantirTabelaConfig() {
             .single();
 
         if (error && error.code === 'PGRST116') {
-            // Tabela vazia ou não existe – vamos criar o registo
+            // Tabela vazia ou não existe – criar registo com true (por segurança, mas podes por false)
             console.log('📝 A criar registo config (id=1) com verificacao_ativa=true...');
             const { error: insertError } = await supabase
                 .from('config')
@@ -70,8 +70,8 @@ async function garantirTabelaConfig() {
 async function getVerificacaoAtiva() {
     try {
         if (!supabaseUrl || !supabaseKey) {
-            console.warn('⚠️ Supabase não configurado, usando true por segurança.');
-            return true;
+            console.warn('⚠️ Supabase não configurado. A desativar verificação.');
+            return false; // Fallback seguro: desativado
         }
 
         const { data, error } = await supabase
@@ -82,7 +82,7 @@ async function getVerificacaoAtiva() {
 
         if (error) {
             console.error('❌ Erro ao ler verificacao_ativa:', error.message);
-            return true;
+            return false; // Fallback seguro: desativado
         }
 
         if (!data) {
@@ -96,7 +96,7 @@ async function getVerificacaoAtiva() {
 
     } catch (err) {
         console.error('❌ Exceção ao ler verificacao_ativa:', err.message);
-        return true;
+        return false; // Fallback seguro: desativado
     }
 }
 
@@ -121,7 +121,6 @@ async function setVerificacaoAtiva(valor) {
         console.error('❌ Exceção ao guardar estado:', err.message);
     }
 }
-// ===================================================
 
 // ================= COMANDO /verificacao =================
 const comandoVerificacao = new SlashCommandBuilder()
