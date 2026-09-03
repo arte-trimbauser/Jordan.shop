@@ -1,7 +1,7 @@
-// src/events/interactionCreate.js (VERSÃO CORRIGIDA)
 const {
     EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle,
-    PermissionsBitField, StringSelectMenuBuilder, ChannelType
+    PermissionsBitField, StringSelectMenuBuilder, ChannelType,
+    ModalBuilder, TextInputBuilder, TextInputStyle
 } = require("discord.js");
 const config = require("../config");
 const isStaff = require("../helpers/isStaff");
@@ -57,6 +57,7 @@ module.exports = (client) => {
         const { guild, channel, user, member, customId: cid } = interaction;
 
         try {
+            // ===================== COMANDOS SLASH =====================
             if (interaction.isChatInputCommand()) {
                 if (interaction.commandName === "chamar") {
                     return await handleChamarCommand(interaction, client);
@@ -71,7 +72,7 @@ module.exports = (client) => {
                         if (nomeLimpo.length > 100) nomeLimpo = nomeLimpo.slice(0, 97) + "...";
                         return {
                             label: nomeLimpo || "Produto",
-                            description: menu.options[0]?.description || "Ver opcoes",
+                            description: menu.options[0]?.description || "Ver opções",
                             value: menu.id
                         };
                     });
@@ -89,7 +90,7 @@ module.exports = (client) => {
                     const carrinho = client.carrinhos.get(user.id) || [];
                     if (carrinho.length === 0) {
                         return interaction.reply({
-                            content: "🛒 O teu carrinho esta vazio!\n\nUsa `/adicionar` para adicionar produtos.",
+                            content: "🛒 O teu carrinho está vazio!\n\nUsa `/adicionar` para adicionar produtos.",
                             flags: [64]
                         });
                     }
@@ -106,7 +107,7 @@ module.exports = (client) => {
                         total += subtotal;
                         descricao += `**${index + 1}.** ${item.titulo}\n`;
                         descricao += ` Quantidade: **${item.quantidade || 1}**\n`;
-                        descricao += ` Preco unitario: €${precoUnit.toFixed(2)}\n`;
+                        descricao += ` Preço unitário: €${precoUnit.toFixed(2)}\n`;
                         descricao += ` Subtotal: €${subtotal.toFixed(2)}\n\n`;
                     });
                     const embed = new EmbedBuilder()
@@ -129,24 +130,24 @@ module.exports = (client) => {
             if (interaction.isStringSelectMenu() && (cid === "menu_ticket" || cid === "menu_produtos")) {
                 const tipo = interaction.values[0];
                 const embed = new EmbedBuilder()
-                    .setTitle("⚖️ Termos de Servico - Jordan Shop")
+                    .setTitle("⚖️ Termos de Serviço - Jordan Shop")
                     .setDescription(
-                        "**Termos de Servico de Reembolso**\n" +
-                        "Nao oferecemos reembolsos apos a conclusao de uma compra ou servico. Em casos excepcionais, uma substituicao pode ser oferecida, se possivel.\n\n" +
-                        "**Termos de Servico de Substituicao**\n" +
-                        "A substituicao so e possivel com um voucher.\n" +
-                        "Sem voucher = sem garantia ou substituicao.\n\n" +
-                        "**Termos de Servico da Conta**\n" +
-                        "Apos receber uma conta, voce devera alterar seu endereco de e-mail e senha imediatamente.\n" +
-                        "Nao assumimos qualquer responsabilidade ou substituicao caso voce nao o faca.\n\n" +
-                        "**Termos de Servico do PayPal**\n" +
-                        "Os pagamentos devem ser enviados via \"Amigos e Familiares\" – sem uma mensagem nos detalhes de pagamento.\n" +
-                        "Nao nos responsabilizamos se nossa conta do PayPal for bloqueada e os fundos permanecerem la. Nao ha reembolsos possiveis!\n\n" +
+                        "**Termos de Serviço de Reembolso**\n" +
+                        "Não oferecemos reembolsos após a conclusão de uma compra ou serviço. Em casos excecionais, poderá ser oferecida uma substituição, se possível.\n\n" +
+                        "**Termos de Serviço de Substituição**\n" +
+                        "A substituição só é possível com um *voucher*.\n" +
+                        "Sem *voucher* = sem garantia ou substituição.\n\n" +
+                        "**Termos de Serviço da Conta**\n" +
+                        "Após receber a conta, deve alterar o endereço de e-mail e a palavra-passe imediatamente.\n" +
+                        "Não assumimos qualquer responsabilidade ou substituição caso não o faça.\n\n" +
+                        "**Termos de Serviço do PayPal**\n" +
+                        "Os pagamentos devem ser enviados via \"Amigos e Família\" – sem qualquer mensagem nos detalhes do pagamento.\n" +
+                        "Não nos responsabilizamos se a nossa conta do PayPal for bloqueada e os fundos ficarem retidos. Não há reembolsos possíveis!\n\n" +
                         "**Idioma do Ticket**\n" +
-                        "O suporte e os tickets sao processados exclusivamente em Portugues.\n\n" +
-                        "**Comportamento do Ticket**\n" +
-                        "Por favor, nao envie spam ou ping varias vezes em DM ou tickets.\n" +
-                        "Aguarde pacientemente ate receber seu produto ou uma response.\n\n" +
+                        "O suporte e os *tickets* são processados exclusivamente em português.\n\n" +
+                        "**Comportamento no Ticket**\n" +
+                        "Por favor, não envie *spam* nem mencione (*ping*) a equipa várias vezes em DM ou nos *tickets*.\n" +
+                        "Aguarde pacientemente até receber o seu produto ou uma resposta.\n\n" +
                         "*Atenciosamente, Jordan.*"
                     )
                     .setColor("#ff0000");
@@ -161,7 +162,7 @@ module.exports = (client) => {
                 const menuId = interaction.values[0];
                 const menuSelecionado = menus.find(m => m.id === menuId);
                 if (!menuSelecionado) {
-                    return interaction.reply({ content: "❌ Produto nao encontrado.", ephemeral: true });
+                    return interaction.reply({ content: "❌ Produto não encontrado.", ephemeral: true });
                 }
                 if (!client.carrinhos.has(user.id)) {
                     client.carrinhos.set(user.id, []);
@@ -186,7 +187,7 @@ module.exports = (client) => {
                 const canalLogs = guild.channels.cache.get(config.STAFF_LOGS_CHANNEL_ID);
                 if (canalLogs) {
                     await canalLogs.send({
-                        content: `❌ <@${user.id}> (${user.username}) **nao aceitou** os termos para abrir ticket de: \`${tipoRec}\` # 🔵 vpn-service`
+                        content: `❌ <@${user.id}> (${user.username}) **não aceitou** os termos para abrir ticket de: \`${tipoRec}\` # 🔵 vpn-service`
                     }).catch(() => {});
                 }
                 return interaction.update({
@@ -225,18 +226,18 @@ module.exports = (client) => {
                 }
                 const menuPagamento = new StringSelectMenuBuilder()
                     .setCustomId(`pagamento_${tipoAceito}`)
-                    .setPlaceholder("💳 Escolha o metodo de pagamento")
+                    .setPlaceholder("💳 Escolha o método de pagamento")
                     .addOptions([
                         { label: "MBWay", value: "MBWay", emoji: "1464608251516813446" },
                         { label: "PayPal", value: "PayPal", emoji: "1464608396383883314" },
                         { label: "Revolut", value: "Revolut", emoji: "1464608485617565726" },
-                        { label: "Cartao de Credito", value: "CartaoCredito", emoji: "1464608966826004676" },
-                        { label: "Google Pay", value: "GooglePay", emoji: "1464609044315508797" },
-                        { label: "Apple Pay", value: "ApplePay", emoji: "1464609102906003588" },
-                        { label: "Multibanco", value: "ReferenciaMultibanco", emoji: "1464609317926735902" }
+                        { label: "Cartão de Crédito", value: "Cartão_Crédito", emoji: "1464608966826004676" },
+                        { label: "Google Pay", value: "Google_Pay", emoji: "1464609044315508797" },
+                        { label: "Apple Pay", value: "Apple_Pay", emoji: "1464609102906003588" },
+                        { label: "Multibanco", value: "Referência_Multibanco", emoji: "1464609317926735902" }
                     ]);
                 return interaction.update({
-                    content: "✅ **Termos aceites!** Agora seleciona o metodo de pagamento:",
+                    content: "✅ **Termos aceites!** Agora seleciona o método de pagamento:",
                     embeds: [],
                     components: [new ActionRowBuilder().addComponents(menuPagamento)]
                 });
@@ -265,17 +266,17 @@ module.exports = (client) => {
                     ]
                 });
                 const embedTicket = new EmbedBuilder()
-                    .setTitle("Jordan Shop | Suporte")
+                    .setTitle("Jordan Shop | Tickets")
                     .setDescription(
                         `📦 **Produto:** ${tipoProd}\n` +
                         `🛡️ **Staff:** ⏳ Aguardando...\n` +
-                        `💳 **Metodo:** ${emoji} ${metodo}`
+                        `💳 **Método:** ${emoji} ${metodo}`
                     )
                     .setColor("#2f3136");
                 const btns = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId("claim_ticket").setLabel("Reivindicar").setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId("claim_ticket").setLabel("🙋‍♂️ Assumir o Ticket").setStyle(ButtonStyle.Secondary),
                     new ButtonBuilder().setCustomId("call_staff_list").setLabel("🔔 Chamar Staff").setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder().setCustomId("close_ticket").setLabel("Fechar").setStyle(ButtonStyle.Danger)
+                    new ButtonBuilder().setCustomId("close_ticket").setLabel("❌ Fechar o Ticket").setStyle(ButtonStyle.Danger)
                 );
                 await ticket.send({
                     content: `<@${user.id}> obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
@@ -289,25 +290,26 @@ module.exports = (client) => {
                         .setURL(`https://discord.com/channels/${guild.id}/${ticket.id}`)
                 );
                 return await interaction.editReply({
-                    content: `✅ Seu Ticket/Pedido criado com sucesso: <#${ticket.id}>`,
+                    content: `✅ O Seu Ticket/Pedido foi criado com sucesso: <#${ticket.id}>`,
                     components: [rowGo]
                 });
             }
 
             if (cid === "claim_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas Staff.", flags: [64] });
-                const [uid, met, pdr] = channel.topic?.split("|") || ["?", "Nao definido", "Geral"];
+                const [uid, met, pdr] = channel.topic?.split("|") || ["?", "Não definido", "Geral"];
                 const emj = emojisPagamento[met] || "💰";
                 const embedClaim = new EmbedBuilder()
-                    .setTitle("🛡️ Ticket Reivindicado")
-                    .setDescription(`👤 **Staff:** <@${user.id}>\n**Produto:** ${pdr}\n**Metodo:** ${emj} ${met}`)
-                    .setColor("#57f287");
+                    .setTitle("🛡️ Ticket Assumido")
+                    .setDescription(`👤 **Staff:** <@${user.id}>\n**Produto:** ${pdr}\n**Método:** ${emj} ${met}`)
+                    .setColor("#57f287")
+                    .setFooter({ text: "Jordan Shop | Tickets" });
                 return await interaction.update({
                     embeds: [embedClaim],
                     components: [new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId("claimed").setLabel("Reivindicado").setStyle(ButtonStyle.Success).setDisabled(true),
+                        new ButtonBuilder().setCustomId("claimed").setLabel("✅ Ticket Assumido").setStyle(ButtonStyle.Success).setDisabled(true),
                         new ButtonBuilder().setCustomId("call_staff_list").setLabel("🔔 Chamar Staff").setStyle(ButtonStyle.Primary),
-                        new ButtonBuilder().setCustomId("close_ticket").setLabel("Fechar").setStyle(ButtonStyle.Danger)
+                        new ButtonBuilder().setCustomId("close_ticket").setLabel("❌ Fechar o Ticket").setStyle(ButtonStyle.Danger)
                     )]
                 });
             }
@@ -349,38 +351,156 @@ module.exports = (client) => {
                 });
             }
 
+            // ============================================================
+            // BOTÃO FECHAR TICKET – AGORA COM MODAL PARA REGISTAR VENDA
+            // ============================================================
             if (cid === "close_ticket") {
-                if (!isStaff(member)) return interaction.reply({ content: "Apenas staff pode fechar.", flags: [64] });
-                const messages = await channel.messages.fetch({ limit: 50 });
-                const msgCount = messages.size;
-                if (msgCount >= 5) {
-                    await interaction.reply(`🔒 Ticket com mensagens suficientes (**${msgCount}**). A gerar transcricao...`);
-                    await sendTranscript(channel, user.tag);
-                    return setTimeout(() => channel.delete().catch(() => {}), 5000);
-                } else {
-                    const embedAviso = new EmbedBuilder()
-                        .setTitle("⚠️ Poucas Mensagens")
-                        .setDescription(`Este ticket tem apenas **${msgCount}** mensagens.\nQueres guardar a transcricao ou apenas fechar?`)
-                        .setColor("#f1c40f");
-                    const rowEscolha = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId("confirm_close_save").setLabel("Guardar e Fechar").setStyle(ButtonStyle.Success),
-                        new ButtonBuilder().setCustomId("confirm_close_silent").setLabel("Fechar sem Guardar").setStyle(ButtonStyle.Danger)
-                    );
-                    return await interaction.reply({ embeds: [embedAviso], components: [rowEscolha], flags: [64] });
+                // Verificar se é staff
+                if (!isStaff(member)) {
+                    return interaction.reply({ content: "Apenas staff pode fechar.", flags: 64 });
                 }
+
+                // Verificar se o ticket está na categoria proibida (não perguntar venda)
+                const CATEGORIA_SEM_VENDA = "1490783459470475414";
+                const isCategoriaProibida = channel.parentId === CATEGORIA_SEM_VENDA;
+
+                if (isCategoriaProibida) {
+                    // Fechar sem perguntar nada (apenas transcript + delete)
+                    await interaction.reply({ content: "🔒 A fechar ticket (sem registo de venda)...", flags: 64 });
+                    await sendTranscript(channel, member.displayName || member.user.username);
+                    setTimeout(() => channel.delete().catch(() => {}), 3000);
+                    return;
+                }
+
+                // ============================================================
+                // ABRIR MODAL PARA REGISTAR VENDA
+                // ============================================================
+                // Extrair produto do tópico (se existir)
+                const topic = channel.topic || '';
+                const [, , produtoDoTopico] = topic.split('|');
+                const produtoPreenchido = produtoDoTopico || 'Não especificado';
+
+                // Criar o modal
+                const modal = new ModalBuilder()
+                    .setCustomId('modal_venda_fechamento')
+                    .setTitle('📝 Registar Venda');
+
+                // Campo: Nome do comprador
+                const compradorInput = new TextInputBuilder()
+                    .setCustomId('venda_comprador')
+                    .setLabel('Nome do Comprador')
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('Ex: @Jordan / jordan_shop')
+                    .setRequired(true)
+                    .setMaxLength(100);
+
+                // Campo: Data de venda (pré-preenchida com hoje)
+                const hoje = new Date().toISOString().split('T')[0];
+                const dataInput = new TextInputBuilder()
+                    .setCustomId('venda_data')
+                    .setLabel('Data de Venda (DD-MM-AAAA)')
+                    .setStyle(TextInputStyle.Short)
+                    .setValue(hoje)
+                    .setRequired(true)
+                    .setMaxLength(10);
+
+                // Campo: Produto (pré-preenchido com o produto do ticket)
+                const produtoInput = new TextInputBuilder()
+                    .setCustomId('venda_produto')
+                    .setLabel('Produto')
+                    .setStyle(TextInputStyle.Short)
+                    .setValue(produtoPreenchido)
+                    .setRequired(true)
+                    .setMaxLength(200);
+
+                // Campo: Duração do produto
+                const duracaoInput = new TextInputBuilder()
+                    .setCustomId('venda_duracao')
+                    .setLabel('Duração do Produto')
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('Ex: Lifetime, 15 dias, Semanal...')
+                    .setRequired(false)
+                    .setMaxLength(50);
+
+                // Campo: Staff responsável (pré-preenchido com quem fechou)
+                const staffInput = new TextInputBuilder()
+                    .setCustomId('venda_staff')
+                    .setLabel('Staff responsável')
+                    .setStyle(TextInputStyle.Short)
+                    .setValue(member.displayName || member.user.username)
+                    .setRequired(true)
+                    .setMaxLength(100);
+
+                // Montar o modal com linhas (cada linha pode ter um campo)
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(compradorInput),
+                    new ActionRowBuilder().addComponents(dataInput),
+                    new ActionRowBuilder().addComponents(produtoInput),
+                    new ActionRowBuilder().addComponents(duracaoInput),
+                    new ActionRowBuilder().addComponents(staffInput)
+                );
+
+                // Mostrar o modal
+                await interaction.showModal(modal);
+                // O resto (fechar o ticket) será feito no handler do modal
+                return;
             }
 
-            if (cid === "confirm_close_save") {
-                await interaction.update({ content: "🔒 A guardar log e a eliminar...", embeds: [], components: [] });
-                await sendTranscript(channel, user.tag);
-                return setTimeout(() => channel.delete().catch(() => {}), 3000);
+            // ============================================================
+            // MODAL SUBMIT – REGISTAR VENDA APÓS FECHAR TICKET
+            // ============================================================
+            if (interaction.isModalSubmit() && interaction.customId === 'modal_venda_fechamento') {
+                const { fields, member, channel } = interaction;
+                // Obter os valores do modal
+                const comprador = fields.getTextInputValue('venda_comprador');
+                const data = fields.getTextInputValue('venda_data');
+                const produto = fields.getTextInputValue('venda_produto');
+                const duracao = fields.getTextInputValue('venda_duracao') || 'N/A';
+                const staff = fields.getTextInputValue('venda_staff');
+
+                // Confirmar a receção (resposta efémera)
+                await interaction.reply({ content: '✅ Venda registada! A fechar ticket...', flags: 64 });
+
+                // ============================================================
+                // ENVIAR EMBED DA VENDA PARA O CANAL 1393689118717771786
+                // ============================================================
+                try {
+                    const canalVendas = await client.channels.fetch('1393689118717771786');
+                    if (canalVendas) {
+                        const embedVenda = new EmbedBuilder()
+                            .setTitle('🛒 Nova Venda Registrada')
+                            .setColor('#8b0000')
+                            .addFields(
+                                { name: '👤 Comprador', value: comprador, inline: true },
+                                { name: '📅 Data', value: data, inline: true },
+                                { name: '📦 Produto', value: produto, inline: false },
+                                { name: '⏱️ Duração', value: duracao, inline: true },
+                                { name: '🛡️ Staff', value: staff, inline: true }
+                            )
+                            .setTimestamp()
+                            .setFooter({ text: 'Jordan Shop Vendas', iconURL: client.user.displayAvatarURL() });
+
+                        await canalVendas.send({ embeds: [embedVenda] });
+                    }
+                } catch (err) {
+                    console.error('❌ Erro ao enviar embed de venda:', err);
+                }
+
+                // ============================================================
+                // FECHAR O TICKET (TRANSCRIPT + DELETE)
+                // ============================================================
+                try {
+                    await sendTranscript(channel, member.displayName || member.user.username);
+                    setTimeout(() => channel.delete().catch(() => {}), 3000);
+                } catch (err) {
+                    console.error('❌ Erro ao fechar ticket após venda:', err);
+                }
+                return;
             }
 
-            if (cid === "confirm_close_silent") {
-                await interaction.update({ content: "❌ Ticket eliminado sem registo.", embeds: [], components: [] });
-                return setTimeout(() => channel.delete().catch(() => {}), 3000);
-            }
-
+            // ============================================================
+            // FECHAR TICKET QUANDO CLIENTE SAIU (ANTIGO)
+            // ============================================================
             if (interaction.isButton() && interaction.customId.startsWith("fechar_ticket_saida_")) {
                 return await handleFecharTicketSaida(interaction, client);
             }
