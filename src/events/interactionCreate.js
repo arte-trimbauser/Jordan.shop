@@ -279,7 +279,7 @@ module.exports = (client) => {
                     new ButtonBuilder().setCustomId("close_ticket").setLabel("❌ Fechar o Ticket").setStyle(ButtonStyle.Danger)
                 );
                 await ticket.send({
-                    content: `<@${user.id}> obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
+                    content: `<@${user.id}> obrigado(a) por criar um ticket, em breve algum staff te ajudará`,
                     embeds: [embedTicket],
                     components: [btns]
                 });
@@ -290,7 +290,7 @@ module.exports = (client) => {
                         .setURL(`https://discord.com/channels/${guild.id}/${ticket.id}`)
                 );
                 return await interaction.editReply({
-                    content: `✅ O Seu Ticket/Pedido foi criado com sucesso: <#${ticket.id}>`,
+                    content: `✅ O teu Ticket/Pedido foi criado com sucesso: <#${ticket.id}>`,
                     components: [rowGo]
                 });
             }
@@ -300,7 +300,7 @@ module.exports = (client) => {
                 const [uid, met, pdr] = channel.topic?.split("|") || ["?", "Não definido", "Geral"];
                 const emj = emojisPagamento[met] || "💰";
                 const embedClaim = new EmbedBuilder()
-                    .setTitle("🛡️ Ticket Assumido")
+                    .setTitle("🛡️ Ticket Reivindicado")
                     .setDescription(`👤 **Staff:** <@${user.id}>\n**Produto:** ${pdr}\n**Método:** ${emj} ${met}`)
                     .setColor("#57f287")
                     .setFooter({ text: "Jordan Shop | Tickets" });
@@ -352,20 +352,18 @@ module.exports = (client) => {
             }
 
             // ============================================================
-            // BOTÃO FECHAR TICKET – AGORA COM MODAL PARA REGISTAR VENDA
+            // BOTÃO FECHAR TICKET – PERGUNTAR SE HOUVE VENDA
             // ============================================================
             if (cid === "close_ticket") {
-                // Verificar se é staff
                 if (!isStaff(member)) {
                     return interaction.reply({ content: "Apenas staff pode fechar.", flags: 64 });
                 }
 
-                // Verificar se o ticket está na categoria proibida (não perguntar venda)
                 const CATEGORIA_SEM_VENDA = "1490783459470475414";
                 const isCategoriaProibida = channel.parentId === CATEGORIA_SEM_VENDA;
 
                 if (isCategoriaProibida) {
-                    // Fechar sem perguntar nada (apenas transcript + delete)
+                    // Fechar sem perguntar nada
                     await interaction.reply({ content: "🔒 A fechar ticket (sem registo de venda)...", flags: 64 });
                     await sendTranscript(channel, member.displayName || member.user.username);
                     setTimeout(() => channel.delete().catch(() => {}), 3000);
@@ -373,38 +371,82 @@ module.exports = (client) => {
                 }
 
                 // ============================================================
-                // ABRIR MODAL PARA REGISTAR VENDA
+                // PERGUNTAR SE HOUVE VENDA (BOTÕES)
                 // ============================================================
-                // Extrair produto do tópico (se existir)
+                const embedPergunta = new EmbedBuilder()
+                    .setTitle("📝 Registo de Venda")
+                    .setDescription("Houve venda neste ticket?")
+                    .setColor("#8b0000");
+
+                const rowBotoes = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId("venda_sim")
+                        .setLabel("✅ Sim, houve venda")
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId("venda_nao")
+                        .setLabel("❌ Não, fechar apenas")
+                        .setStyle(ButtonStyle.Danger)
+                );
+
+                await interaction.reply({
+                    embeds: [embedPergunta],
+                    components: [rowBotoes],
+                    flags: [64]
+                });
+                return;
+            }
+
+            // ============================================================
+            // BOTÃO "SIM, HOUVE VENDA" – ABRIR MODAL
+            // ============================================================
+            if (interaction.isButton() && cid === "venda_sim") {
+                // Extrair produto do tópico
                 const topic = channel.topic || '';
-                const [, , produtoDoTopico] = topic.split('|');
+                const [userId, , produtoDoTopico] = topic.split('|');
                 const produtoPreenchido = produtoDoTopico || 'Não especificado';
+
+                // Buscar o utilizador que abriu o ticket para preencher o comprador
+                let compradorPreenchido = '';
+                if (userId) {
+                    try {
+                        const userTicket = await client.users.fetch(userId);
+                        compradorPreenchido = `<@${userId}>/${userTicket.username}`;
+                    } catch {
+                        compradorPreenchido = 'Utilizador desconhecido';
+                    }
+                }
 
                 // Criar o modal
                 const modal = new ModalBuilder()
                     .setCustomId('modal_venda_fechamento')
                     .setTitle('📝 Registar Venda');
 
-                // Campo: Nome do comprador
+                // Campo: Nome do comprador (pré-preenchido com @menção/username)
                 const compradorInput = new TextInputBuilder()
                     .setCustomId('venda_comprador')
                     .setLabel('Nome do Comprador')
                     .setStyle(TextInputStyle.Short)
-                    .setPlaceholder('Ex: @Jordan / jordan_shop')
+                    .setValue(compradorPreenchido)
                     .setRequired(true)
                     .setMaxLength(100);
 
-                // Campo: Data de venda (pré-preenchida com hoje)
-                const hoje = new Date().toISOString().split('T')[0];
+                // Campo: Data de venda (DD-MM-AAAA)
+                const hoje = new Date();
+                const dia = String(hoje.getDate()).padStart(2, '0');
+                const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+                const ano = hoje.getFullYear();
+                const dataHoje = `${dia}-${mes}-${ano}`;
+
                 const dataInput = new TextInputBuilder()
                     .setCustomId('venda_data')
                     .setLabel('Data de Venda (DD-MM-AAAA)')
                     .setStyle(TextInputStyle.Short)
-                    .setValue(hoje)
+                    .setValue(dataHoje)
                     .setRequired(true)
                     .setMaxLength(10);
 
-                // Campo: Produto (pré-preenchido com o produto do ticket)
+                // Campo: Produto (pré-preenchido)
                 const produtoInput = new TextInputBuilder()
                     .setCustomId('venda_produto')
                     .setLabel('Produto')
@@ -413,7 +455,7 @@ module.exports = (client) => {
                     .setRequired(true)
                     .setMaxLength(200);
 
-                // Campo: Duração do produto
+                // Campo: Duração
                 const duracaoInput = new TextInputBuilder()
                     .setCustomId('venda_duracao')
                     .setLabel('Duração do Produto')
@@ -431,7 +473,6 @@ module.exports = (client) => {
                     .setRequired(true)
                     .setMaxLength(100);
 
-                // Montar o modal com linhas (cada linha pode ter um campo)
                 modal.addComponents(
                     new ActionRowBuilder().addComponents(compradorInput),
                     new ActionRowBuilder().addComponents(dataInput),
@@ -440,9 +481,17 @@ module.exports = (client) => {
                     new ActionRowBuilder().addComponents(staffInput)
                 );
 
-                // Mostrar o modal
                 await interaction.showModal(modal);
-                // O resto (fechar o ticket) será feito no handler do modal
+                return;
+            }
+
+            // ============================================================
+            // BOTÃO "NÃO, FECHAR APENAS"
+            // ============================================================
+            if (interaction.isButton() && cid === "venda_nao") {
+                await interaction.reply({ content: "🔒 A fechar ticket sem registo de venda...", flags: 64 });
+                await sendTranscript(channel, member.displayName || member.user.username);
+                setTimeout(() => channel.delete().catch(() => {}), 3000);
                 return;
             }
 
