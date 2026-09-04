@@ -12,6 +12,7 @@ const { handleChamarCommand, handleFecharTicketSaida } = require("../commands/ch
 const { handleSistemaInteraction } = require("./sistemaCompleto");
 const { handleVerificacaoInteraction } = require("./sistemaVerificacao");
 
+// ==================== EMOJIS DE PAGAMENTO (com IDs) ====================
 const emojisPagamento = {
     "MBWay": "<:mbway:1464608251516813446>",
     "PayPal": "<:paypal:1464608396383883314>",
@@ -20,6 +21,17 @@ const emojisPagamento = {
     "GooglePay": "<:googlepay:1464609044315508797>",
     "ApplePay": "<:applepay:1464609102906003588>",
     "ReferenciaMultibanco": "<:multibanco:1464609317926735902>"
+};
+
+// Mapeamento dos nomes dos métodos para exibição sem underscores
+const metodoNomes = {
+    "MBWay": "MBWay",
+    "PayPal": "PayPal",
+    "Revolut": "Revolut",
+    "CartaoCredito": "Cartão de Crédito",
+    "GooglePay": "Google Pay",
+    "ApplePay": "Apple Pay",
+    "ReferenciaMultibanco": "Referência Multibanco"
 };
 
 const recentTicketLogs = new Map();
@@ -127,6 +139,7 @@ module.exports = (client) => {
                 }
             }
 
+            // ===================== SELECT MENUS =====================
             if (interaction.isStringSelectMenu() && (cid === "menu_ticket" || cid === "menu_produtos")) {
                 const tipo = interaction.values[0];
                 const embed = new EmbedBuilder()
@@ -182,6 +195,7 @@ module.exports = (client) => {
                 await interaction.update({ embeds: [embed], components: [] });
             }
 
+            // ===================== BOTÕES =====================
             if (interaction.isButton() && cid?.startsWith("recusar_termos_")) {
                 const tipoRec = cid.replace("recusar_termos_", "");
                 const canalLogs = guild.channels.cache.get(config.STAFF_LOGS_CHANNEL_ID);
@@ -231,10 +245,10 @@ module.exports = (client) => {
                         { label: "MBWay", value: "MBWay", emoji: "1464608251516813446" },
                         { label: "PayPal", value: "PayPal", emoji: "1464608396383883314" },
                         { label: "Revolut", value: "Revolut", emoji: "1464608485617565726" },
-                        { label: "Cartão de Crédito", value: "Cartão_Crédito", emoji: "1464608966826004676" },
-                        { label: "Google Pay", value: "Google_Pay", emoji: "1464609044315508797" },
-                        { label: "Apple Pay", value: "Apple_Pay", emoji: "1464609102906003588" },
-                        { label: "Multibanco", value: "Referência_Multibanco", emoji: "1464609317926735902" }
+                        { label: "Cartão de Crédito", value: "CartaoCredito", emoji: "1464608966826004676" },
+                        { label: "Google Pay", value: "GooglePay", emoji: "1464609044315508797" },
+                        { label: "Apple Pay", value: "ApplePay", emoji: "1464609102906003588" },
+                        { label: "Multibanco", value: "ReferenciaMultibanco", emoji: "1464609317926735902" }
                     ]);
                 return interaction.update({
                     content: "✅ **Termos aceites!** Agora seleciona o método de pagamento:",
@@ -243,15 +257,57 @@ module.exports = (client) => {
                 });
             }
 
+            // ===================== CRIAÇÃO DE TICKET (com verificação de tickets abertos) =====================
             if (interaction.isStringSelectMenu() && cid?.startsWith("pagamento_")) {
                 await interaction.deferReply({ flags: [64] });
                 const tipoProd = cid.replace("pagamento_", "");
                 const metodo = interaction.values[0];
                 const emoji = emojisPagamento[metodo] || "💰";
+                const metodoNome = metodoNomes[metodo] || metodo;
+
+                const CATEGORIA_GERAL = config.CATEGORY_ID; // ou o ID da categoria geral
+                const CATEGORIA_ESPECIAL = "1490783459470475414";
+
+                // Verificar tickets existentes do utilizador
+                const ticketsExistentes = guild.channels.cache.filter(ch =>
+                    ch.type === ChannelType.GuildText &&
+                    ch.name.startsWith(`ticket-`) &&
+                    ch.topic &&
+                    ch.topic.startsWith(`${user.id}|`) &&
+                    ch.parentId !== null
+                );
+
+                // Separar tickets por categoria
+                const ticketGeral = ticketsExistentes.find(ch => ch.parentId === CATEGORIA_GERAL);
+                const ticketEspecial = ticketsExistentes.find(ch => ch.parentId === CATEGORIA_ESPECIAL);
+
+                // Determinar se o novo ticket vai para a categoria especial ou geral
+                // (usamos a categoria do tópico? Vamos assumir que o produto define a categoria,
+                //  mas para simplificar, vamos ver se o produto contém "vpn" ou outra palavra chave
+                //  que indique que deve ir para a categoria especial.
+                //  Como não temos essa lógica, vamos deixar o ticket ser criado na categoria geral por defeito,
+                //  e verificar se já existe ticket na mesma categoria.
+                //  Alternativa: se o produto for da categoria especial, usar essa categoria.
+                const isEspecial = tipoProd.includes("vpn") || tipoProd.includes("cyberghost") || tipoProd.includes("tunnelbear") || tipoProd.includes("ipvanish");
+                const categoriaDestino = isEspecial ? CATEGORIA_ESPECIAL : CATEGORIA_GERAL;
+
+                // Verificar se já existe ticket na mesma categoria
+                const ticketExistente = ticketsExistentes.find(ch => ch.parentId === categoriaDestino);
+
+                if (ticketExistente) {
+                    return await interaction.editReply({
+                        content: `🚫 **Stop!** Já tens um ticket aberto: <#${ticketExistente.id}>\n\n` +
+                                 `Pretendes adicionar outro produto? Se sim, clica no botão **Adicionar Produto** no ticket existente.\n` +
+                                 `Para consultares o teu carrinho, usa o comando \`/carrinho\`.`,
+                        flags: [64]
+                    });
+                }
+
+                // Criar o ticket
                 const ticket = await guild.channels.create({
                     name: `ticket-${tipoProd}-${user.username}`.toLowerCase(),
                     type: ChannelType.GuildText,
-                    parent: config.CATEGORY_ID || null,
+                    parent: categoriaDestino,
                     topic: `${user.id}|${metodo}|${tipoProd}`,
                     permissionOverwrites: [
                         { id: guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
@@ -265,30 +321,35 @@ module.exports = (client) => {
                         })))
                     ]
                 });
+
                 const embedTicket = new EmbedBuilder()
                     .setTitle("Jordan Shop | Tickets")
                     .setDescription(
                         `📦 **Produto:** ${tipoProd}\n` +
-                        `🛡️ **Staff:** ⏳ Aguardando...\n` +
-                        `💳 **Método:** ${emoji} ${metodo}`
+                        `🛡️ **Staff:** ⏳ Aguardando <:threedots:1521920058140659803>\n` +
+                        `💳 **Método:** ${emoji} ${metodoNome}`
                     )
                     .setColor("#2f3136");
+
                 const btns = new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId("claim_ticket").setLabel("🙋‍♂️ Assumir o Ticket").setStyle(ButtonStyle.Secondary),
                     new ButtonBuilder().setCustomId("call_staff_list").setLabel("🔔 Chamar Staff").setStyle(ButtonStyle.Primary),
                     new ButtonBuilder().setCustomId("close_ticket").setLabel("❌ Fechar o Ticket").setStyle(ButtonStyle.Danger)
                 );
+
                 await ticket.send({
                     content: `<@${user.id}> obrigado(a) por criar um ticket, em breve algum staff te ajudará`,
                     embeds: [embedTicket],
                     components: [btns]
                 });
+
                 const rowGo = new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
                         .setLabel("Ir para o Ticket/Pedido")
                         .setStyle(ButtonStyle.Link)
                         .setURL(`https://discord.com/channels/${guild.id}/${ticket.id}`)
                 );
+
                 return await interaction.editReply({
                     content: `✅ O teu Ticket/Pedido foi criado com sucesso: <#${ticket.id}>`,
                     components: [rowGo]
@@ -299,9 +360,10 @@ module.exports = (client) => {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas Staff.", flags: [64] });
                 const [uid, met, pdr] = channel.topic?.split("|") || ["?", "Não definido", "Geral"];
                 const emj = emojisPagamento[met] || "💰";
+                const metodoNome = metodoNomes[met] || met;
                 const embedClaim = new EmbedBuilder()
                     .setTitle("🛡️ Ticket Reivindicado")
-                    .setDescription(`👤 **Staff:** <@${user.id}>\n**Produto:** ${pdr}\n**Método:** ${emj} ${met}`)
+                    .setDescription(`👤 **Staff:** <@${user.id}>\n**Produto:** ${pdr}\n**Método:** ${emj} ${metodoNome}`)
                     .setColor("#57f287")
                     .setFooter({ text: "Jordan Shop | Tickets" });
                 return await interaction.update({
@@ -363,10 +425,8 @@ module.exports = (client) => {
                 const isCategoriaProibida = channel.parentId === CATEGORIA_SEM_VENDA;
 
                 if (isCategoriaProibida) {
-                    await interaction.reply({ content: "🔒 A fechar ticket (sem registo de venda)...", flags: 64 });
-                    await sendTranscript(channel, member.displayName || member.user.username);
-                    setTimeout(() => channel.delete().catch(() => {}), 3000);
-                    return;
+                    // Fechar sem perguntar venda, mas verificar transcript para staff especial
+                    return await fecharTicketComOuSemTranscript(interaction, channel, member);
                 }
 
                 // Perguntar se houve venda
@@ -403,14 +463,14 @@ module.exports = (client) => {
                 const produtoPreenchido = produtoDoTopico || 'Não especificado';
 
                 let compradorPreenchido = '';
-if (userId) {
-    try {
-        const userTicket = await client.users.fetch(userId);
-        compradorPreenchido = `<@${userId}>/${userTicket.username}`; // 👈 assim fica com menção e username
-    } catch {
-        compradorPreenchido = 'Utilizador desconhecido';
-    }
-}
+                if (userId) {
+                    try {
+                        const userTicket = await client.users.fetch(userId);
+                        compradorPreenchido = `<@${userId}>/${userTicket.username}`;
+                    } catch {
+                        compradorPreenchido = 'Utilizador desconhecido';
+                    }
+                }
 
                 // Data no formato DD-MM-AAAA
                 const hoje = new Date();
@@ -480,8 +540,7 @@ if (userId) {
             // ============================================================
             if (interaction.isButton() && cid === "venda_nao") {
                 await interaction.reply({ content: "🔒 A fechar ticket sem registo de venda...", flags: 64 });
-                await sendTranscript(channel, member.displayName || member.user.username);
-                setTimeout(() => channel.delete().catch(() => {}), 3000);
+                await fecharTicketComOuSemTranscript(interaction, channel, member);
                 return;
             }
 
@@ -520,12 +579,29 @@ if (userId) {
                     console.error('❌ Erro ao enviar embed de venda:', err);
                 }
 
+                // Fechar com transcript
                 try {
                     await sendTranscript(channel, member.displayName || member.user.username);
                     setTimeout(() => channel.delete().catch(() => {}), 3000);
                 } catch (err) {
                     console.error('❌ Erro ao fechar ticket após venda:', err);
                 }
+                return;
+            }
+
+            // ============================================================
+            // BOTÕES DE TRANSCRIPT (apenas para staff especial)
+            // ============================================================
+            if (interaction.isButton() && cid === "transcript_guardar") {
+                await interaction.update({ content: "🔒 A guardar transcript e a fechar...", embeds: [], components: [], flags: [64] });
+                await sendTranscript(channel, member.displayName || member.user.username);
+                setTimeout(() => channel.delete().catch(() => {}), 3000);
+                return;
+            }
+
+            if (interaction.isButton() && cid === "transcript_nao_guardar") {
+                await interaction.update({ content: "❌ Ticket fechado sem transcript.", embeds: [], components: [], flags: [64] });
+                setTimeout(() => channel.delete().catch(() => {}), 3000);
                 return;
             }
 
@@ -537,21 +613,54 @@ if (userId) {
             }
 
             // ============================================================
-            // BOTÕES ANTIGOS (confirm_close_save e confirm_close_silent)
+            // BOTÕES ANTIGOS (confirm_close_save e confirm_close_silent) – removidos
             // ============================================================
-            if (cid === "confirm_close_save") {
-                await interaction.update({ content: "🔒 A guardar log e a eliminar...", embeds: [], components: [] });
-                await sendTranscript(channel, user.tag);
-                return setTimeout(() => channel.delete().catch(() => {}), 3000);
-            }
-
-            if (cid === "confirm_close_silent") {
-                await interaction.update({ content: "❌ Ticket eliminado sem registo.", embeds: [], components: [] });
-                return setTimeout(() => channel.delete().catch(() => {}), 3000);
-            }
 
         } catch (err) {
             console.error("❌ Erro Geral no InteractionCreate:", err);
         }
     });
 };
+
+// ============================================================
+// FUNÇÃO AUXILIAR – PERGUNTAR SOBRE TRANSCRIPT (APENAS PARA STAFF ESPECÍFICO)
+// ============================================================
+async function fecharTicketComOuSemTranscript(interaction, channel, member) {
+    const STAFF_ID_ESPECIAL = "996454465555136675";
+    const isStaffEspecial = member.id === STAFF_ID_ESPECIAL;
+
+    // Verificar número de mensagens no ticket
+    let mensagens = await channel.messages.fetch({ limit: 100 });
+    let count = mensagens.size;
+
+    if (!isStaffEspecial || count >= 5) {
+        // Guarda transcript e fecha
+        await interaction.editReply({ content: "🔒 A fechar com transcript...", flags: 64 });
+        await sendTranscript(channel, member.displayName || member.user.username);
+        setTimeout(() => channel.delete().catch(() => {}), 3000);
+        return;
+    }
+
+    // Staff especial e menos de 5 mensagens – pergunta
+    const embedPergunta = new EmbedBuilder()
+        .setTitle("📄 Guardar Transcript?")
+        .setDescription(`Este ticket tem apenas **${count}** mensagens.\nDesejas guardar o transcript antes de fechar?`)
+        .setColor("#f1c40f");
+
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId("transcript_guardar")
+            .setLabel("✅ Guardar e Fechar")
+            .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+            .setCustomId("transcript_nao_guardar")
+            .setLabel("❌ Fechar sem Guardar")
+            .setStyle(ButtonStyle.Danger)
+    );
+
+    await interaction.editReply({
+        embeds: [embedPergunta],
+        components: [row],
+        flags: [64]
+    });
+}
