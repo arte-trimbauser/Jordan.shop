@@ -402,16 +402,15 @@ module.exports = (client) => {
                 const [userId, , produtoDoTopico] = topic.split('|');
                 const produtoPreenchido = produtoDoTopico || 'Não especificado';
 
-                // Buscar o utilizador que abriu o ticket
                 let compradorPreenchido = '';
-                if (userId) {
-                    try {
-                        const userTicket = await client.users.fetch(userId);
-                        compradorPreenchido = `<@${userId}>/${userTicket.username}`;
-                    } catch {
-                        compradorPreenchido = 'Utilizador desconhecido';
-                    }
-                }
+if (userId) {
+    try {
+        const userTicket = await client.users.fetch(userId);
+        compradorPreenchido = `<@${userId}>/${userTicket.username}`; // 👈 assim fica com menção e username
+    } catch {
+        compradorPreenchido = 'Utilizador desconhecido';
+    }
+}
 
                 // Data no formato DD-MM-AAAA
                 const hoje = new Date();
