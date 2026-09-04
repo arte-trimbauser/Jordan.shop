@@ -718,11 +718,12 @@ async function handleMenuSuporte(interaction) {
     await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
 }
 
+// ===================== FORMULÁRIOS =====================
 async function handleFormBug(interaction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const modal = new ModalBuilder()
         .setCustomId('modal_bug')
         .setTitle('🐛 Reportar Bug');
+
     const input1 = new TextInputBuilder()
         .setCustomId('descricao_bug')
         .setLabel('Descrição do Bug')
@@ -730,6 +731,7 @@ async function handleFormBug(interaction) {
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
         .setMaxLength(1000);
+
     const input2 = new TextInputBuilder()
         .setCustomId('canal_bug')
         .setLabel('Canal onde ocorreu (opcional)')
@@ -737,18 +739,20 @@ async function handleFormBug(interaction) {
         .setStyle(TextInputStyle.Short)
         .setRequired(false)
         .setMaxLength(100);
+
     modal.addComponents(
         new ActionRowBuilder().addComponents(input1),
         new ActionRowBuilder().addComponents(input2)
     );
+
     await interaction.showModal(modal);
 }
 
 async function handleFormIdeia(interaction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const modal = new ModalBuilder()
         .setCustomId('modal_ideia')
         .setTitle('💡 Sugestão');
+
     const input = new TextInputBuilder()
         .setCustomId('descricao_ideia')
         .setLabel('A tua ideia')
@@ -756,16 +760,19 @@ async function handleFormIdeia(interaction) {
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
         .setMaxLength(2000);
+
     modal.addComponents(new ActionRowBuilder().addComponents(input));
     await interaction.showModal(modal);
 }
 
 async function handleFormAvaliar(interaction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    // Este não usa modal diretamente, mas mostra botões (já tens)
+    // Se quiseres modal, podes adaptar. Mas o código atual já está correto.
     const embed = new EmbedBuilder()
         .setTitle('⭐ Avalia o Jordan Shop Bot')
         .setDescription('Quantas estrelas dás ao nosso serviço (bot)?')
         .setColor('#FFD700');
+
     const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId('avaliar_1').setLabel('⭐').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('avaliar_2').setLabel('⭐⭐').setStyle(ButtonStyle.Secondary),
@@ -773,7 +780,9 @@ async function handleFormAvaliar(interaction) {
         new ButtonBuilder().setCustomId('avaliar_4').setLabel('⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('avaliar_5').setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary)
     );
-    await interaction.editReply({ embeds: [embed], components: [row] });
+
+    // NÃO USAR deferReply() antes disto
+    await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
 }
 
 async function handleAvaliacaoEstrelas(interaction, estrelas) {
