@@ -41,6 +41,11 @@ client.carrinhos = carrinhos;
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 
+// 🟢 NOVA ROTA RAIZ – resolve o erro "Cannot GET /"
+app.get('/', (req, res) => {
+    res.send('🚀 Jordan Shop Bot API - Online!');
+});
+
 // Health check (opcional)
 app.get('/health', (req, res) => {
     res.status(200).send('OK');
@@ -153,6 +158,7 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${PORT}`);
     console.log(`✅ Rota /api/enviar-embed disponível`);
+    console.log(`✅ Rota raiz (/) disponível`);
 });
 
 // Iniciar o bot
