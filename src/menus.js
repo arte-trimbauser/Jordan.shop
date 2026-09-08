@@ -300,29 +300,41 @@ IPVanish VPN: €1.00`,
   },
   {
     id: "1431298408362152060",
-    title: "Membros discord",
+    title: "discord members",
     embedDesc: `precos:
 Por 200x  ➟ 1.00€
 Por 100x  ➟ 0.50€
 Outras quantidades  ➟ Negociado em ticket`,
     options: [
-    { label: "Por 200x  ➟ 1.00€", description: "1.00€", value: "membros_200x" },
-    { label: "Por 100x  ➟ 0.50€", description: "0.50€", value: "membros_100x" },
-    { label: "Outras quantidades", description: "Negociado em ticket", value: "membros_outras" }
+      { label: "Por 200x  ➟ 1.00€", description: "1.00€", value: "membros_200x" },
+      { label: "Por 100x  ➟ 0.50€", description: "0.50€", value: "membros_100x" },
+      { label: "Outras quantidades", description: "Negociado em ticket", value: "membros_outras" }
     ],
     ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`
   },
-{
+  {
     id: "1456982867799445751",
     title: "Standard Bypass Prices",
     color: "#EBEBEB",
     embedDesc: "• **Public**\n\nEUR €35.00\nUSD $37.80\nBRL R$189.00\n\n• **Aegis**\n\nEUR €70.00\nUSD $75.60\nBRL R$378.00\n\n• **Advanced**\n\nEUR €120.00\nUSD $129.60\nBRL R$648.00\n\n©️ Todos os direitos Da SneaK Solutions®",
-  options: [
-    { label: "Public", description: "EUR €35.00 USD $37.80 BRL R$189.00", value: "• Public EUR €35.00 USD $37.80 BRL R$189.00" },
-    { label: "Aegis", description: "EUR €70.00 USD $75.60 BRL R$378.00", value: "• Aegis EUR €70.00 USD $75.60 BRL R$378.00" },
-    { label: "Advanced", description: "EUR €120.00 USD $129.60 BRL R$648.00", value: "• Advanced EUR €120.00 USD $129.60 BRL R$648.00" }
+    options: [
+      { label: "Public", description: "EUR €35.00 USD $37.80 BRL R$189.00", value: "• Public EUR €35.00 USD $37.80 BRL R$189.00" },
+      { label: "Aegis", description: "EUR €70.00 USD $75.60 BRL R$378.00", value: "• Aegis EUR €70.00 USD $75.60 BRL R$378.00" },
+      { label: "Advanced", description: "EUR €120.00 USD $129.60 BRL R$648.00", value: "• Advanced EUR €120.00 USD $129.60 BRL R$648.00" }
     ],
     ticketMessage: (tipo) => "obrigado(a) por criar um ticket, em breve algum staff te ajudara",
-    embedImage: "https://i.postimg.cc/nVKWW7Hz/image.png" 
+    embedImage: "https://i.postimg.cc/nVKWW7Hz/image.png"
+  },
+  // ========== NOVA ENTRADA: N1TRO B00ST ==========
+  {
+    id: "1431215916552818709", // Usa um ID fixo ou gera um aleatório
+    title: "N1TRO B00ST",
+    embedDesc: "Escolhe a tua opção de boosts para o servidor:",
+    options: [
+      { label: "14x Boosts 1 Month", description: "5 euros", value: "boost_1month" },
+      { label: "14x Boosts 3 Months", description: "18 euros", value: "boost_3months" }
+    ],
+    ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
+    embedImage: "" // Podes colocar uma imagem se quiseres
   }
 ];
