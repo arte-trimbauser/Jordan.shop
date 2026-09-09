@@ -1,4 +1,5 @@
-// index.js – BOT + APENAS ROTA /api/enviar-embed
+// index.js – BOT + API /api/enviar-embed
+// CORREÇÕES: Recebe imagem, tipoImagem, footer, timestamp do site
 require('dotenv').config();
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
@@ -26,36 +27,46 @@ const client = new Client({
     ]
 });
 
-// ==================== SUPABASE (para o bot, se precisar) ====================
+// ==================== SUPABASE ====================
 const { createClient } = require("@supabase/supabase-js");
 const supabase = createClient(
     process.env.SUPABASE_URL || "https://fdbmhgcfhdnnpwuodxzh.supabase.co",
     process.env.SUPABASE_KEY
 );
 
-// ==================== CARRINHOS (para o bot) ====================
+// ==================== CARRINHOS ====================
 const carrinhos = new Map();
 client.carrinhos = carrinhos;
 
-// ==================== EXPRESS (APENAS PARA O ENDPOINT) ====================
+// ==================== EXPRESS ====================
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 
-// 🟢 NOVA ROTA RAIZ – resolve o erro "Cannot GET /"
 app.get('/', (req, res) => {
     res.send('🚀 Jordan Shop Bot API - Online!');
 });
 
-// Health check (opcional)
 app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
 
-// Rota /api/enviar-embed (usada pelo site da Vercel)
+// CORREÇÃO PRINCIPAL: Recebe imagem, tipoImagem, footer, timestamp
 app.post('/api/enviar-embed', async (req, res) => {
-    const { titulo, desc, cor, canalId, produtos } = req.body;
+    const { 
+        titulo, 
+        desc, 
+        cor, 
+        canalId, 
+        produtos,
+        imagem,        // NOVO: URL da imagem
+        tipoImagem,    // NOVO: 'normal', 'thumbnail', 'footer', 'none'
+        footerTexto,   // NOVO: Texto do footer
+        footerIcone,   // NOVO: URL do ícone do footer
+        timestamp      // NOVO: boolean
+    } = req.body;
+
     if (!titulo || !desc || !canalId) {
-        return res.status(400).send('Faltam campos (titulo, desc, canalId).');
+        return res.status(400).send('Faltam campos obrigatórios (titulo, desc, canalId).');
     }
 
     try {
@@ -66,6 +77,37 @@ app.post('/api/enviar-embed', async (req, res) => {
             .setTitle(titulo)
             .setDescription(desc)
             .setColor(cor || '#8b0000');
+
+        // ========== IMAGEM ==========
+        if (imagem && tipoImagem !== 'none') {
+            const urlLimpa = imagem.trim();
+            // Validar URL básica
+            if (urlLimpa.startsWith('http')) {
+                if (tipoImagem === 'thumbnail') {
+                    embed.setThumbnail(urlLimpa);
+                } else {
+                    // 'normal' ou 'footer' (footer de imagem é tratado abaixo)
+                    embed.setImage(urlLimpa);
+                }
+            }
+        }
+
+        // ========== FOOTER ==========
+        if (footerTexto || footerIcone) {
+            const footerObj = { text: footerTexto || '' };
+            if (footerIcone && footerIcone.startsWith('http')) {
+                footerObj.iconURL = footerIcone;
+            }
+            embed.setFooter(footerObj);
+        } else if (tipoImagem === 'footer' && imagem) {
+            // Se escolheu footer mas não preencheu footer separado, usa imagem como ícone
+            embed.setFooter({ text: 'Jordan Shop', iconURL: imagem });
+        }
+
+        // ========== TIMESTAMP ==========
+        if (timestamp === true) {
+            embed.setTimestamp();
+        }
 
         const components = [];
         if (produtos?.length) {
@@ -88,7 +130,7 @@ app.post('/api/enviar-embed', async (req, res) => {
     }
 });
 
-// ==================== INICIALIZAÇÃO DOS EVENTOS DO BOT ====================
+// ==================== INICIALIZAÇÃO DOS EVENTOS ====================
 const inicializarBot = () => {
     try {
         const interactionPath = path.join(__dirname, "src/events/interactionCreate.js");
@@ -111,8 +153,6 @@ const inicializarBot = () => {
             const messageCreateEvent = require(messageCreatePath);
             client.on("messageCreate", (message) => messageCreateEvent(client, message));
             console.log("✅ Evento messageCreate configurado.");
-        } else {
-            console.warn("⚠️ messageCreate.js nao encontrado.");
         }
     } catch (e) {
         console.warn("⚠️ Erro ao configurar eventos:", e.message);
@@ -121,7 +161,7 @@ const inicializarBot = () => {
 
 inicializarBot();
 
-// ==================== LOGIN DO BOT ====================
+// ==================== LOGIN ====================
 const TOKEN = process.env.DISCORD_TOKEN;
 if (!TOKEN) {
     console.error("❌ DISCORD_TOKEN não definido!");
@@ -134,32 +174,21 @@ function iniciarBot() {
         .then(() => console.log("✅ Pedido de login enviado ao Discord"))
         .catch(err => {
             console.error("❌ ERRO NO LOGIN:", err);
-            console.log("🔄 A tentar login novamente em 10 segundos...");
             setTimeout(() => iniciarBot(), 10000);
         });
 }
 
-// Reconexão automática
 client.on('shardDisconnect', (event, id) => {
     console.log(`⚠️ Shard ${id} desconectado. A reconectar...`);
     setTimeout(() => iniciarBot(), 5000);
 });
 
-client.on('shardReconnecting', (id) => {
-    console.log(`🔄 Shard ${id} a reconectar...`);
-});
-
-client.on('error', (error) => {
-    console.error('❌ Erro no client Discord:', error);
-});
+client.on('error', console.error);
 
 // ==================== SERVIDOR HTTP ====================
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`🚀 Servidor HTTP ativo na porta ${PORT}`);
-    console.log(`✅ Rota /api/enviar-embed disponível`);
-    console.log(`✅ Rota raiz (/) disponível`);
 });
 
-// Iniciar o bot
 iniciarBot();
