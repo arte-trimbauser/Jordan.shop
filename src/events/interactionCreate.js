@@ -319,7 +319,7 @@ module.exports = (client) => {
                     .setTitle("Jordan Shop | Tickets")
                     .setDescription(
                         `📦 **Produto:** ${produtoExibicao}\n` +
-                        `🛡️ **Staff:** ⏳ Aguardando <:threedots:1521920058140659803>\n` +
+                        `🛡️ **Staff:** ⏳ Aguardando...\n` +
                         `💳 **Método:** ${emoji} ${metodoNome}`
                     )
                     .setColor("#2f3136");
@@ -354,7 +354,6 @@ module.exports = (client) => {
             // ============================================================
             if (interaction.isButton() && cid?.startsWith("adicionar_carrinho_")) {
                 const tipoProd = cid.replace("adicionar_carrinho_", "");
-                // Procurar o menu que contém esta opção
                 let menuSelecionado = null;
                 let opcaoSelecionada = null;
                 for (const menu of menus) {
@@ -393,7 +392,7 @@ module.exports = (client) => {
                 const metodoNome = metodoNomes[met] || met;
                 const produtoExibicao = pdr.replace(/_/g, ' ');
                 const embedClaim = new EmbedBuilder()
-                    .setTitle("🛡️ Ticket Reivindicado")
+                    .setTitle("🛡️ Ticket Assumido")
                     .setDescription(`👤 **Staff:** <@${user.id}>\n**Produto:** ${produtoExibicao}\n**Método:** ${emj} ${metodoNome}`)
                     .setColor("#57f287")
                     .setFooter({ text: "Jordan Shop | Tickets" });
@@ -445,18 +444,33 @@ module.exports = (client) => {
             }
 
             // ============================================================
-            // BOTÃO FECHAR TICKET – PERGUNTAR SE HOUVE VENDA
+            // BOTÃO FECHAR TICKET (VERSÃO ROBUSTA)
             // ============================================================
             if (cid === "close_ticket") {
                 if (!isStaff(member)) {
                     return interaction.reply({ content: "Apenas staff pode fechar.", flags: 64 });
                 }
 
+                // Verifica se o canal ainda existe
+                if (!channel || channel.deleted) {
+                    return interaction.reply({ content: "❌ Este canal já foi eliminado.", flags: 64 });
+                }
+
                 const CATEGORIA_SEM_VENDA = "1490783459470475414";
                 const isCategoriaProibida = channel.parentId === CATEGORIA_SEM_VENDA;
 
+                // Se for categoria especial, fecha direto com transcript
                 if (isCategoriaProibida) {
-                    return await fecharTicketComOuSemTranscript(interaction, channel, member);
+                    await interaction.reply({ content: "🔒 A fechar ticket (categoria sem venda)...", flags: 64 });
+                    try {
+                        await sendTranscript(channel, member.displayName || member.user.username);
+                    } catch (err) {
+                        console.error('Erro ao gerar transcript (fecho direto):', err);
+                    }
+                    setTimeout(() => {
+                        channel.delete().catch((e) => console.error('Erro ao eliminar canal (fecho direto):', e));
+                    }, 3000);
+                    return;
                 }
 
                 const embedPergunta = new EmbedBuilder()
@@ -568,7 +582,15 @@ module.exports = (client) => {
             // ============================================================
             if (interaction.isButton() && cid === "venda_nao") {
                 await interaction.reply({ content: "🔒 A fechar ticket sem registo de venda...", flags: 64 });
-                return await fecharTicketComOuSemTranscript(interaction, channel, member);
+                try {
+                    await sendTranscript(channel, member.displayName || member.user.username);
+                } catch (err) {
+                    console.error('Erro ao gerar transcript (venda_nao):', err);
+                }
+                setTimeout(() => {
+                    channel.delete().catch(() => {});
+                }, 3000);
+                return;
             }
 
             // ============================================================
@@ -608,10 +630,12 @@ module.exports = (client) => {
 
                 try {
                     await sendTranscript(channel, member.displayName || member.user.username);
-                    setTimeout(() => channel.delete().catch(() => {}), 3000);
                 } catch (err) {
-                    console.error('❌ Erro ao fechar ticket após venda:', err);
+                    console.error('❌ Erro ao gerar transcript (venda):', err);
                 }
+                setTimeout(() => {
+                    channel.delete().catch(() => {});
+                }, 3000);
                 return;
             }
 
@@ -620,7 +644,11 @@ module.exports = (client) => {
             // ============================================================
             if (interaction.isButton() && cid === "transcript_guardar") {
                 await interaction.update({ content: "🔒 A guardar transcript e a fechar...", embeds: [], components: [], flags: [64] });
-                await sendTranscript(channel, member.displayName || member.user.username);
+                try {
+                    await sendTranscript(channel, member.displayName || member.user.username);
+                } catch (err) {
+                    console.error('Erro ao gerar transcript (guardar):', err);
+                }
                 setTimeout(() => channel.delete().catch(() => {}), 3000);
                 return;
             }
@@ -640,10 +668,15 @@ module.exports = (client) => {
 
         } catch (err) {
             console.error("❌ Erro Geral no InteractionCreate:", err);
+            // Tenta responder se ainda não foi respondido
+            if (!interaction.replied && !interaction.deferred) {
+                try {
+                    await interaction.reply({ content: "❌ Ocorreu um erro inesperado. Contacta um administrador.", flags: 64 });
+                } catch (e) {}
+            }
         }
     });
 };
-
 // ============================================================
 // FUNÇÃO AUXILIAR – PERGUNTAR SOBRE TRANSCRIPT (APENAS PARA STAFF ESPECÍFICO)
 // ============================================================
