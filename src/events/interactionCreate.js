@@ -443,228 +443,240 @@ module.exports = (client) => {
                 });
             }
 
-            // ============================================================
-            // BOTÃO FECHAR TICKET (VERSÃO ROBUSTA)
-            // ============================================================
-            if (cid === "close_ticket") {
-                if (!isStaff(member)) {
-                    return interaction.reply({ content: "Apenas staff pode fechar.", flags: 64 });
-                }
+// Helper: apaga o canal com retry (resolve o "nao consigo fechar os tickets")
+async function apagarCanalSeguro(channel) {
+    setTimeout(() => {
+        channel.delete().catch((e) => {
+            console.error('Erro ao eliminar canal, a tentar novamente:', e);
+            setTimeout(() => channel.delete().catch(() => {}), 2000);
+        });
+    }, 3000);
+}
 
-                // Verifica se o canal ainda existe
-                if (!channel || channel.deleted) {
-                    return interaction.reply({ content: "❌ Este canal já foi eliminado.", flags: 64 });
-                }
+// ============================================================
+// BOTÃO FECHAR TICKET (VERSÃO CORRIGIDA)
+// ============================================================
+if (cid === "close_ticket") {
+    if (!isStaff(member)) {
+        return interaction.reply({ content: "❌ Apenas staff pode fechar tickets.", flags: 64 });
+    }
 
-                const CATEGORIA_SEM_VENDA = "1490783459470475414";
-                const isCategoriaProibida = channel.parentId === CATEGORIA_SEM_VENDA;
+    // Verifica se o canal ainda existe
+    if (!channel || channel.deleted) {
+        return interaction.reply({ content: "❌ Este canal já foi eliminado.", flags: 64 });
+    }
 
-                // Se for categoria especial, fecha direto com transcript
-                if (isCategoriaProibida) {
-                    await interaction.reply({ content: "🔒 A fechar ticket (categoria sem venda)...", flags: 64 });
-                    try {
-                        await sendTranscript(channel, member.displayName || member.user.username);
-                    } catch (err) {
-                        console.error('Erro ao gerar transcript (fecho direto):', err);
-                    }
-                    setTimeout(() => {
-                        channel.delete().catch((e) => console.error('Erro ao eliminar canal (fecho direto):', e));
-                    }, 3000);
-                    return;
-                }
+    // >>> CORREÇÃO PRINCIPAL <<<
+    // O teu snippet anterior usava `guild.members.me` mas a variável `guild`
+    // nem sempre existe neste scope — usa interaction.guild.
+    // Se o bot não tiver ManageChannels, channel.delete() falha em silêncio
+    // e é por isso que o ticket "fica a pensar" e nunca fecha.
+    try {
+        const botMember = interaction.guild.members.me;
+        const botPermissions = channel.permissionsFor(botMember);
+        if (!botPermissions || !botPermissions.has(PermissionsBitField.Flags.ManageChannels)) {
+            return interaction.reply({
+                content: "❌ O bot não tem a permissão **Gerir Canais** (Manage Channels) nesta categoria.\n" +
+                         "Vai a: Categoria dos tickets → Permissões → adiciona o bot → ativa **Gerir Canais**.",
+                flags: 64
+            });
+        }
+    } catch (err) {
+        console.error('Erro ao verificar permissões do bot:', err);
+    }
 
-                const embedPergunta = new EmbedBuilder()
-                    .setTitle("📝 Registo de Venda")
-                    .setDescription("Houve venda neste ticket?")
-                    .setColor("#8b0000");
+    const CATEGORIA_SEM_VENDA = "1490783459470475414";
+    const isCategoriaProibida = channel.parentId === CATEGORIA_SEM_VENDA;
 
-                const rowBotoes = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId("venda_sim")
-                        .setLabel("✅ Sim, houve venda")
-                        .setStyle(ButtonStyle.Success),
-                    new ButtonBuilder()
-                        .setCustomId("venda_nao")
-                        .setLabel("❌ Não, fechar apenas")
-                        .setStyle(ButtonStyle.Danger)
-                );
+    // Categoria especial: fecha direto com transcript
+    if (isCategoriaProibida) {
+        await interaction.deferReply({ ephemeral: true }); // defer para não dar timeout
+        try {
+            await sendTranscript(channel, member.displayName || member.user.username);
+        } catch (err) {
+            console.error('Erro ao gerar transcript (fecho direto):', err);
+        }
+        await interaction.editReply({ content: "🔒 Ticket fechado. Transcript guardado." });
+        apagarCanalSeguro(channel);
+        return;
+    }
 
-                await interaction.reply({
-                    embeds: [embedPergunta],
-                    components: [rowBotoes],
-                    flags: [64]
-                });
-                return;
-            }
+    // Resto do fluxo: pergunta se houve venda (mantido do teu código)
+    const embedPergunta = new EmbedBuilder()
+        .setTitle("📝 Registo de Venda")
+        .setDescription("Houve venda neste ticket?")
+        .setColor("#8b0000");
 
-            // ============================================================
-            // BOTÃO "SIM, HOUVE VENDA" – ABRIR MODAL
-            // ============================================================
-            if (interaction.isButton() && cid === "venda_sim") {
-                const topic = channel.topic || '';
-                const [userId, , produtoDoTopico] = topic.split('|');
-                const produtoPreenchido = produtoDoTopico ? produtoDoTopico.replace(/_/g, ' ') : 'Não especificado';
+    const rowBotoes = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId("venda_sim")
+            .setLabel("✅ Sim, houve venda")
+            .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+            .setCustomId("venda_nao")
+            .setLabel("❌ Não, fechar apenas")
+            .setStyle(ButtonStyle.Danger)
+    );
 
-                let compradorPreenchido = '';
-                if (userId) {
-                    try {
-                        const userTicket = await client.users.fetch(userId);
-                        compradorPreenchido = `<@${userId}>/${userTicket.username}`;
-                    } catch {
-                        compradorPreenchido = 'Utilizador desconhecido';
-                    }
-                }
+    await interaction.reply({
+        embeds: [embedPergunta],
+        components: [rowBotoes],
+        flags: [64]
+    });
+    return;
+}
 
-                const hoje = new Date();
-                const dia = String(hoje.getDate()).padStart(2, '0');
-                const mes = String(hoje.getMonth() + 1).padStart(2, '0');
-                const ano = hoje.getFullYear();
-                const dataHoje = `${dia}-${mes}-${ano}`;
+// ============================================================
+// BOTÃO "SIM, HOUVE VENDA" – ABRIR MODAL (inalterado)
+// ============================================================
+if (interaction.isButton() && cid === "venda_sim") {
+    const topic = channel.topic || '';
+    const [userId, , produtoDoTopico] = topic.split('|');
+    const produtoPreenchido = produtoDoTopico ? produtoDoTopico.replace(/_/g, ' ') : 'Não especificado';
 
-                const modal = new ModalBuilder()
-                    .setCustomId('modal_venda_fechamento')
-                    .setTitle('📝 Registar Venda');
+    let compradorPreenchido = '';
+    if (userId) {
+        try {
+            const userTicket = await client.users.fetch(userId);
+            compradorPreenchido = `<@${userId}>/${userTicket.username}`;
+        } catch {
+            compradorPreenchido = 'Utilizador desconhecido';
+        }
+    }
 
-                const compradorInput = new TextInputBuilder()
-                    .setCustomId('venda_comprador')
-                    .setLabel('Nome do Comprador')
-                    .setStyle(TextInputStyle.Short)
-                    .setValue(compradorPreenchido)
-                    .setRequired(true)
-                    .setMaxLength(100);
+    const hoje = new Date();
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const ano = hoje.getFullYear();
+    const dataHoje = `${dia}-${mes}-${ano}`;
 
-                const dataInput = new TextInputBuilder()
-                    .setCustomId('venda_data')
-                    .setLabel('Data de Venda (DD-MM-AAAA)')
-                    .setStyle(TextInputStyle.Short)
-                    .setValue(dataHoje)
-                    .setRequired(true)
-                    .setMaxLength(10);
+    const modal = new ModalBuilder()
+        .setCustomId('modal_venda_fechamento')
+        .setTitle('📝 Registar Venda');
 
-                const produtoInput = new TextInputBuilder()
-                    .setCustomId('venda_produto')
-                    .setLabel('Produto')
-                    .setStyle(TextInputStyle.Short)
-                    .setValue(produtoPreenchido)
-                    .setRequired(true)
-                    .setMaxLength(200);
+    const compradorInput = new TextInputBuilder()
+        .setCustomId('venda_comprador').setLabel('Nome do Comprador')
+        .setStyle(TextInputStyle.Short).setValue(compradorPreenchido)
+        .setRequired(true).setMaxLength(100);
 
-                const duracaoInput = new TextInputBuilder()
-                    .setCustomId('venda_duracao')
-                    .setLabel('Duração do Produto')
-                    .setStyle(TextInputStyle.Short)
-                    .setPlaceholder('Ex: Lifetime, 15 dias, Semanal...')
-                    .setRequired(false)
-                    .setMaxLength(50);
+    const dataInput = new TextInputBuilder()
+        .setCustomId('venda_data').setLabel('Data de Venda (DD-MM-AAAA)')
+        .setStyle(TextInputStyle.Short).setValue(dataHoje)
+        .setRequired(true).setMaxLength(10);
 
-                const staffInput = new TextInputBuilder()
-                    .setCustomId('venda_staff')
-                    .setLabel('Staff responsável')
-                    .setStyle(TextInputStyle.Short)
-                    .setValue(member.displayName || member.user.username)
-                    .setRequired(true)
-                    .setMaxLength(100);
+    const produtoInput = new TextInputBuilder()
+        .setCustomId('venda_produto').setLabel('Produto')
+        .setStyle(TextInputStyle.Short).setValue(produtoPreenchido)
+        .setRequired(true).setMaxLength(200);
 
-                modal.addComponents(
-                    new ActionRowBuilder().addComponents(compradorInput),
-                    new ActionRowBuilder().addComponents(dataInput),
-                    new ActionRowBuilder().addComponents(produtoInput),
-                    new ActionRowBuilder().addComponents(duracaoInput),
-                    new ActionRowBuilder().addComponents(staffInput)
-                );
+    const duracaoInput = new TextInputBuilder()
+        .setCustomId('venda_duracao').setLabel('Duração do Produto')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Ex: Lifetime, 15 dias, Semanal...')
+        .setRequired(false).setMaxLength(50);
 
-                await interaction.showModal(modal);
-                return;
-            }
+    const staffInput = new TextInputBuilder()
+        .setCustomId('venda_staff').setLabel('Staff responsável')
+        .setStyle(TextInputStyle.Short)
+        .setValue(member.displayName || member.user.username)
+        .setRequired(true).setMaxLength(100);
 
-            // ============================================================
-            // BOTÃO "NÃO, FECHAR APENAS"
-            // ============================================================
-            if (interaction.isButton() && cid === "venda_nao") {
-                await interaction.reply({ content: "🔒 A fechar ticket sem registo de venda...", flags: 64 });
-                try {
-                    await sendTranscript(channel, member.displayName || member.user.username);
-                } catch (err) {
-                    console.error('Erro ao gerar transcript (venda_nao):', err);
-                }
-                setTimeout(() => {
-                    channel.delete().catch(() => {});
-                }, 3000);
-                return;
-            }
+    modal.addComponents(
+        new ActionRowBuilder().addComponents(compradorInput),
+        new ActionRowBuilder().addComponents(dataInput),
+        new ActionRowBuilder().addComponents(produtoInput),
+        new ActionRowBuilder().addComponents(duracaoInput),
+        new ActionRowBuilder().addComponents(staffInput)
+    );
 
-            // ============================================================
-            // MODAL SUBMIT – REGISTAR VENDA
-            // ============================================================
-            if (interaction.isModalSubmit() && interaction.customId === 'modal_venda_fechamento') {
-                const { fields, member, channel } = interaction;
-                const comprador = fields.getTextInputValue('venda_comprador');
-                const data = fields.getTextInputValue('venda_data');
-                const produto = fields.getTextInputValue('venda_produto');
-                const duracao = fields.getTextInputValue('venda_duracao') || 'N/A';
-                const staff = fields.getTextInputValue('venda_staff');
+    await interaction.showModal(modal);
+    return;
+}
 
-                await interaction.reply({ content: '✅ Venda registada! A fechar ticket...', flags: 64 });
+// ============================================================
+// BOTÃO "NÃO, FECHAR APENAS" (com apagarCanalSeguro)
+// ============================================================
+if (interaction.isButton() && cid === "venda_nao") {
+    await interaction.reply({ content: "🔒 A fechar ticket sem registo de venda...", flags: 64 });
+    try {
+        await sendTranscript(channel, member.displayName || member.user.username);
+    } catch (err) {
+        console.error('Erro ao gerar transcript (venda_nao):', err);
+    }
+    apagarCanalSeguro(channel);
+    return;
+}
 
-                try {
-                    const canalVendas = await client.channels.fetch('1393689118717771786');
-                    if (canalVendas) {
-                        const embedVenda = new EmbedBuilder()
-                            .setTitle('🛒 Nova Venda Registrada')
-                            .setColor('#8b0000')
-                            .addFields(
-                                { name: '👤 Comprador', value: comprador, inline: true },
-                                { name: '📅 Data', value: data, inline: true },
-                                { name: '📦 Produto', value: produto, inline: false },
-                                { name: '⏱️ Duração', value: duracao, inline: true },
-                                { name: '🛡️ Staff', value: staff, inline: true }
-                            )
-                            .setTimestamp()
-                            .setFooter({ text: 'Jordan Shop Vendas', iconURL: client.user.displayAvatarURL() });
+// ============================================================
+// MODAL SUBMIT – REGISTAR VENDA (com apagarCanalSeguro)
+// ============================================================
+if (interaction.isModalSubmit() && interaction.customId === 'modal_venda_fechamento') {
+    const { fields, member, channel } = interaction;
+    const comprador = fields.getTextInputValue('venda_comprador');
+    const data = fields.getTextInputValue('venda_data');
+    const produto = fields.getTextInputValue('venda_produto');
+    const duracao = fields.getTextInputValue('venda_duracao') || 'N/A';
+    const staff = fields.getTextInputValue('venda_staff');
 
-                        await canalVendas.send({ embeds: [embedVenda] });
-                    }
-                } catch (err) {
-                    console.error('❌ Erro ao enviar embed de venda:', err);
-                }
+    await interaction.reply({ content: '✅ Venda registada! A fechar ticket...', flags: 64 });
 
-                try {
-                    await sendTranscript(channel, member.displayName || member.user.username);
-                } catch (err) {
-                    console.error('❌ Erro ao gerar transcript (venda):', err);
-                }
-                setTimeout(() => {
-                    channel.delete().catch(() => {});
-                }, 3000);
-                return;
-            }
+    try {
+        const canalVendas = await client.channels.fetch('1393689118717771786');
+        if (canalVendas) {
+            const embedVenda = new EmbedBuilder()
+                .setTitle('🛒 Nova Venda Registrada')
+                .setColor('#8b0000')
+                .addFields(
+                    { name: '👤 Comprador', value: comprador, inline: true },
+                    { name: '📅 Data', value: data, inline: true },
+                    { name: '📦 Produto', value: produto, inline: false },
+                    { name: '⏱️ Duração', value: duracao, inline: true },
+                    { name: '🛡️ Staff', value: staff, inline: true }
+                )
+                .setTimestamp()
+                .setFooter({ text: 'Jordan Shop Vendas', iconURL: client.user.displayAvatarURL() });
 
-            // ============================================================
-            // BOTÕES DE TRANSCRIPT (staff especial)
-            // ============================================================
-            if (interaction.isButton() && cid === "transcript_guardar") {
-                await interaction.update({ content: "🔒 A guardar transcript e a fechar...", embeds: [], components: [], flags: [64] });
-                try {
-                    await sendTranscript(channel, member.displayName || member.user.username);
-                } catch (err) {
-                    console.error('Erro ao gerar transcript (guardar):', err);
-                }
-                setTimeout(() => channel.delete().catch(() => {}), 3000);
-                return;
-            }
+            await canalVendas.send({ embeds: [embedVenda] });
+        }
+    } catch (err) {
+        console.error('❌ Erro ao enviar embed de venda:', err);
+    }
 
-            if (interaction.isButton() && cid === "transcript_nao_guardar") {
-                await interaction.update({ content: "❌ Ticket fechado sem transcript.", embeds: [], components: [], flags: [64] });
-                setTimeout(() => channel.delete().catch(() => {}), 3000);
-                return;
-            }
+    try {
+        await sendTranscript(channel, member.displayName || member.user.username);
+    } catch (err) {
+        console.error('❌ Erro ao gerar transcript (venda):', err);
+    }
+    apagarCanalSeguro(channel);
+    return;
+}
 
-            // ============================================================
-            // FECHAR TICKET QUANDO CLIENTE SAIU
-            // ============================================================
-            if (interaction.isButton() && interaction.customId.startsWith("fechar_ticket_saida_")) {
-                return await handleFecharTicketSaida(interaction, client);
-            }
+// ============================================================
+// BOTÕES DE TRANSCRIPT (com apagarCanalSeguro)
+// ============================================================
+if (interaction.isButton() && cid === "transcript_guardar") {
+    await interaction.update({ content: "🔒 A guardar transcript e a fechar...", embeds: [], components: [] });
+    try {
+        await sendTranscript(channel, member.displayName || member.user.username);
+    } catch (err) {
+        console.error('Erro ao gerar transcript (guardar):', err);
+    }
+    apagarCanalSeguro(channel);
+    return;
+}
+
+if (interaction.isButton() && cid === "transcript_nao_guardar") {
+    await interaction.update({ content: "❌ Ticket fechado sem transcript.", embeds: [], components: [] });
+    apagarCanalSeguro(channel);
+    return;
+}
+
+// ============================================================
+// FECHAR TICKET QUANDO CLIENTE SAIU (mantido)
+// ============================================================
+if (interaction.isButton() && interaction.customId.startsWith("fechar_ticket_saida_")) {
+    return await handleFecharTicketSaida(interaction, client);
+}
 
         } catch (err) {
             console.error("❌ Erro Geral no InteractionCreate:", err);
