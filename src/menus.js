@@ -300,41 +300,25 @@ IPVanish VPN: €1.00`,
   },
   {
     id: "1431298408362152060",
-    title: "👥 Discord Members Real 👥",
-    embedDesc: `**Tabela de Preços - Membros Reais:**
-500 Members — 1.25€
-1000 Members — 2.50€
-2000 Members — 4.99€
-3000 Members — 7.49€
-4000 Members — 9.99€
-5000 Members — 12.49€
-6000 Members — 14.99€
-7000 Members — 17.49€
-8000 Members — 19.99€
-9000 Members — 22.49€
-10000 Members — 24.99€
-11000 Members — 27.49€
-12000 Members — 29.99€
-13000 Members — 32.49€
-14000 Members — 33.99€
-15000 Members — 34.99€`,
+    title: "discord members",
+    embedDesc: "discord members",
     options: [
-      { label: "500 Members", description: "1.25€", value: "membros_500" },
-      { label: "1000 Members", description: "2.50€", value: "membros_1000" },
-      { label: "2000 Members", description: "4.99€", value: "membros_2000" },
-      { label: "3000 Members", description: "7.49€", value: "membros_3000" },
-      { label: "4000 Members", description: "9.99€", value: "membros_4000" },
-      { label: "5000 Members", description: "12.49€", value: "membros_5000" },
-      { label: "6000 Members", description: "14.99€", value: "membros_6000" },
-      { label: "7000 Members", description: "17.49€", value: "membros_7000" },
-      { label: "8000 Members", description: "19.99€", value: "membros_8000" },
-      { label: "9000 Members", description: "22.49€", value: "membros_9000" },
-      { label: "10000 Members", description: "24.99€", value: "membros_10000" },
-      { label: "11000 Members", description: "27.49€", value: "membros_11000" },
-      { label: "12000 Members", description: "29.99€", value: "membros_12000" },
-      { label: "13000 Members", description: "32.49€", value: "membros_13000" },
-      { label: "14000 Members", description: "33.99€", value: "membros_14000" },
-      { label: "15000 Members", description: "34.99€", value: "membros_15000" }
+      { label: "500 Members", description: "€1.25", value: "membros_500" },
+      { label: "1000 Members", description: "€2.50", value: "membros_1000" },
+      { label: "2000 Members", description: "€4.99", value: "membros_2000" },
+      { label: "3000 Members", description: "€7.49", value: "membros_3000" },
+      { label: "4000 Members", description: "€9.99", value: "membros_4000" },
+      { label: "5000 Members", description: "€12.49", value: "membros_5000" },
+      { label: "6000 Members", description: "€14.99", value: "membros_6000" },
+      { label: "7000 Members", description: "€17.49", value: "membros_7000" },
+      { label: "8000 Members", description: "€19.99", value: "membros_8000" },
+      { label: "9000 Members", description: "€22.49", value: "membros_9000" },
+      { label: "10000 Members", description: "€24.99", value: "membros_10000" },
+      { label: "11000 Members", description: "€27.49", value: "membros_11000" },
+      { label: "12000 Members", description: "€29.99", value: "membros_12000" },
+      { label: "13000 Members", description: "€32.49", value: "membros_13000" },
+      { label: "14000 Members", description: "€33.99", value: "membros_14000" },
+      { label: "15000 Members", description: "€34.99", value: "membros_15000" }
     ],
     ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`
   },
@@ -353,11 +337,8 @@ IPVanish VPN: €1.00`,
   },
   {
     id: "1431215916552818709",
-    title: "🚀 N1TRO B00ST 🚀",
-    embedDesc: `Escolhe a tua opção de boosts para o servidor:
-    
-• 14x Boosts 1 Month — 5€
-• 14x Boosts 3 Months — 18€`,
+    title: "N1TRO B00ST",
+    embedDesc: "N1TRO B00ST",
     options: [
       { label: "14x Boosts 1 Month", description: "5€", value: "boost_1month" },
       { label: "14x Boosts 3 Months", description: "18€", value: "boost_3months" }
