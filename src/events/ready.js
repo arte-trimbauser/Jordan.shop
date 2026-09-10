@@ -112,30 +112,13 @@ module.exports = async (client) => {
                 minute: '2-digit',
                 second: '2-digit'
             });
-            const horaNum = parseInt(agora.split(':')[0]);
 
-            let titulo = "✅ Bot está online!";
-            let descricao =
+            const titulo = "✅ Bot está online!";
+            const descricao =
                 `O bot foi iniciado com sucesso e está pronto para uso.\n\n` +
                 `🕒 **Hora:** ${agora}\n` +
                 `🌐 **Site:** https://jordan-shop-bot-site.vercel.app/\n\n` +
                 `🔄 **Motivo:** Reinício ou deploy manual.`;
-
-            if (horaNum >= 8 && horaNum <= 11) {
-                titulo = "☀️ Bom dia! O bot está online!";
-                descricao =
-                    `O bot acordou e está pronto para trabalhar durante o dia.\n\n` +
-                    `🕒 **Hora:** ${agora}\n` +
-                    `🌐 **Site:** https://jordan-shop-bot-site.vercel.app/\n\n` +
-                    `🔄 **Estado:** Operacional. Volta a dormir às 3:00 da manhã.`;
-            } else if (horaNum >= 0 && horaNum <= 5) {
-                titulo = "🌙 Boa noite! O bot vai descansar.";
-                descricao =
-                    `O bot está a encerrar as atividades e vai dormir até às 10:00.\n\n` +
-                    `🕒 **Hora:** ${agora}\n` +
-                    `🌐 **Site:** https://jordan-shop-bot-site.vercel.app/\n\n` +
-                    `😴 **Estado:** A suspender serviço. Até amanhã!`;
-            }
 
             const embedLog = new EmbedBuilder()
                 .setTitle(titulo)
