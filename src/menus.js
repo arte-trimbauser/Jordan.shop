@@ -90,7 +90,7 @@ Lifetime: €22
 ⭐ STOPER E LUA EXECUTOR
 ⭐ Incluso um SPOOFER para Banimentos Globais`,
     options: [
-      { label: "Diario", description: "Diario: €4", value: "Stellar Diário" },
+      { label: "Diario", description: "Diario: €4", value: "stellar_diario" },
       { label: "Semanal", description: "Semanal: €6", value: "stellar_semanal" },
       { label: "Mensal", description: "Mensal: €10", value: "stellar_mensal" },
       { label: "Trimensal", description: "Trimensal: €15", value: "stellar_trimensal" },
