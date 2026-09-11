@@ -298,12 +298,12 @@ APÓS O ENVIO DA KEY E O RESGATE NÃO SERÁ POSSIVELO REEMBOLSO!**`,
     ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
     embedImage: "https://media.discordapp.net/attachments/1429835071199772752/1546878002288394301/image.png?ex=6aa404e7&is=6aa2b367&hm=4bbb477fde4934aafcb4a3cc6b9b524e3d7f80cd4c7d8b60768f107c1b2d3911&=&format=webp&quality=lossless"
   },
-  {
+{
     id: "1546827325453373450",
     title: "🦈 SHARK GEN 🦈",
     embedDesc: `O Shark Generator é a solução completa para quem busca praticidade, automação e confidencialidade no FiveM.
 
-Com ele, você gera Rockstar de forma ilimitada e totalmente automática, sem precisar ficar inserindo e-mails, senhas ou configurando spoofers manualmente. Todo o processo é feito pelo próprio sistema, de forma rápida e segura.
+\`Com ele, você gera Rockstar de forma ilimitada e totalmente automática, sem precisar ficar inserindo e-mails, senhas ou configurando spoofers manualmente. Todo o processo é feito pelo próprio sistema, de forma rápida e segura.\`
 
 <a:pepe13:1547773212354674798> Gera Rockstar, Steam & Discord
 <a:pepe13:1547773212354674798> Sistema 100% automático
