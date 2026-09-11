@@ -209,6 +209,10 @@ module.exports = (client) => {
                 if (interaction.commandName === "chamar") {
                     return await handleChamarCommand(interaction, client);
                 }
+                    if (interaction.commandName === "idcanais") {
+        const cmd = require("../commands/idcanais");
+        return await cmd.execute(interaction, client);
+    }
                 if (interaction.commandName === "adicionar") {
                     const embed = new EmbedBuilder()
                         .setTitle("🛒 Adicionar ao Carrinho - Jordan Shop")
