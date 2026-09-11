@@ -89,14 +89,27 @@ function encontrarMenu(tipoProd) {
     }) || null;
 }
 
-// Devolve o produto como link (usa embedImage do menu). Se não houver imagem, devolve texto.
-function produtoClicavel(tipoProd, fallbackTexto) {
+// Devolve o produto como <#canal> do menu. Fallback: título do menu ou texto puro.
+function produtoFormatado(tipoProd, fallbackTexto) {
     const menu = encontrarMenu(tipoProd);
-    if (menu?.embedImage) {
-        const titulo = menu.title.replace(/[*_~`]/g, "").trim();
-        return `[${titulo}](${menu.embedImage})`;
+
+    // 1. Se encontrou menu → <#ID> (clicável, aponta para o canal do menu)
+    if (menu?.id) return `<#${menu.id}>`;
+
+    // 2. Fallback: procura por qualquer menu cujo título contenha as palavras-chave
+    const alvo = String(tipoProd || "").toLowerCase().replace(/_/g, " ").trim();
+    const palavras = ["shark", "stan", "stellar", "lunax", "flyside", "rockstar", "steam",
+        "discord", "spoofer", "sp00fer", "sharkgen", "vpn", "duck", "membros",
+        "bypass", "nitro", "boost", "gta"];
+    for (const p of palavras) {
+        if (alvo.includes(p)) {
+            const m = menus.find(x => (x.title || "").toLowerCase().includes(p));
+            if (m?.id) return `<#${m.id}>`;
+        }
     }
-    return fallbackTexto || tipoProd || "Produto";
+
+    // 3. Último recurso: texto simples
+    return `\`${fallbackTexto || tipoProd || "Produto"}\``;
 }
 
 // ============================================================
