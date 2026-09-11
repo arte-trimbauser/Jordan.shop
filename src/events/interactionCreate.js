@@ -73,30 +73,50 @@ function dataParaUnix(dataStr) {
     return Math.floor(Date.now() / 1000);
 }
 
-// Procura o menu a partir do tipo do produto (valor da opção ou título)
+// Procura o menu a partir do tipo do produto (por ID, value, título ou label)
 function encontrarMenu(tipoProd) {
     if (!tipoProd) return null;
-    const alvo = String(tipoProd).toLowerCase().replace(/_/g, " ").trim();
-    return menus.find(m => {
-        const tituloLimpo = (m.title || "")
-            .replace(/[\p{Extended_Pictographic}\uFE0F]/gu, "")
+    const alvo = String(tipoProd).trim();
+    const alvoLower = alvo.toLowerCase();
+
+    // 1. Match por ID
+    let menu = menus.find(m => String(m.id) === alvo);
+    if (menu) return menu;
+
+    // 2. Match por value exato
+    menu = menus.find(m => m.options?.some(o => String(o.value || "").toLowerCase() === alvoLower));
+    if (menu) return menu;
+
+    // 3. Match por título
+    const alvoNorm = alvoLower.replace(/_/g, " ").replace(/\s+/g, " ").trim();
+    menu = menus.find(m => {
+        const titulo = (m.title || "")
+            .replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, "")
+            .replace(/[*_~`]/g, "")
             .toLowerCase()
+            .replace(/\s+/g, " ")
             .trim();
-        if (tituloLimpo && (alvo.includes(tituloLimpo) || tituloLimpo.includes(alvo))) return true;
-        return m.options?.some(o =>
-            String(o.value || "").toLowerCase().replace(/_/g, " ").trim() === alvo
-        );
-    }) || null;
+        return titulo && (alvoNorm.includes(titulo) || titulo.includes(alvoNorm));
+    });
+    if (menu) return menu;
+
+    // 4. Match por label da opção
+    menu = menus.find(m => m.options?.some(o => {
+        const lbl = String(o.label || "").toLowerCase().replace(/_/g, " ").replace(/\s+/g, " ").trim();
+        return lbl === alvoNorm || alvoNorm.includes(lbl) || lbl.includes(alvoNorm);
+    }));
+
+    return menu || null;
 }
 
 // Devolve o produto como <#canal> do menu. Fallback: título do menu ou texto puro.
 function produtoFormatado(tipoProd, fallbackTexto) {
     const menu = encontrarMenu(tipoProd);
 
-    // 1. Se encontrou menu → <#ID> (clicável, aponta para o canal do menu)
+    // 1. Se encontrou menu → <#ID>
     if (menu?.id) return `<#${menu.id}>`;
 
-    // 2. Fallback: procura por qualquer menu cujo título contenha as palavras-chave
+    // 2. Fallback por palavras-chave
     const alvo = String(tipoProd || "").toLowerCase().replace(/_/g, " ").trim();
     const palavras = ["shark", "stan", "stellar", "lunax", "flyside", "rockstar", "steam",
         "discord", "spoofer", "sp00fer", "sharkgen", "vpn", "duck", "membros",
@@ -108,7 +128,7 @@ function produtoFormatado(tipoProd, fallbackTexto) {
         }
     }
 
-    // 3. Último recurso: texto simples
+    // 3. Último recurso
     return `\`${fallbackTexto || tipoProd || "Produto"}\``;
 }
 
@@ -126,9 +146,6 @@ function apagarCanalSeguro(channel) {
 
 // ============================================================
 // FECHO COM DECISÃO DE TRANSCRIPT
-// - Se for vendas → envia sempre
-// - Se tiver >= 5 mensagens → envia automaticamente
-// - Se tiver < 5 mensagens → pergunta
 // ============================================================
 async function fecharComDecisao(interaction, channel, member, forcarEnvio = false) {
     const fechadoPor = member.displayName || member.user.username;
@@ -141,7 +158,7 @@ async function fecharComDecisao(interaction, channel, member, forcarEnvio = fals
         console.error("Erro ao contar mensagens:", err);
     }
 
-    // Caso 1: forçar envio (venda) OU >= 5 mensagens → envia direto
+    // Caso 1: forçar OU >= 5 msgs → envia direto
     if (forcarEnvio || totalMsgs >= 5) {
         console.log(`📄 Fecho com transcript automático (${totalMsgs} msgs, forçar=${forcarEnvio})`);
         try {
@@ -166,7 +183,7 @@ async function fecharComDecisao(interaction, channel, member, forcarEnvio = fals
         return;
     }
 
-    // Caso 2: < 5 mensagens → pergunta
+    // Caso 2: < 5 msgs → pergunta
     console.log(`❓ Fecho com pergunta de transcript (${totalMsgs} msgs)`);
 
     const embed = new EmbedBuilder()
@@ -222,10 +239,10 @@ module.exports = (client) => {
                 if (interaction.commandName === "chamar") {
                     return await handleChamarCommand(interaction, client);
                 }
-                    if (interaction.commandName === "idcanais") {
-        const cmd = require("../commands/idcanais");
-        return await cmd.execute(interaction, client);
-    }
+                if (interaction.commandName === "idcanais") {
+                    const cmd = require("../commands/idcanais");
+                    return await cmd.execute(interaction, client);
+                }
                 if (interaction.commandName === "adicionar") {
                     const embed = new EmbedBuilder()
                         .setTitle("🛒 Adicionar ao Carrinho - Jordan Shop")
@@ -369,25 +386,11 @@ module.exports = (client) => {
                     // Ignora duplicado
                 } else {
                     const canalLogsTicket = guild.channels.cache.get(CANAL_TICKETS_LOGS);
-                    let tagFinal = "# ⭐ produto";
-                    const tipoLower = tipoAceito.toLowerCase();
-                    if (tipoLower.includes("steam")) tagFinal = "# ⭐ steam-account";
-                    else if (tipoLower.includes("vpn") || tipoLower.includes("cyberghost")) tagFinal = "# 🔵 vpn-service";
-                    else if (tipoLower.includes("spoofer") || tipoLower.includes("sp00fer")) tagFinal = "# 🛡️ spoofer";
-                    else if (tipoLower.includes("shark")) tagFinal = "# 🦈 shark-menu";
-                    else if (tipoLower.includes("stan")) tagFinal = "# 🦍 stan-menu";
-                    else if (tipoLower.includes("stellar")) tagFinal = "# ⭐ stellar-menu";
-                    else if (tipoLower.includes("lunax")) tagFinal = "# 🌙 lunax-menu";
-                    else if (tipoLower.includes("flyside")) tagFinal = "# 🟣 flyside-menu";
-                    else if (tipoLower.includes("discord")) tagFinal = "# 💬 discord-account";
-                    else if (tipoLower.includes("rockstar")) tagFinal = "# 🎮 rockstar-account";
-                    else if (tipoLower.includes("duck")) tagFinal = "# 🦆 duck-cleaner";
-
                     if (canalLogsTicket) {
-                        const produtoLink = produtoClicavel(tipoAceito, tipoAceito);
+                        const produtoFmt = produtoFormatado(tipoAceito, tipoAceito);
                         const embedLog = new EmbedBuilder()
                             .setColor(0x00FF00)
-                            .setDescription(`✅ <@${user.id}> (${user.username}) aceitou os termos para abrir ticket de: ${produtoLink} ${tagFinal}`)
+                            .setDescription(`✅ <@${user.id}> (${user.username}) aceitou os termos para abrir ticket de: ${produtoFmt}`)
                             .setTimestamp();
                         await canalLogsTicket.send({ embeds: [embedLog] }).catch(() => {});
                     }
@@ -542,39 +545,19 @@ module.exports = (client) => {
             }
 
             // ============================================================
-            // ASSUMIR TICKET
+            // ASSUMIR TICKET (versão antiga, mantida)
             // ============================================================
             if (cid === "claim_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas Staff.", flags: [64] });
                 const [uid, met, pdr] = channel.topic?.split("|") || ["?", "Não definido", "Geral"];
                 const emj = emojisPagamento[met] || "💰";
                 const metodoNome = metodoNomes[met] || met;
-                const produtoLink = produtoClicavel(pdr, pdr.replace(/_/g, ' '));
+                const produtoExibicao = pdr.replace(/_/g, ' ');
                 const embedClaim = new EmbedBuilder()
                     .setTitle("🛡️ Ticket Assumido")
-                    .setDescription(`👤 **Staff:** <@${user.id}>\n**Produto:** ${produtoLink}\n**Método:** ${emj} ${metodoNome}`)
+                    .setDescription(`👤 **Staff:** <@${user.id}>\n**Produto:** ${produtoExibicao}\n**Método:** ${emj} ${metodoNome}`)
                     .setColor("#57f287")
                     .setFooter({ text: "Jordan Shop | Tickets" });
-
-                // Log em CANAL_TICKETS_LOGS
-                try {
-                    const canalLogs = await client.channels.fetch(CANAL_TICKETS_LOGS).catch(() => null);
-                    if (canalLogs) {
-                        const embedLog = new EmbedBuilder()
-                            .setTitle("🛡️ Ticket Assumido")
-                            .setDescription(
-                                `**Staff:** <@${user.id}> (${user.username})\n` +
-                                `**Cliente:** <@${uid}>\n` +
-                                `**Produto:** ${produtoLink}\n` +
-                                `**Método:** ${emj} ${metodoNome}\n` +
-                                `**Canal:** <#${channel.id}>`
-                            )
-                            .setColor("#57f287")
-                            .setTimestamp();
-                        await canalLogs.send({ embeds: [embedLog] }).catch(() => {});
-                    }
-                } catch (err) { console.error("Erro log claim:", err); }
-
                 return await interaction.update({
                     embeds: [embedClaim],
                     components: [new ActionRowBuilder().addComponents(
@@ -622,24 +605,6 @@ module.exports = (client) => {
                     new ButtonBuilder().setLabel("Ir para o Ticket").setStyle(ButtonStyle.Link).setURL(`https://discord.com/channels/${guild.id}/${channel.id}`)
                 );
                 await target.send({ embeds: [embedDM], components: [rowL] }).catch(() => {});
-
-                // Log em CANAL_TICKETS_LOGS
-                try {
-                    const canalLogs = await client.channels.fetch(CANAL_TICKETS_LOGS).catch(() => null);
-                    if (canalLogs) {
-                        const embedLog = new EmbedBuilder()
-                            .setTitle("🔔 Cliente Chamou Staff")
-                            .setDescription(
-                                `**Cliente:** <@${user.id}> (${user.username})\n` +
-                                `**Staff chamado:** <@${target.id}> (${target.user.username})\n` +
-                                `**Canal:** <#${channel.id}>`
-                            )
-                            .setColor("#f1c40f")
-                            .setTimestamp();
-                        await canalLogs.send({ embeds: [embedLog] }).catch(() => {});
-                    }
-                } catch (err) { console.error("Erro log notify_staff:", err); }
-
                 return await interaction.update({
                     content: `📢 <@${target.id}> (${target.user.username}), foste solicitado aqui por **${user.username}**!`,
                     components: []
@@ -653,18 +618,15 @@ module.exports = (client) => {
                 if (!isStaff(member)) {
                     return interaction.reply({ content: "❌ Apenas staff pode fechar tickets.", flags: 64 });
                 }
-
                 if (!channel || channel.deleted) {
                     return interaction.reply({ content: "❌ Este canal já foi eliminado.", flags: 64 });
                 }
-
                 try {
                     const botMember = interaction.guild.members.me;
                     const botPermissions = channel.permissionsFor(botMember);
                     if (!botPermissions || !botPermissions.has(PermissionsBitField.Flags.ManageChannels)) {
                         return interaction.reply({
-                            content: "❌ O bot não tem a permissão **Gerir Canais** (Manage Channels) nesta categoria.\n" +
-                                     "Vai a: Categoria dos tickets → Permissões → adiciona o bot → ativa **Gerir Canais**.",
+                            content: "❌ O bot não tem a permissão **Gerir Canais** (Manage Channels) nesta categoria.",
                             flags: 64
                         });
                     }
@@ -675,7 +637,6 @@ module.exports = (client) => {
                 const CATEGORIA_SEM_VENDA = "1490783459470475414";
                 const isCategoriaProibida = channel.parentId === CATEGORIA_SEM_VENDA;
 
-                // Categoria especial (VPN): fecha direto com transcript
                 if (isCategoriaProibida) {
                     await interaction.deferReply({ flags: 64 });
                     try {
@@ -688,7 +649,6 @@ module.exports = (client) => {
                     return;
                 }
 
-                // Fluxo normal: pergunta se houve venda
                 const embedPergunta = new EmbedBuilder()
                     .setTitle("📝 Registo de Venda")
                     .setDescription("Houve venda neste ticket?")
@@ -796,24 +756,30 @@ module.exports = (client) => {
                 const { fields, member, channel } = interaction;
                 const comprador = fields.getTextInputValue('venda_comprador');
                 const data = fields.getTextInputValue('venda_data');
-                const produto = fields.getTextInputValue('venda_produto');
                 const duracao = fields.getTextInputValue('venda_duracao') || 'N/A';
-                const staff = fields.getTextInputValue('venda_staff');
 
                 await interaction.reply({ content: '✅ Venda registada! A fechar ticket...', flags: 64 });
 
-                // Extrai o "tipoProduto" do tópico (ex: "steam_aged", "shark_lifetime")
+                // Tópico tem: "userId|metodo|tipoProduto"
                 const topicRaw = channel.topic || '';
                 const [, , produtoTopico] = topicRaw.split('|');
 
-                // Produto clicável (procura o menu pelo tipo do produto)
-                const produtoFinal = produtoClicavel(produtoTopico || produto, produto);
+                // Produto como <#canal> (usa produtoFormatado)
+                const produtoFmt = produtoFormatado(produtoTopico, produtoTopico || "Produto");
 
-                // Data em formato unix do Discord
+                // Data em unix (formato <t:s> → 11/08/2026 04:15:11)
                 const unix = dataParaUnix(data);
-                const dataFormatada = `<t:${unix}:D>`; // Mostra como 19/10/2025
+                const dataFormatada = `<t:${unix}:s>`;
+                
+                // Deteta se o staff é Moderador ou Staff
+                const ROLE_MODERADOR = "1393658417884823662";
+                const ROLE_STAFF = "1393658313006383176";
+                let labelRole;
+                if (member.roles.cache.has(ROLE_MODERADOR)) labelRole = "@Moderador🛠️";
+                else if (member.roles.cache.has(ROLE_STAFF)) labelRole = "@Staff🛡️";
+                else labelRole = "@Staff🛡️ / @Moderador🛠️";
 
-                // 1. Enviar embed de venda para o canal de vendas
+                // Enviar embed para o canal de vendas
                 try {
                     const canalVendas = await client.channels.fetch('1393689118717771786');
                     if (canalVendas) {
@@ -822,9 +788,9 @@ module.exports = (client) => {
                             .setDescription(
                                 `**Nome do comprador:** ${comprador}\n` +
                                 `**Data de venda:** ${dataFormatada}\n` +
-                                `**Produto:** ${produtoFinal}\n` +
+                                `**Produto:** ${produtoFmt}\n` +
                                 `**Duração do produto:** ${duracao}\n` +
-                                `**@Staff🛡️ / @Moderador🛠️ responsável:** ${staff}`
+                                `**${labelRole} responsável:** <@${member.id}>`
                             )
                             .setColor('#8b0000')
                             .setTimestamp()
@@ -836,30 +802,7 @@ module.exports = (client) => {
                     console.error('❌ Erro ao enviar embed de venda:', err);
                 }
 
-                // 2. Log adicional no canal de tickets (CANAL_TICKETS_LOGS)
-                try {
-                    const canalTickets = await client.channels.fetch(CANAL_TICKETS_LOGS).catch(() => null);
-                    if (canalTickets) {
-                        const embedLog = new EmbedBuilder()
-                            .setTitle('💰 Venda Registada num Ticket')
-                            .setDescription(
-                                `**Comprador:** ${comprador}\n` +
-                                `**Data:** ${dataFormatada}\n` +
-                                `**Produto:** ${produtoFinal}\n` +
-                                `**Duração:** ${duracao}\n` +
-                                `**Staff:** ${staff}\n` +
-                                `**Ticket:** \`${channel.name}\``
-                            )
-                            .setColor('#00ff00')
-                            .setTimestamp()
-                            .setFooter({ text: 'Jordan Shop | Logs de Tickets' });
-                        await canalTickets.send({ embeds: [embedLog] }).catch(() => {});
-                    }
-                } catch (err) {
-                    console.error('❌ Erro ao enviar log de venda para tickets:', err);
-                }
-
-                // 3. Fecho com transcript (forçado porque houve venda)
+                // Fecho com transcript (forçado porque houve venda)
                 await fecharComDecisao(interaction, channel, member, true);
                 return;
             }
