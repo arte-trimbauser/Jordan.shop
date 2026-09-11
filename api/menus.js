@@ -1,37 +1,42 @@
-// BOT: api/migrar-menus.js
+// BOT: api/menus.js
 const { createClient } = require('@supabase/supabase-js');
+const { limparCacheMenus } = require('../src/menus-db');
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 module.exports = async (req, res) => {
-    // Proteção por secret — muda isto!
-    const SECRET = process.env.MIGRAR_SECRET || 'migrar-123-muda-isto';
-    if (req.query.secret !== SECRET) {
-        return res.status(401).json({ error: 'Não autorizado' });
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') return res.status(200).end();
+
+    if (req.method === 'GET') {
+        const { data, error } = await supabase
+            .from('menus')
+            .select('*')
+            .order('ordem', { ascending: true });
+        if (error) return res.status(500).json({ success: false, error: error.message });
+        return res.json({ success: true, menus: data });
     }
 
-    try {
-        // Importa o teu menu.js atual
-        delete require.cache[require.resolve('../src/menus.js')];
-        const menus = require('../src/menus.js');
+    if (req.method === 'POST') {
+        const { id } = req.body || {};
+        if (!id) return res.status(400).json({ success: false, error: 'id em falta' });
 
-        const registos = menus.map((m, i) => ({
-            id: String(m.id),
-            title: m.title || '',
-            embed_desc: m.embedDesc || '',
-            embed_image: m.embedImage || '',
-            embed_thumbnail: m.embedThumbnail || '',
-            color: m.color || null,
-            options: m.options || [],
-            ordem: i
-        }));
+        // Permite atualizar qualquer campo editável
+        const permitidos = ['title', 'embed_desc', 'embed_image', 'embed_thumbnail', 'color', 'options'];
+        const update = {};
+        for (const k of permitidos) {
+            if (req.body[k] !== undefined) update[k] = req.body[k];
+        }
+        update.atualizado_em = new Date().toISOString();
 
-        // Upsert (não duplica se já existir)
-        const { error } = await supabase.from('menus').upsert(registos, { onConflict: 'id' });
-        if (error) throw error;
+        const { error } = await supabase.from('menus').update(update).eq('id', String(id));
+        if (error) return res.status(500).json({ success: false, error: error.message });
 
-        res.json({ success: true, inseridos: registos.length });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, error: err.message });
+        limparCacheMenus(); // força o bot a recarregar
+        return res.json({ success: true });
     }
+
+    res.status(405).json({ success: false, error: 'Método não permitido' });
 };
