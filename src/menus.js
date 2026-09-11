@@ -305,10 +305,10 @@ APÓS O ENVIO DA KEY E O RESGATE NÃO SERÁ POSSIVELO REEMBOLSO!**`,
 
 Com ele, você gera Rockstar de forma ilimitada e totalmente automática, sem precisar ficar inserindo e-mails, senhas ou configurando spoofers manualmente. Todo o processo é feito pelo próprio sistema, de forma rápida e segura.
 
-🌊 Gera Rockstar, Steam & Discord
-🌊 Sistema 100% automático
-🌊 Remove banimentos Global/HWID
-🌊 Cleaner avançado, que remove banimentos de anti-spoof (FiveGuard, WaveShield, Reaper e Electron)
+<a:pepe13:1547773212354674798> Gera Rockstar, Steam & Discord
+<a:pepe13:1547773212354674798> Sistema 100% automático
+<a:pepe13:1547773212354674798> Remove banimentos Global/HWID
+<a:pepe13:1547773212354674798> Cleaner avançado, que remove banimentos de anti-spoof (FiveGuard, WaveShield, Reaper e Electron)
 
 O Shark Generator foi desenvolvido para oferecer eficiência, segurança e simplicidade, tudo em uma única ferramenta.`,
     options: [
