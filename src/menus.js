@@ -386,6 +386,30 @@ Essa vpn não é aquela vpn fuleira igual que as outras lojas vendem, aqui realm
     embedImage: "https://i.postimg.cc/nVKWW7Hz/image.png"
   },
   {
+  id: "1546870031780945971", // ⚠️ substituir pelo ID real do canal
+  title: "🎮 GTA INSTALÁVEL 🎮",
+  embedDesc: `🌟 Adquira Sua Conta Steam Exclusiva para FiveM!
+
+☀️ Experiência Única: Contas especialmente criadas para o universo FiveM.
+🗳️ Controle Total: Após a entrega, personalize totalmente seus dados.
+
+🔍 Tem Dúvidas? Saiba Mais Antes de Comprar:
+Em caso de dúvidas ou problemas, estamos à disposição para ajudar!
+
+🚫 CONTA STEAM COM GTAV [FIVEM COMPARTILHADA] 15 DIAS [NÃO ACOMPANHA ROCKSTAR LICENCIADA] ATENTE-SE PARA NÃO TER ERROS.
+
+🚫 CONTA STEAM/EPIC COM GTA INSTÁLAVEL
+
+🚫 NÃO É FEITA PARA JOGAR O GTA, SOMENTE PARA INSTALAR E JOGAR O FIVEM!
+
+APÓS A ENTREGA DA CONTA NÃO HÁ MANEIRA DE REEMBOLSAR.`,
+  options: [
+    { label: "GTA Instalável", description: "€3", value: "gta_instalavel" }
+  ],
+  ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
+  embedImage: ""
+},
+  {
     id: "1431215916552818709",
     title: "N1TRO B00ST",
     embedDesc: "N1TRO B00ST",
