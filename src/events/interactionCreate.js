@@ -35,6 +35,51 @@ const metodoNomes = {
 
 const recentTicketLogs = new Map();
 const LOG_COOLDOWN_MS = 5000;
+// ==================== HELPERS EXTRAS ====================
+const CANAL_TICKETS_LOGS = "1521916593402286191";
+
+// Converte "DD-MM-AAAA", "DD/MM/AAAA" ou "AAAA-MM-DD" para unix timestamp
+function dataParaUnix(dataStr) {
+    if (!dataStr) return Math.floor(Date.now() / 1000);
+    const s = String(dataStr).trim();
+    let m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+    if (m) {
+        const d = new Date(Date.UTC(+m[3], +m[2] - 1, +m[1]));
+        return Math.floor(d.getTime() / 1000);
+    }
+    m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+    if (m) {
+        const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+        return Math.floor(d.getTime() / 1000);
+    }
+    return Math.floor(Date.now() / 1000);
+}
+
+// Procura o menu a partir do tipo do produto (valor da opção ou título)
+function encontrarMenu(tipoProd) {
+    if (!tipoProd) return null;
+    const alvo = String(tipoProd).toLowerCase().replace(/_/g, " ").trim();
+    return menus.find(m => {
+        const tituloLimpo = (m.title || "")
+            .replace(/[\p{Extended_Pictographic}\uFE0F]/gu, "")
+            .toLowerCase()
+            .trim();
+        if (tituloLimpo && (alvo.includes(tituloLimpo) || tituloLimpo.includes(alvo))) return true;
+        return m.options?.some(o =>
+            String(o.value || "").toLowerCase().replace(/_/g, " ").trim() === alvo
+        );
+    }) || null;
+}
+
+// Devolve o produto como link (usa embedImage do menu). Se não houver imagem, devolve texto.
+function produtoClicavel(tipoProd, fallbackTexto) {
+    const menu = encontrarMenu(tipoProd);
+    if (menu?.embedImage) {
+        const titulo = menu.title.replace(/[*_~`]/g, "").trim();
+        return `[${titulo}](${menu.embedImage})`;
+    }
+    return fallbackTexto || tipoProd || "Produto";
+}
 
 function isDuplicateTicketLog(userId, action, channelId) {
     const key = `${userId}-${action}-${channelId}`;
