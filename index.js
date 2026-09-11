@@ -1,5 +1,4 @@
 // index.js – BOT + API /api/enviar-embed
-// CORREÇÕES: Recebe imagem, tipoImagem, footer, timestamp do site
 require('dotenv').config();
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
@@ -50,28 +49,38 @@ app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
 
-// CORREÇÃO PRINCIPAL: Recebe imagem, tipoImagem, footer, timestamp
+// ============================================================
+// API: /api/enviar-embed
+// ============================================================
 app.post('/api/enviar-embed', async (req, res) => {
-    const { 
-        titulo, 
-        desc, 
-        cor, 
-        canalId, 
+    const {
+        titulo,
+        desc,
+        cor,
+        canalId,
         produtos,
-        imagem,        // NOVO: URL da imagem
-        tipoImagem,    // NOVO: 'normal', 'thumbnail', 'footer', 'none'
-        footerTexto,   // NOVO: Texto do footer
-        footerIcone,   // NOVO: URL do ícone do footer
-        timestamp      // NOVO: boolean
+        imagem,
+        tipoImagem,
+        footerTexto,
+        footerIcone,
+        timestamp
     } = req.body;
+
+    console.log("📥 /api/enviar-embed body:", {
+        titulo, canalId, temImagem: !!imagem, tipoImagem,
+        qtdProdutos: produtos?.length || 0
+    });
 
     if (!titulo || !desc || !canalId) {
         return res.status(400).send('Faltam campos obrigatórios (titulo, desc, canalId).');
     }
 
     try {
-        const canal = await client.channels.fetch(canalId);
-        if (!canal) return res.status(404).send('Canal não encontrado.');
+        const canal = await client.channels.fetch(canalId).catch(() => null);
+        if (!canal) {
+            console.error(`❌ Canal ${canalId} não encontrado`);
+            return res.status(404).send('Canal não encontrado.');
+        }
 
         const embed = new EmbedBuilder()
             .setTitle(titulo)
@@ -80,13 +89,11 @@ app.post('/api/enviar-embed', async (req, res) => {
 
         // ========== IMAGEM ==========
         if (imagem && tipoImagem !== 'none') {
-            const urlLimpa = imagem.trim();
-            // Validar URL básica
+            const urlLimpa = String(imagem).trim();
             if (urlLimpa.startsWith('http')) {
                 if (tipoImagem === 'thumbnail') {
                     embed.setThumbnail(urlLimpa);
                 } else {
-                    // 'normal' ou 'footer' (footer de imagem é tratado abaixo)
                     embed.setImage(urlLimpa);
                 }
             }
@@ -100,7 +107,6 @@ app.post('/api/enviar-embed', async (req, res) => {
             }
             embed.setFooter(footerObj);
         } else if (tipoImagem === 'footer' && imagem) {
-            // Se escolheu footer mas não preencheu footer separado, usa imagem como ícone
             embed.setFooter({ text: 'Jordan Shop', iconURL: imagem });
         }
 
@@ -109,23 +115,47 @@ app.post('/api/enviar-embed', async (req, res) => {
             embed.setTimestamp();
         }
 
+        // ========== SELECT MENU ==========
         const components = [];
         if (produtos?.length) {
+            const menusLocais = require('./src/menus');
+
             const selectMenu = new StringSelectMenuBuilder()
                 .setCustomId('menu_produtos')
                 .setPlaceholder('Escolhe uma opção')
-                .addOptions(produtos.map((p, i) => ({
-                    label: p.nome.slice(0, 100),
-                    description: `Preço: ${p.preco}`.slice(0, 100),
-                    value: `prod_${p.nome.replace(/\s+/g, '_').toLowerCase()}_${i}`
-                })));
+                .addOptions(
+                    produtos.slice(0, 25).map((p, i) => {
+                        const nomeLower = String(p.nome).toLowerCase();
+                        const menuReal = menusLocais.find(m => {
+                            const tituloLimpo = (m.title || '')
+                                .replace(/[\p{Extended_Pictographic}\uFE0F]/gu, '')
+                                .trim()
+                                .toLowerCase();
+                            if (tituloLimpo && nomeLower.includes(tituloLimpo)) return true;
+                            return m.options?.some(o =>
+                                String(o.label || '').toLowerCase() === nomeLower
+                            );
+                        });
+
+                        const valueFinal = menuReal?.id
+                            || `prod_${String(p.nome).replace(/\s+/g, '_').toLowerCase()}_${i}`;
+
+                        return {
+                            label: String(p.nome).slice(0, 100),
+                            description: `Preço: ${p.preco}`.slice(0, 100),
+                            value: valueFinal
+                        };
+                    })
+                );
+
             components.push(new ActionRowBuilder().addComponents(selectMenu));
         }
 
         await canal.send({ embeds: [embed], components });
+        console.log(`✅ Embed enviado para #${canal.name}`);
         res.send('✅ Embed enviado com sucesso!');
     } catch (error) {
-        console.error('Erro no /api/enviar-embed:', error);
+        console.error('❌ Erro no /api/enviar-embed:', error);
         res.status(500).send('Erro ao enviar embed: ' + error.message);
     }
 });
