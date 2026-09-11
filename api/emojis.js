@@ -1,0 +1,22 @@
+// BOT: api/emojis.js
+module.exports = async (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    try {
+        const GUILD_ID = process.env.GUILD_ID || '1393629457599828040';
+        const guild = await global.client.guilds.fetch(GUILD_ID);
+        const emojis = await guild.emojis.fetch();
+
+        const lista = emojis.map(e => ({
+            id: e.id,
+            name: e.name,
+            animated: e.animated,
+            url: e.imageURL({ size: 48, extension: e.animated ? 'gif' : 'png' }),
+            tag: `<${e.animated ? 'a' : ''}:${e.name}:${e.id}>`
+        }));
+
+        res.json({ success: true, emojis: lista });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
