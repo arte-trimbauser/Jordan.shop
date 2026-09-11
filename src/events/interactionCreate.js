@@ -38,6 +38,8 @@ const LOG_COOLDOWN_MS = 5000;
 
 // ==================== CANAIS / HELPERS EXTRAS ====================
 const CANAL_TICKETS_LOGS = "1521916593402286191";
+const ROLE_STAFF = "1393658313006383176";
+const ROLE_MODERADOR = "1393658417884823662";
 
 function isDuplicateTicketLog(userId, action, channelId) {
     const key = `${userId}-${action}-${channelId}`;
@@ -79,15 +81,12 @@ function encontrarMenu(tipoProd) {
     const alvo = String(tipoProd).trim();
     const alvoLower = alvo.toLowerCase();
 
-    // 1. Match por ID
     let menu = menus.find(m => String(m.id) === alvo);
     if (menu) return menu;
 
-    // 2. Match por value exato
     menu = menus.find(m => m.options?.some(o => String(o.value || "").toLowerCase() === alvoLower));
     if (menu) return menu;
 
-    // 3. Match por título
     const alvoNorm = alvoLower.replace(/_/g, " ").replace(/\s+/g, " ").trim();
     menu = menus.find(m => {
         const titulo = (m.title || "")
@@ -100,7 +99,6 @@ function encontrarMenu(tipoProd) {
     });
     if (menu) return menu;
 
-    // 4. Match por label da opção
     menu = menus.find(m => m.options?.some(o => {
         const lbl = String(o.label || "").toLowerCase().replace(/_/g, " ").replace(/\s+/g, " ").trim();
         return lbl === alvoNorm || alvoNorm.includes(lbl) || lbl.includes(alvoNorm);
@@ -112,11 +110,8 @@ function encontrarMenu(tipoProd) {
 // Devolve o produto como <#canal> do menu. Fallback: título do menu ou texto puro.
 function produtoFormatado(tipoProd, fallbackTexto) {
     const menu = encontrarMenu(tipoProd);
-
-    // 1. Se encontrou menu → <#ID>
     if (menu?.id) return `<#${menu.id}>`;
 
-    // 2. Fallback por palavras-chave
     const alvo = String(tipoProd || "").toLowerCase().replace(/_/g, " ").trim();
     const palavras = ["shark", "stan", "stellar", "lunax", "flyside", "rockstar", "steam",
         "discord", "spoofer", "sp00fer", "sharkgen", "vpn", "duck", "membros",
@@ -128,8 +123,37 @@ function produtoFormatado(tipoProd, fallbackTexto) {
         }
     }
 
-    // 3. Último recurso
     return `\`${fallbackTexto || tipoProd || "Produto"}\``;
+}
+
+// Extrai a duração (Lifetime, Semanal, etc.) a partir do tipo do produto
+function duracaoDoProduto(tipoProd) {
+    if (!tipoProd) return "";
+    const t = String(tipoProd).toLowerCase().replace(/_/g, " ");
+
+    const menu = encontrarMenu(tipoProd);
+    if (menu?.options) {
+        const opt = menu.options.find(o =>
+            String(o.value || "").toLowerCase().replace(/_/g, " ") === t
+        );
+        if (opt) {
+            const lbl = String(opt.label || "").toLowerCase();
+            if (lbl.includes("lifetime")) return "Lifetime";
+            if (lbl.includes("trimensal") || lbl.includes("trimestral")) return "Trimensal";
+            if (lbl.includes("semanal")) return "Semanal";
+            if (lbl.includes("mensal")) return "Mensal";
+            if (lbl.includes("diario") || lbl.includes("diário")) return "Diário";
+            if (lbl.includes("3 meses") || lbl.includes("3meses")) return "3 Meses";
+        }
+    }
+
+    if (t.includes("lifetime")) return "Lifetime";
+    if (t.includes("trimensal") || t.includes("trimestral")) return "Trimensal";
+    if (t.includes("semanal")) return "Semanal";
+    if (t.includes("mensal")) return "Mensal";
+    if (t.includes("diario") || t.includes("diário")) return "Diário";
+    if (t.includes("3meses") || t.includes("3 meses")) return "3 Meses";
+    return "";
 }
 
 // ============================================================
@@ -158,7 +182,6 @@ async function fecharComDecisao(interaction, channel, member, forcarEnvio = fals
         console.error("Erro ao contar mensagens:", err);
     }
 
-    // Caso 1: forçar OU >= 5 msgs → envia direto
     if (forcarEnvio || totalMsgs >= 5) {
         console.log(`📄 Fecho com transcript automático (${totalMsgs} msgs, forçar=${forcarEnvio})`);
         try {
@@ -183,7 +206,6 @@ async function fecharComDecisao(interaction, channel, member, forcarEnvio = fals
         return;
     }
 
-    // Caso 2: < 5 msgs → pergunta
     console.log(`❓ Fecho com pergunta de transcript (${totalMsgs} msgs)`);
 
     const embed = new EmbedBuilder()
@@ -382,15 +404,27 @@ module.exports = (client) => {
 
             if (interaction.isButton() && cid?.startsWith("aceitar_termos_")) {
                 const tipoAceito = cid.replace("aceitar_termos_", "");
+
                 if (isDuplicateTicketLog(user.id, `aceitar_${tipoAceito}`, channel.id)) {
                     // Ignora duplicado
                 } else {
                     const canalLogsTicket = guild.channels.cache.get(CANAL_TICKETS_LOGS);
                     if (canalLogsTicket) {
                         const produtoFmt = produtoFormatado(tipoAceito, tipoAceito);
+
+                        let opcaoTxt = "";
+                        const menuAchado = encontrarMenu(tipoAceito);
+                        if (menuAchado?.options) {
+                            const opt = menuAchado.options.find(o =>
+                                String(o.value || "").toLowerCase().replace(/_/g, " ") ===
+                                String(tipoAceito).toLowerCase().replace(/_/g, " ")
+                            );
+                            if (opt) opcaoTxt = ` \`${opt.label}\``;
+                        }
+
                         const embedLog = new EmbedBuilder()
                             .setColor(0x00FF00)
-                            .setDescription(`✅ <@${user.id}> (${user.username}) aceitou os termos para abrir ticket de: ${produtoFmt}`)
+                            .setDescription(`✅ <@${user.id}> (${user.username}) aceitou os termos para abrir ticket de: ${produtoFmt}${opcaoTxt}`)
                             .setTimestamp();
                         await canalLogsTicket.send({ embeds: [embedLog] }).catch(() => {});
                     }
@@ -545,7 +579,7 @@ module.exports = (client) => {
             }
 
             // ============================================================
-            // ASSUMIR TICKET (versão antiga, mantida)
+            // ASSUMIR TICKET (versão antiga)
             // ============================================================
             if (cid === "claim_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas Staff.", flags: [64] });
@@ -697,6 +731,9 @@ module.exports = (client) => {
                 const ano = hoje.getFullYear();
                 const dataHoje = `${dia}-${mes}-${ano}`;
 
+                // ✅ Duração auto-preenchida
+                const duracaoAuto = duracaoDoProduto(produtoDoTopico || "");
+
                 const modal = new ModalBuilder()
                     .setCustomId('modal_venda_fechamento')
                     .setTitle('📝 Registar Venda');
@@ -716,10 +753,12 @@ module.exports = (client) => {
                     .setStyle(TextInputStyle.Short).setValue(produtoPreenchido)
                     .setRequired(true).setMaxLength(200);
 
+                // ✅ Duração com valor pré-preenchido
                 const duracaoInput = new TextInputBuilder()
                     .setCustomId('venda_duracao').setLabel('Duração do Produto')
                     .setStyle(TextInputStyle.Short)
                     .setPlaceholder('Ex: Lifetime, 15 dias, Semanal...')
+                    .setValue(duracaoAuto)
                     .setRequired(false).setMaxLength(50);
 
                 const staffInput = new TextInputBuilder()
@@ -760,26 +799,19 @@ module.exports = (client) => {
 
                 await interaction.reply({ content: '✅ Venda registada! A fechar ticket...', flags: 64 });
 
-                // Tópico tem: "userId|metodo|tipoProduto"
                 const topicRaw = channel.topic || '';
                 const [, , produtoTopico] = topicRaw.split('|');
 
-                // Produto como <#canal> (usa produtoFormatado)
                 const produtoFmt = produtoFormatado(produtoTopico, produtoTopico || "Produto");
 
-                // Data em unix (formato <t:s> → 11/08/2026 04:15:11)
+                // ✅ Data só (sem horas) → formato :d
                 const unix = dataParaUnix(data);
-                const dataFormatada = `<t:${unix}:s>`;
-                
-                // Deteta se o staff é Moderador ou Staff
-                const ROLE_MODERADOR = "1393658417884823662";
-                const ROLE_STAFF = "1393658313006383176";
-                let labelRole;
-                if (member.roles.cache.has(ROLE_MODERADOR)) labelRole = "@Moderador🛠️";
-                else if (member.roles.cache.has(ROLE_STAFF)) labelRole = "@Staff🛡️";
-                else labelRole = "@Staff🛡️ / @Moderador🛠️";
+                const dataFormatada = `<t:${unix}:d>`;
 
-                // Enviar embed para o canal de vendas
+                // ✅ Roles como menções clicáveis
+                const labelRole = `<@&${ROLE_STAFF}> / <@&${ROLE_MODERADOR}>`;
+                const nomeStaff = member.displayName || member.user.username;
+
                 try {
                     const canalVendas = await client.channels.fetch('1393689118717771786');
                     if (canalVendas) {
@@ -790,7 +822,7 @@ module.exports = (client) => {
                                 `**Data de venda:** ${dataFormatada}\n` +
                                 `**Produto:** ${produtoFmt}\n` +
                                 `**Duração do produto:** ${duracao}\n` +
-                                `**${labelRole} responsável:** <@${member.id}>`
+                                `**${labelRole} responsável:** ${nomeStaff}`
                             )
                             .setColor('#8b0000')
                             .setTimestamp()
@@ -802,7 +834,6 @@ module.exports = (client) => {
                     console.error('❌ Erro ao enviar embed de venda:', err);
                 }
 
-                // Fecho com transcript (forçado porque houve venda)
                 await fecharComDecisao(interaction, channel, member, true);
                 return;
             }
