@@ -386,8 +386,8 @@ Essa vpn não é aquela vpn fuleira igual que as outras lojas vendem, aqui realm
     embedImage: "https://i.postimg.cc/nVKWW7Hz/image.png"
   },
   {
-  id: "1546870031780945971", // ⚠️ substituir pelo ID real do canal
-  title: "🎮 GTA INSTALÁVEL 🎮",
+  id: "1546870031780945971",
+  title: "<:Caixa:1522055518275768380> GTA INSTALAVEL",
   embedDesc: `🌟 Adquira Sua Conta Steam Exclusiva para FiveM!
 
 ☀️ Experiência Única: Contas especialmente criadas para o universo FiveM.
