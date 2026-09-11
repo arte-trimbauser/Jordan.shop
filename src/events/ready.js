@@ -2,6 +2,7 @@
 const { EmbedBuilder, ActivityType, REST, Routes } = require("discord.js");
 const { registrarComandoChamar } = require('../commands/chamarCommand');
 const { comandoVerificacao } = require('./sistemaVerificacao');
+const publicarMenus = require('./publicarMenus');
 
 const {
     entrarCanalVoz,
@@ -18,15 +19,16 @@ const {
 } = require('./sistemaVerificacao');
 
 module.exports = async (client) => {
-    console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
+    console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
     console.log(`✅ Sistema Jordan Shop Online!`);
     console.log(`🌐 Site: https://jordan-shop-bot-site.vercel.app/`);
     console.log(`✅ Bot online como: ${client.user.tag}`);
     console.log(`🕒 Hora de Portugal: ${new Date().toLocaleString('pt-PT', { timeZone: 'Europe/Lisbon' })}`);
-    console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
+    console.log("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
 
     const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
+    // 1. Slash commands básicos
     try {
         const adicionar = require("../commands/adicionar");
         const carrinho = require("../commands/carrinho");
@@ -46,6 +48,7 @@ module.exports = async (client) => {
         console.error("❌ Erro ao registar slash commands:", err);
     }
 
+    // 2. Comandos de voz
     try {
         await registrarComandosVoz(client);
         console.log("✅ Comandos de voz registados com sucesso!");
@@ -53,6 +56,7 @@ module.exports = async (client) => {
         console.error("❌ Erro ao registar comandos de voz:", err);
     }
 
+    // 3. Comando /chamar
     try {
         await registrarComandoChamar(client);
         console.log("✅ Comando /chamar registado com sucesso!");
@@ -60,6 +64,7 @@ module.exports = async (client) => {
         console.error("❌ Erro ao registar /chamar:", err);
     }
 
+    // 4. Sistemas adicionais
     try {
         await entrarCanalVoz(client);
         await enviarEmbedSuporte(client);
@@ -69,6 +74,7 @@ module.exports = async (client) => {
         console.error("❌ Erro ao inicializar sistemas adicionais:", err);
     }
 
+    // 5. Verificação
     try {
         await enviarVerificacao(client);
         inicializarSistemaVerificacao(client);
@@ -77,6 +83,7 @@ module.exports = async (client) => {
         console.error("❌ Erro ao inicializar verificacao:", err);
     }
 
+    // 6. Notificação tickets
     try {
         inicializarNotificacaoTickets(client);
         iniciarMonitorizacaoInatividadeTickets(client);
@@ -85,6 +92,15 @@ module.exports = async (client) => {
         console.error("❌ Erro ao inicializar notificação:", err);
     }
 
+    // 7. ⭐ NOVO: Publicar menus nos respetivos canais
+    try {
+        await publicarMenus(client);
+        console.log("✅ Menus publicados nos canais!");
+    } catch (err) {
+        console.error("❌ Erro ao publicar menus:", err);
+    }
+
+    // 8. Status rotativo
     const statusList = [
         { name: "Jordan Shop | discord.gg/6hhZeqb7Qk", type: ActivityType.Competing },
         { name: "Os melhores precos!", type: ActivityType.Watching },
@@ -93,15 +109,13 @@ module.exports = async (client) => {
     ];
     let i = 0;
     const updateStatus = () => {
-        client.user.setPresence({
-            activities: [statusList[i]],
-            status: "online"
-        });
+        client.user.setPresence({ activities: [statusList[i]], status: "online" });
         i = (i + 1) % statusList.length;
     };
     updateStatus();
     setInterval(updateStatus, 5000);
 
+    // 9. Log de arranque
     const LOG_ID = "1437076921627181228";
     try {
         const logChannel = await client.channels.fetch(LOG_ID).catch(() => null);
@@ -113,16 +127,14 @@ module.exports = async (client) => {
                 second: '2-digit'
             });
 
-            const titulo = "✅ Bot está online!";
-            const descricao =
-                `O bot foi iniciado com sucesso e está pronto para uso.\n\n` +
-                `🕒 **Hora:** ${agora}\n` +
-                `🌐 **Site:** https://jordan-shop-bot-site.vercel.app/\n\n` +
-                `🔄 **Motivo:** Reinício ou deploy manual.`;
-
             const embedLog = new EmbedBuilder()
-                .setTitle(titulo)
-                .setDescription(descricao)
+                .setTitle("✅ Bot está online!")
+                .setDescription(
+                    `O bot foi iniciado com sucesso e está pronto para uso.\n\n` +
+                    `🕒 **Hora:** ${agora}\n` +
+                    `🌐 **Site:** https://jordan-shop-bot-site.vercel.app/\n\n` +
+                    `🔄 **Motivo:** Reinício ou deploy manual.`
+                )
                 .setImage("https://i.postimg.cc/YCmc9zyY/sucesso-no-neg-cio-61850034.webp")
                 .setThumbnail(client.user.displayAvatarURL())
                 .setColor("#00ff00")
