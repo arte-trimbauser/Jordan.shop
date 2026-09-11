@@ -333,12 +333,23 @@ module.exports = async function sendTranscript(channel, fechadoPor) {
         const fallbackUrl = sent.attachments.first()?.url || "";
         const linkFinal = verLink || fallbackUrl || "https://discord.com";
 
+        // Extrai quem abriu o ticket (do tópico: "userId|metodo|produto")
+        let abertoPor = "Desconhecido";
+        try {
+            const openerId = (channel.topic || "").split("|")[0];
+            if (/^\d{17,19}$/.test(openerId)) {
+                const u = await channel.client.users.fetch(openerId).catch(() => null);
+                if (u) abertoPor = u.username;
+            }
+        } catch {}
+
         // 5. Embed final com o formato pedido
         const embedFinal = new EmbedBuilder()
             .setTitle("📄 Transcrição Arquivada")
             .setDescription(`🔗 **Ver Online:** [Clique Aqui](${linkFinal})`)
             .addFields(
                 { name: "Canal", value: `\`${channelName}\``, inline: false },
+                { name: "Aberto por", value: `\`${abertoPor}\``, inline: false },
                 { name: "Fechado por", value: `\`${fechadoPor || "Desconhecido"}\``, inline: false }
             )
             .setColor("#8b0000")
