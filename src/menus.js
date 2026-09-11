@@ -62,7 +62,7 @@ STAN MENU 2.2
       { label: "Lifetime", description: "Lifetime: €40,5", value: "stan_lifetime" }
     ],
     ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
-    embedImage: "https://i.postimg.cc/PqJBN0Sy/image.png"
+    embedImage: "https://i.postimg.cc/J4Wn0g7B/stan-menu.png"
   },
   {
     id: "1415057511668514936",
@@ -219,18 +219,18 @@ Lifetime: €22
       { label: "2016 Accounts", description: "€7,85", value: "discord_2016_acc" }
     ],
     ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
-    embedImage: "https://media.discordapp.net/attachments/1413602383296200754/1546877368965275748/image.png?ex=6aa40450&is=6aa2b2d0&hm=bfca0aaaec010b99566a7daf0ab2a164238c8291e70c4454cdfcc0e13233d8a4&=&format=webp&quality=lossless"
+    embedImage: "https://i.postimg.cc/HWtG0P4Q/contas.webp"
   },
-{
-  id: "1413601792138416258",
-  title: "🔥 Contas Steam - FiveM 🔥",
-  embedDesc: `Steam Account: €0.20`,
-  options: [
-    { label: "Steam Account", description: "€0.20", value: "steam_account" }
-  ],
-  ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
-  embedImage: "https://i.postimg.cc/dVwFQHMW/image.png"
-},
+  {
+    id: "1413601792138416258",
+    title: "🔥 Contas Steam - FiveM 🔥",
+    embedDesc: `Steam Account: €0.20`,
+    options: [
+      { label: "Steam Account", description: "€0.20", value: "steam_account" }
+    ],
+    ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
+    embedImage: "https://i.postimg.cc/dVwFQHMW/image.png"
+  },
   {
     id: "1414712954762432623",
     title: "🛡 Spoofer 1 Click 🛡",
@@ -262,7 +262,7 @@ APÓS O ENVIO DA KEY E O RESGATE NÃO SERÁ POSSIVELO REEMBOLSO!`,
       { label: "Lifetime + Mysterium VPN", description: "€20", value: "spoofer1_lifetime_vpn" }
     ],
     ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
-    embedImage: "https://media.discordapp.net/attachments/1414712954762432623/1546878725717491844/image.png?ex=6aa40593&is=6aa2b413&hm=8b1826e62dda5e0ce971d86017141073a1ac97be6d029e99202e0bb862050e3a&=&format=webp&quality=lossless&width=1536&height=864"
+    embedImage: "https://i.postimg.cc/qB2JPLck/sp00fer1.png"
   },
   {
     id: "1429835071199772752",
@@ -296,9 +296,9 @@ APÓS O ENVIO DA KEY E O RESGATE NÃO SERÁ POSSIVELO REEMBOLSO!**`,
       { label: "Lifetime", description: "€25", value: "spooferpermanente_lifetime" }
     ],
     ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
-    embedImage: "https://media.discordapp.net/attachments/1429835071199772752/1546878002288394301/image.png?ex=6aa404e7&is=6aa2b367&hm=4bbb477fde4934aafcb4a3cc6b9b524e3d7f80cd4c7d8b60768f107c1b2d3911&=&format=webp&quality=lossless"
+    embedImage: "https://i.postimg.cc/PJDP9nXd/spoofer.png"
   },
-{
+  {
     id: "1546827325453373450",
     title: "🦈 SHARK GEN 🦈",
     embedDesc: `O Shark Generator é a solução completa para quem busca praticidade, automação e confidencialidade no FiveM.
@@ -316,7 +316,7 @@ O Shark Generator foi desenvolvido para oferecer eficiência, segurança e simpl
       { label: "Mensal", description: "€35", value: "sharkgen_mensal" }
     ],
     ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
-    embedImage: "https://media.discordapp.net/attachments/1546827325453373450/1546877890811928616/image.png?ex=6aa404cc&is=6aa2b34c&hm=a8df9de626e0775dfda896a3cb109020f98e3948c65bed7b728e6362491d4a9f&=&format=webp&quality=lossless&width=1536&height=864"
+    embedImage: "https://i.postimg.cc/ncvX1xSz/fivemgen.png"
   },
   {
     id: "1413602908863205388",
@@ -332,7 +332,7 @@ Essa vpn não é aquela vpn fuleira igual que as outras lojas vendem, aqui realm
       { label: "Mysterium VPN", description: "€7", value: "vpn_mysterium" }
     ],
     ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
-    embedImage: "https://media.discordapp.net/attachments/1413602908863205388/1546877263075614861/image.png?ex=6aa40437&is=6aa2b2b7&hm=8b51ae94c6fff3fff8c8bbf844972f5b590aa30487497ed84da462859f221767&=&format=webp&quality=lossless&width=1280&height=1057"
+    embedImage: "https://i.postimg.cc/02g6mjn1/vpn.png"
   },
   {
     id: "1414922861239337071",
@@ -386,9 +386,9 @@ Essa vpn não é aquela vpn fuleira igual que as outras lojas vendem, aqui realm
     embedImage: "https://i.postimg.cc/nVKWW7Hz/image.png"
   },
   {
-  id: "1546870031780945971",
-  title: "<:Caixa:1522055518275768380> GTA INSTALAVEL",
-  embedDesc: `🌟 Adquira Sua Conta Steam Exclusiva para FiveM!
+    id: "1546870031780945971",
+    title: "<:Caixa:1522055518275768380> GTA INSTALAVEL",
+    embedDesc: `🌟 Adquira Sua Conta Steam Exclusiva para FiveM!
 
 ☀️ Experiência Única: Contas especialmente criadas para o universo FiveM.
 🗳️ Controle Total: Após a entrega, personalize totalmente seus dados.
@@ -403,12 +403,12 @@ Em caso de dúvidas ou problemas, estamos à disposição para ajudar!
 🚫 NÃO É FEITA PARA JOGAR O GTA, SOMENTE PARA INSTALAR E JOGAR O FIVEM!
 
 APÓS A ENTREGA DA CONTA NÃO HÁ MANEIRA DE REEMBOLSAR.`,
-  options: [
-    { label: "GTA Instalável", description: "€3", value: "gta_instalavel" }
-  ],
-  ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
-  embedImage: ""
-},
+    options: [
+      { label: "GTA Instalável", description: "€3", value: "gta_instalavel" }
+    ],
+    ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
+    embedImage: ""
+  },
   {
     id: "1431215916552818709",
     title: "N1TRO B00ST",
