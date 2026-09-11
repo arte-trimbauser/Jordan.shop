@@ -766,8 +766,6 @@ async function handleFormIdeia(interaction) {
 }
 
 async function handleFormAvaliar(interaction) {
-    // Este não usa modal diretamente, mas mostra botões (já tens)
-    // Se quiseres modal, podes adaptar. Mas o código atual já está correto.
     const embed = new EmbedBuilder()
         .setTitle('⭐ Avalia o Jordan Shop Bot')
         .setDescription('Quantas estrelas dás ao nosso serviço (bot)?')
@@ -781,7 +779,6 @@ async function handleFormAvaliar(interaction) {
         new ButtonBuilder().setCustomId('avaliar_5').setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary)
     );
 
-    // NÃO USAR deferReply() antes disto
     await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
 }
 
@@ -803,6 +800,18 @@ async function handleAvaliacaoEstrelas(interaction, estrelas) {
 
 async function handleModalSubmit(interaction) {
     const { customId, fields, user } = interaction;
+
+    // ===== GUARDA: só tratamos os NOSSOS modais =====
+    const ehModalDoSistema =
+        customId === 'modal_bug' ||
+        customId === 'modal_ideia' ||
+        customId.startsWith('modal_avaliacao_');
+
+    if (!ehModalDoSistema) {
+        return; // deixa o interactionCreate.js tratar (ex.: modal_venda_fechamento)
+    }
+    // =================================================
+
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const logChannel = await interaction.guild.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
 
@@ -822,6 +831,7 @@ async function handleModalSubmit(interaction) {
             await logChannel.send({ embeds: [embed] });
         }
         await interaction.editReply({ content: '✅ Bug reportado com sucesso! Obrigado.' });
+
     } else if (customId === 'modal_ideia') {
         const ideia = fields.getTextInputValue('descricao_ideia');
         if (logChannel) {
@@ -836,6 +846,7 @@ async function handleModalSubmit(interaction) {
             await logChannel.send({ embeds: [embed] });
         }
         await interaction.editReply({ content: '💡 Obrigado pela tua sugestão!' });
+
     } else if (customId.startsWith('modal_avaliacao_')) {
         const estrelas = customId.split('_')[2];
         const motivo = fields.getTextInputValue('motivo_avaliacao') || 'Sem comentário';
@@ -906,12 +917,20 @@ async function handleSistemaInteraction(interaction, client) {
         }
     }
     if (interaction.isModalSubmit()) {
-        await handleModalSubmit(interaction);
-        return true;
+        const id = interaction.customId;
+        const ehModalDoSistema =
+            id === 'modal_bug' ||
+            id === 'modal_ideia' ||
+            id.startsWith('modal_avaliacao_');
+
+        if (ehModalDoSistema) {
+            await handleModalSubmit(interaction);
+            return true;
+        }
+        // Modais desconhecidos (ex.: modal_venda_fechamento) seguem para o interactionCreate.js
     }
     return false;
 }
-
 // ============================================================================
 // 14. INICIALIZAÇÕES
 // ============================================================================
