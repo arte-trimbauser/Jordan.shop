@@ -32,10 +32,10 @@ Lifetime: €63
     ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
     embedImage: "https://i.postimg.cc/htfrmgqR/image.png"
   },
-  {
-    id: "1415056008845332550",
-    title: "🦍 Stan Menu 🦍",
-    embedDesc: `
+{
+  id: "1415056008845332550",
+  title: "🦍 Stan Menu 🦍",
+  embedDesc: `
 Diario: €3,5
 Semanal: €6,5
 Mensal: €13
@@ -55,15 +55,16 @@ STAN MENU 2.2
 💣・Grudar No Cavalinho No Player Ou X3.
 💣・Sistema de dar ADV nos carros tecla bind. LotusGroup/Nexus/FusionGroup
 💣・Pulando Whitelist em TODAS cidades, LotusGroup/SantasGroup`,
-    options: [
-      { label: "Diario", description: "Diario: €3,5", value: "stan_diario" },
-      { label: "Semanal", description: "Semanal: €6,5", value: "stan_semanal" },
-      { label: "Mensal", description: "Mensal: €13", value: "stan_mensal" },
-      { label: "Lifetime", description: "Lifetime: €40,5", value: "stan_lifetime" }
-    ],
-    ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
-    embedImage: "https://i.postimg.cc/J4Wn0g7B/stan-menu.png"
-  },
+  options: [
+    { label: "Diario", description: "Diario: €3,5", value: "stan_diario" },
+    { label: "Semanal", description: "Semanal: €6,5", value: "stan_semanal" },
+    { label: "Mensal", description: "Mensal: €13", value: "stan_mensal" },
+    { label: "Lifetime", description: "Lifetime: €40,5", value: "stan_lifetime" }
+  ],
+  ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
+  embedThumbnail: "https://i.postimg.cc/PqJBN0Sy/image.png",
+  embedImage: "https://i.postimg.cc/Pxh3PT74/stan.webp"
+},
   {
     id: "1415057511668514936",
     title: "⭐ Stellar Menu ⭐",
