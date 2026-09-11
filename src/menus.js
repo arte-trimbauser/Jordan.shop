@@ -191,18 +191,35 @@ Lifetime: €22
     title: "💬 Contas Discord - FiveM 💬",
     embedDesc: `
     💬 Contas Discord - FiveM 💬
-    Discord Account 10 Months + Phone Registered: €0.85
-    Discord Account 3 Months + Phone Registered: €0.75
-    Discord Account 30 days + Phone Registered: €0.65
-    Discord Account 2023: €1.00`,
+    Produto    Preço
+    📧 E-Mail Verified    €0,03
+    📧 E-Mail Verified + Phone Verified    €0,06
+    📅 3+ Months Aged E-Mail + Phone Verified    €0,15
+    🗓️ 2023 Accounts    €0,30
+    🗓️ 2021 Accounts    €0,55
+    🗓️ 2020 Accounts    €0,90
+    🚀 1 Month Nitro + 2 Boosts + Phone Verified    €1,25
+    🗓️ 2019 Accounts    €1,90
+    🗓️ 2018 Accounts    €2,45
+    🗓️ 2017 Accounts    €3,65
+    🚀 3 Month Nitro + 2 Boosts + Phone Verified    €3,80
+    🗓️ 2016 Accounts    €7,85`,
     options: [
-      { label: "Discord 10 Meses + Phone", description: "€0.85", value: "discord_10m" },
-      { label: "Discord 3 Meses + Phone", description: "€0.75", value: "discord_3m" },
-      { label: "Discord 30 Dias + Phone", description: "€0.65", value: "discord_30d" },
-      { label: "Discord 2023", description: "€1.00", value: "discord_2023" }
+      { label: "E-Mail Verified", description: "€0,03", value: "discord_email_verified" },
+      { label: "E-Mail + Phone Verified", description: "€0,06", value: "discord_email_phone" },
+      { label: "3+ Months Aged + Phone", description: "€0,15", value: "discord_3m_aged" },
+      { label: "2023 Accounts", description: "€0,30", value: "discord_2023_acc" },
+      { label: "2021 Accounts", description: "€0,55", value: "discord_2021_acc" },
+      { label: "2020 Accounts", description: "€0,90", value: "discord_2020_acc" },
+      { label: "1 Month Nitro + 2 Boosts", description: "€1,25", value: "discord_nitro_1m" },
+      { label: "2019 Accounts", description: "€1,90", value: "discord_2019_acc" },
+      { label: "2018 Accounts", description: "€2,45", value: "discord_2018_acc" },
+      { label: "2017 Accounts", description: "€3,65", value: "discord_2017_acc" },
+      { label: "3 Month Nitro + 2 Boosts", description: "€3,80", value: "discord_nitro_3m" },
+      { label: "2016 Accounts", description: "€7,85", value: "discord_2016_acc" }
     ],
     ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
-    embedImage: "https://i.postimg.cc/fbWMCHBd/imagem-2025-12-07-002708325.png"
+    embedImage: "https://media.discordapp.net/attachments/1413602383296200754/1546877368965275748/image.png?ex=6aa40450&is=6aa2b2d0&hm=bfca0aaaec010b99566a7daf0ab2a164238c8291e70c4454cdfcc0e13233d8a4&=&format=webp&quality=lossless"
   },
   {
     id: "1413601792138416258",
@@ -221,21 +238,35 @@ Lifetime: €22
   {
     id: "1414712954762432623",
     title: "🛡 Spoofer 1 Click 🛡",
-    embedDesc: `Diario: €2
-Semanal: €5
-Mensal: €7
-Lifetime: €25
+    embedDesc: `Diario: €5
+Semanal: €7
+Mensal: €9
+3 Meses: €17
+Lifetime + Mysterium VPN: €20
+
 ・Remove ban Global/HWID.
 ・Remove o banimento com 1 CLICK
-・Suporte em call (Sem taxa).
-・Preço Justo e Acessível.`,
+・Suporte em call (Possui taxa).
+・Preço Justo e Acessível.
+
+INF Sp00fer
+𝗦𝗲𝗺 𝗱𝗮𝗻𝗶𝗳𝗶𝗰𝗮𝗿 𝗼 𝘀𝗲𝘂 𝗰𝗼𝗺𝗽𝘂𝘁𝗮𝗱𝗼𝗿
+𝗦𝗲𝗺 𝗲𝘅𝗰𝗹𝘂𝘀𝗮̃𝗼 𝗱𝗲 𝗮𝗿𝗾𝘂𝗶𝘃𝗼𝘀 𝗶𝗻𝗱𝗲𝘀𝗲𝗷𝗮𝗱𝗼𝘀
+𝗦𝗶𝗺𝗽𝗹𝗲𝘀𝗺𝗲𝗻𝘁𝗲 𝗦𝗣𝟬𝟬𝗙𝗔𝗥 𝗘 𝗣𝗥𝗢𝗡𝗧𝗢
+𝗦𝗲𝗺 𝗲𝗿𝗿𝗼𝘀
+𝗡𝗮̃𝗼 𝗰𝗮𝘂𝘀𝗮 𝗯𝘂𝗴𝘀 𝗻𝗼 𝘀𝗲𝘂 𝗣𝗖
+𝗜𝗻𝗱𝗶𝘀𝗰𝘂𝘁𝗶𝘃𝗲𝗹𝗺𝗲𝗻𝘁𝗲 𝗼 𝗺𝗲𝗹𝗵𝗼𝗿 𝗱𝗶𝘀𝗽𝗼𝗻𝗶́𝘃𝗲𝗹
+
+APÓS O ENVIO DA KEY E O RESGATE NÃO SERÁ POSSIVELO REEMBOLSO!`,
     options: [
-      { label: "Diario", description: "€2", value: "spoofer1_diario" },
-      { label: "Semanal", description: "€5", value: "spoofer1_semanal" },
-      { label: "Mensal", description: "€7", value: "spoofer1_mensal" },
-      { label: "Lifetime", description: "€25", value: "spoofer1_lifetime" }
+      { label: "Diario", description: "€5", value: "spoofer1_diario" },
+      { label: "Semanal", description: "€7", value: "spoofer1_semanal" },
+      { label: "Mensal", description: "€9", value: "spoofer1_mensal" },
+      { label: "3 Meses", description: "€17", value: "spoofer1_3meses" },
+      { label: "Lifetime + Mysterium VPN", description: "€20", value: "spoofer1_lifetime_vpn" }
     ],
-    ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`
+    ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
+    embedImage: "https://media.discordapp.net/attachments/1414712954762432623/1546878725717491844/image.png?ex=6aa40593&is=6aa2b413&hm=8b1826e62dda5e0ce971d86017141073a1ac97be6d029e99202e0bb862050e3a&=&format=webp&quality=lossless&width=1536&height=864"
   },
   {
     id: "1429835071199772752",
@@ -268,21 +299,44 @@ APÓS O ENVIO DA KEY E O RESGATE NÃO SERÁ POSSIVELO REEMBOLSO!**`,
       { label: "Mensal", description: "€15", value: "spooferpermanente_mensal" },
       { label: "Lifetime", description: "€25", value: "spooferpermanente_lifetime" }
     ],
-    ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`
+    ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
+    embedImage: "https://media.discordapp.net/attachments/1429835071199772752/1546878002288394301/image.png?ex=6aa404e7&is=6aa2b367&hm=4bbb477fde4934aafcb4a3cc6b9b524e3d7f80cd4c7d8b60768f107c1b2d3911&=&format=webp&quality=lossless"
+  },
+  {
+    id: "1546827325453373450",
+    title: "🦈 SHARK GEN 🦈",
+    embedDesc: `O Shark Generator é a solução completa para quem busca praticidade, automação e confidencialidade no FiveM.
+
+Com ele, você gera Rockstar de forma ilimitada e totalmente automática, sem precisar ficar inserindo e-mails, senhas ou configurando spoofers manualmente. Todo o processo é feito pelo próprio sistema, de forma rápida e segura.
+
+🌊 Gera Rockstar, Steam & Discord
+🌊 Sistema 100% automático
+🌊 Remove banimentos Global/HWID
+🌊 Cleaner avançado, que remove banimentos de anti-spoof (FiveGuard, WaveShield, Reaper e Electron)
+
+O Shark Generator foi desenvolvido para oferecer eficiência, segurança e simplicidade, tudo em uma única ferramenta.`,
+    options: [
+      { label: "Semanal", description: "€25", value: "sharkgen_semanal" },
+      { label: "Mensal", description: "€35", value: "sharkgen_mensal" }
+    ],
+    ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
+    embedImage: "https://media.discordapp.net/attachments/1546827325453373450/1546877890811928616/image.png?ex=6aa404cc&is=6aa2b34c&hm=a8df9de626e0775dfda896a3cb109020f98e3948c65bed7b728e6362491d4a9f&=&format=webp&quality=lossless&width=1536&height=864"
   },
   {
     id: "1413602908863205388",
-    title: "🔒 VPN Service 🔒",
-    embedDesc: `Cyber Ghost VPN (Bypass Fiveguard): €3.00
-Tunnel Bear VPN: €4.00
-IPVanish VPN: €1.00`,
+    title: "🔒 VPN RESIDENCIAL MYSTERIUM 🔒",
+    embedDesc: `Acabou com aquela desculpa que seu roteador não é mais dinâmico! Agora com a mysterium mesmo seu ip sendo fixo você consegue logar em qualquer servidor, porque o IP da vpn é 100% residencial ou seja mesmo seu roteador sendo fixo você consegue jogar tranquilamente e remover os bans dos servidores!
+
+a vpn ela é de 15 a 30 dias com dias corridos então aproveite já sua mysterium para fazer aquele seu rp tranquilamente
+
+Essa vpn não é aquela vpn fuleira igual que as outras lojas vendem, aqui realmente é funcional, suporte de instalação totalmente gratuito por anydesk!
+
+€7`,
     options: [
-      { label: "Cyber Ghost (Bypass)", description: "€3.00", value: "vpn_cyberghost" },
-      { label: "Tunnel Bear", description: "€4.00", value: "vpn_tunnelbear" },
-      { label: "IPVanish", description: "€1.00", value: "vpn_ipvanish" }
+      { label: "Mysterium VPN", description: "€7", value: "vpn_mysterium" }
     ],
     ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
-    embedImage: "https://i.postimg.cc/jdr0vgjt/image.png"
+    embedImage: "https://media.discordapp.net/attachments/1413602908863205388/1546877263075614861/image.png?ex=6aa40437&is=6aa2b2b7&hm=8b51ae94c6fff3fff8c8bbf844972f5b590aa30487497ed84da462859f221767&=&format=webp&quality=lossless&width=1280&height=1057"
   },
   {
     id: "1414922861239337071",
