@@ -633,7 +633,6 @@ async function verificarInatividadeTicket(channel, client) {
 // 11. ROTA DE SUSPENSÃO E REATIVAÇÃO (PARA CRON JOB)
 // ============================================================================
 function setupSuspendRoute(app) {
-    // Rota para suspender
     app.post('/api/suspend', async (req, res) => {
         const token = req.query.token;
         const SECRET_TOKEN = process.env.SUSPEND_TOKEN || 'mudar_esta_chave';
@@ -665,7 +664,6 @@ function setupSuspendRoute(app) {
         }
     });
 
-    // Rota para reativar (resume)
     app.post('/api/resume', async (req, res) => {
         const token = req.query.token;
         const SECRET_TOKEN = process.env.SUSPEND_TOKEN || 'mudar_esta_chave';
@@ -779,11 +777,12 @@ async function handleFormAvaliar(interaction) {
         new ButtonBuilder().setCustomId('avaliar_5').setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary)
     );
 
+    // NÃO USAR deferReply() antes disto
     await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
 }
 
 async function handleAvaliacaoEstrelas(interaction, estrelas) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    // ✅ CORRIGIDO: SEM deferReply — showModal tem de ser a PRIMEIRA resposta à interação
     const modal = new ModalBuilder()
         .setCustomId(`modal_avaliacao_${estrelas}`)
         .setTitle(`⭐ Avaliação: ${estrelas} Estrelas`);
@@ -801,14 +800,16 @@ async function handleAvaliacaoEstrelas(interaction, estrelas) {
 async function handleModalSubmit(interaction) {
     const { customId, fields, user } = interaction;
 
-    // ===== GUARDA: só tratamos os NOSSOS modais =====
+    // ✅ CORRIGIDO: GUARDA — só tratamos os NOSSOS modais.
+    // Outros modais (ex.: modal_venda_fechamento) têm de seguir para o interactionCreate.js,
+    // senão ficam "a pensar" para sempre.
     const ehModalDoSistema =
         customId === 'modal_bug' ||
         customId === 'modal_ideia' ||
         customId.startsWith('modal_avaliacao_');
 
     if (!ehModalDoSistema) {
-        return; // deixa o interactionCreate.js tratar (ex.: modal_venda_fechamento)
+        return; // deixa o interactionCreate.js tratar
     }
     // =================================================
 
@@ -831,7 +832,6 @@ async function handleModalSubmit(interaction) {
             await logChannel.send({ embeds: [embed] });
         }
         await interaction.editReply({ content: '✅ Bug reportado com sucesso! Obrigado.' });
-
     } else if (customId === 'modal_ideia') {
         const ideia = fields.getTextInputValue('descricao_ideia');
         if (logChannel) {
@@ -846,7 +846,6 @@ async function handleModalSubmit(interaction) {
             await logChannel.send({ embeds: [embed] });
         }
         await interaction.editReply({ content: '💡 Obrigado pela tua sugestão!' });
-
     } else if (customId.startsWith('modal_avaliacao_')) {
         const estrelas = customId.split('_')[2];
         const motivo = fields.getTextInputValue('motivo_avaliacao') || 'Sem comentário';
@@ -917,6 +916,8 @@ async function handleSistemaInteraction(interaction, client) {
         }
     }
     if (interaction.isModalSubmit()) {
+        // ✅ CORRIGIDO: só interceta os modais do sistema.
+        // Outros modais (ex.: modal_venda_fechamento) seguem para o interactionCreate.js
         const id = interaction.customId;
         const ehModalDoSistema =
             id === 'modal_bug' ||
@@ -927,10 +928,11 @@ async function handleSistemaInteraction(interaction, client) {
             await handleModalSubmit(interaction);
             return true;
         }
-        // Modais desconhecidos (ex.: modal_venda_fechamento) seguem para o interactionCreate.js
+        // Modais desconhecidos seguem para o interactionCreate.js
     }
     return false;
 }
+
 // ============================================================================
 // 14. INICIALIZAÇÕES
 // ============================================================================
