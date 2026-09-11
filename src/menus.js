@@ -221,20 +221,16 @@ Lifetime: €22
     ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
     embedImage: "https://media.discordapp.net/attachments/1413602383296200754/1546877368965275748/image.png?ex=6aa40450&is=6aa2b2d0&hm=bfca0aaaec010b99566a7daf0ab2a164238c8291e70c4454cdfcc0e13233d8a4&=&format=webp&quality=lossless"
   },
-  {
-    id: "1413601792138416258",
-    title: "🔥 Contas Steam - FiveM 🔥",
-    embedDesc: `Steam Account Aged: €0.25
-    Steam Account 100h FiveM: €2.00
-    Steam Random Keys: €0.50`,
-    options: [
-      { label: "Steam Aged", description: "€0.25", value: "steam_aged" },
-      { label: "Steam 100h FiveM", description: "€2.00", value: "steam_100h" },
-      { label: "Steam Random Keys", description: "€0.50", value: "steam_random" }
-    ],
-    ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
-    embedImage: "https://i.postimg.cc/dVwFQHMW/image.png"
-  },
+{
+  id: "1413601792138416258",
+  title: "🔥 Contas Steam - FiveM 🔥",
+  embedDesc: `Steam Account: €0.20`,
+  options: [
+    { label: "Steam Account", description: "€0.20", value: "steam_account" }
+  ],
+  ticketMessage: (tipo) => `obrigado(a) por criar um ticket, em breve algum staff te ajudara`,
+  embedImage: "https://i.postimg.cc/dVwFQHMW/image.png"
+},
   {
     id: "1414712954762432623",
     title: "🛡 Spoofer 1 Click 🛡",
