@@ -32,12 +32,13 @@ module.exports = async (client) => {
     try {
         const adicionar = require("../commands/adicionar");
         const carrinho = require("../commands/carrinho");
-        const commands = [
-            adicionar.data.toJSON(),
-            carrinho.data.toJSON(),
-            comandoVerificacao.toJSON()
-        ];
-
+const idcanais = require("../commands/idcanais");
+const commands = [
+    adicionar.data.toJSON(),
+    carrinho.data.toJSON(),
+    comandoVerificacao.toJSON(),
+    idcanais.data.toJSON()
+];
         await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
         await rest.put(
             Routes.applicationGuildCommands(client.user.id, "1393629457599828040"),
