@@ -175,7 +175,7 @@ app.post('/api/enviar-embed', async (req, res) => {
 });
 
 // ============================================================
-// ⭐ API: /api/menus/reenviar — apaga mensagem antiga e reenvia
+// API: /api/menus/reenviar — apaga mensagem antiga e reenvia
 // ============================================================
 app.post('/api/menus/reenviar', async (req, res) => {
     try {
@@ -194,8 +194,7 @@ app.post('/api/menus/reenviar', async (req, res) => {
         const msgs = await canal.messages.fetch({ limit: 30 }).catch(() => null);
         if (msgs) {
             for (const m of msgs.values()) {
-                if (m.author.id === client.user.id &&
-                    m.embeds[0]?.title === menu.title) {
+                if (m.author.id === client.user.id && m.embeds[0]?.title === menu.title) {
                     await m.delete().catch(() => {});
                 }
             }
@@ -207,7 +206,7 @@ app.post('/api/menus/reenviar', async (req, res) => {
             .setDescription(menu.embedDesc || 'Sem descrição')
             .setColor(menu.color || '#8b0000');
 
-        if (menu.embedImage && menu.embedImage.startsWith('http')) embed.setImage(menu.embedImage);
+        if (menu.embedImage && menu.embedImage.startsWith('http'))     embed.setImage(menu.embedImage);
         if (menu.embedThumbnail && menu.embedThumbnail.startsWith('http')) embed.setThumbnail(menu.embedThumbnail);
 
         // 3. Reconstrói o select
