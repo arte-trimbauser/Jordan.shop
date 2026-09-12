@@ -173,7 +173,7 @@ async function handleChamarCommand(interaction, client) {
     
     setImmediate(async () => {
         try {
-            const logId = process.env.LOG_CHANNEL_ID || "1437076921627181228";
+            const logId = "1521916593402286191";
             const logChannel = await guild.channels.fetch(logId);
             if (logChannel) {
                 const embedLog = new EmbedBuilder()
