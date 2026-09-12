@@ -2,7 +2,7 @@
 const { EmbedBuilder } = require("discord.js");
 
 // Canal onde os logs de tickets vão ser enviados
-const CANAL_LOGS_TICKETS = "1437076921627181228";
+const CANAL_LOGS_TICKETS = "1521916593402286191";
 
 // ============ IDs A IGNORAR NAS ESTATÍSTICAS ============
 // Tickets abertos por estes IDs NÃO contam para:
