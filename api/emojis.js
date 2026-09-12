@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
             id: e.id,
             name: e.name,
             animated: e.animated,
-            url: e.imageURL({ size: 48, extension: e.animated ? 'gif' : 'png' }),
+            url: e.imageURL({ size: 64, extension: e.animated ? 'gif' : 'png' }),
             tag: `<${e.animated ? 'a' : ''}:${e.name}:${e.id}>`
         }));
 
