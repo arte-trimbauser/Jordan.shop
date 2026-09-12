@@ -711,32 +711,36 @@ module.exports = (client) => {
             // BOTÃO "SIM, HOUVE VENDA" – ABRIR MODAL
             // ============================================================
             if (interaction.isButton() && cid === "venda_sim") {
-                const topic = channel.topic || '';
-                const [userId, , produtoDoTopico] = topic.split('|');
-                const produtoPreenchido = produtoDoTopico ? produtoDoTopico.replace(/_/g, ' ') : 'Não especificado';
+        const topic = channel.topic || '';
+        const [userId, , produtoDoTopico] = topic.split('|');
+        const produtoPreenchido = produtoDoTopico ? produtoDoTopico.replace(/_/g, ' ') : 'Não especificado';
 
-                let compradorPreenchido = '';
-                if (userId) {
-                    try {
-                        const userTicket = await client.users.fetch(userId);
-                        compradorPreenchido = `<@${userId}>/${userTicket.username}`;
-                    } catch {
-                        compradorPreenchido = 'Utilizador desconhecido';
-                    }
-                }
+            let compradorPreenchido = '';
+            if (userId) {
+            try {
+        const userTicket = await client.users.fetch(userId);
+            compradorPreenchido = `<@${userId}>/${userTicket.username}`;
+        } catch {
+            compradorPreenchido = 'Utilizador desconhecido';
+        }
+    }
 
-                const hoje = new Date();
-                const dia = String(hoje.getDate()).padStart(2, '0');
-                const mes = String(hoje.getMonth() + 1).padStart(2, '0');
-                const ano = hoje.getFullYear();
-                const dataHoje = `${dia}-${mes}-${ano}`;
+    // ✅ NOVO: data em hora de Portugal
+        const formatadorData = new Intl.DateTimeFormat('pt-PT', {
+        timeZone: 'Europe/Lisbon',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+        const dataHoje = formatadorData.format(new Date()).replace(/\//g, '-');
 
-                // ✅ Duração auto-preenchida
-                const duracaoAuto = duracaoDoProduto(produtoDoTopico || "");
+    // ✅ Duração auto-preenchida
+        const duracaoAuto = duracaoDoProduto(produtoDoTopico || "");
 
-                const modal = new ModalBuilder()
-                    .setCustomId('modal_venda_fechamento')
-                    .setTitle('📝 Registar Venda');
+        const modal = new ModalBuilder()
+        .setCustomId('modal_venda_fechamento')
+        .setTitle('📝 Registar Venda');
+
 
                 const compradorInput = new TextInputBuilder()
                     .setCustomId('venda_comprador').setLabel('Nome do Comprador')
