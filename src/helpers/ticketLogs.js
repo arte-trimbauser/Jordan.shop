@@ -4,6 +4,15 @@ const { EmbedBuilder } = require("discord.js");
 // Canal onde os logs de tickets vão ser enviados
 const CANAL_LOGS_TICKETS = "1437076921627181228";
 
+// ============ IDs A IGNORAR NAS ESTATÍSTICAS ============
+// Tickets abertos por estes IDs NÃO contam para:
+//   - Total de "Abertos"
+//   - Contagem por produto
+// (Continuam a ser logados no canal, só não inflacionam as stats)
+const IGNORAR_ABERTOS_POR = [
+    "996454465555136675", // Jordan (tu)
+];
+
 // ============ ESTATÍSTICAS EM MEMÓRIA ============
 const stats = {
     totalAbertos: 0,
@@ -29,9 +38,13 @@ async function getCanal(client) {
 
 // ===================== ABERTURA =====================
 async function logTicketAberto(client, { canal, user, produto, metodo }) {
-    stats.totalAbertos++;
-    const chaveProd = String(produto || "Desconhecido");
-    stats.produtos.set(chaveProd, (stats.produtos.get(chaveProd) || 0) + 1);
+    const ignorarStats = IGNORAR_ABERTOS_POR.includes(user.id);
+
+    if (!ignorarStats) {
+        stats.totalAbertos++;
+        const chaveProd = String(produto || "Desconhecido");
+        stats.produtos.set(chaveProd, (stats.produtos.get(chaveProd) || 0) + 1);
+    }
 
     const canalLogs = await getCanal(client);
     if (!canalLogs) return;
@@ -42,12 +55,17 @@ async function logTicketAberto(client, { canal, user, produto, metodo }) {
         .setColor("#3498db")
         .setDescription(
             `**👤 Aberto por:** ${user.username}\n` +
-            `**📦 Produto:** \`${chaveProd}\`\n` +
+            `**📦 Produto:** \`${produto}\`\n` +
             `**💳 Método:** ${metodo}\n` +
             `**📁 Canal:** <#${canal.id}>\n` +
             `**🕐 Data:** <t:${Math.floor(Date.now() / 1000)}:F>`
+            + (ignorarStats ? `\n\n⚠️ *Ticket de teste/staff — não conta nas estatísticas.*` : "")
         )
-        .setFooter({ text: `📊 Total de tickets abertos: ${stats.totalAbertos}` })
+        .setFooter({
+            text: ignorarStats
+                ? "📊 Ticket ignorado nas estatísticas"
+                : `📊 Total de tickets abertos: ${stats.totalAbertos}`
+        })
         .setTimestamp();
 
     await canalLogs.send({ embeds: [embed] }).catch(() => {});
@@ -145,7 +163,9 @@ async function mostrarEstatisticas(client) {
             { name: "🏆 Top Staff (assumidos / fechados / vendas)", value: topStaff, inline: false },
             { name: "🔥 Produtos Mais Pedidos", value: topProdutos, inline: false }
         )
-        .setFooter({ text: "Estatísticas desde o último reinício do bot" })
+        .setFooter({
+            text: `Estatísticas desde o último reinício • ${IGNORAR_ABERTOS_POR.length} ID(s) ignorado(s) na abertura`
+        })
         .setTimestamp();
 
     await canalLogs.send({ embeds: [embed] });
@@ -157,5 +177,6 @@ module.exports = {
     logTicketFechado,
     mostrarEstatisticas,
     stats,
-    CANAL_LOGS_TICKETS
+    CANAL_LOGS_TICKETS,
+    IGNORAR_ABERTOS_POR
 };
