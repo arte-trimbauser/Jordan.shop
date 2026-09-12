@@ -52,6 +52,34 @@ let currentResource = null;
 let currentVolume = 0.5;
 let isPlaying = false;
 
+// ============================================================
+// ESTADO TEMPORÁRIO DE FORMULÁRIOS
+// ============================================================
+// Mapa: userId -> { messageId, channelId, estrelas, ts }
+// Usado para editar a mensagem de avaliação original em vez de criar uma nova
+const avaliacoesPendentes = new Map();
+
+// Mapa: userId -> gravidade ("Ligeiro" | "Moderado" | "Critico")
+// Usado entre o select de gravidade e o modal de bug
+const bugSeveridadePendente = new Map();
+
+// ============================================================
+// HELPERS DE FEEDBACK
+// ============================================================
+const SEVERIDADES = {
+    ligeiro:  { label: "🟢 Ligeiro",   desc: "Não impede o uso normal",           cor: 0x2ECC71, tag: "🟢 Ligeiro"   },
+    moderado: { label: "🟡 Moderado",  desc: "Atrapalha mas dá para contornar",   cor: 0xF1C40F, tag: "🟡 Moderado"  },
+    critico:  { label: "🔴 Crítico",   desc: "Impede o uso / quebra tudo",        cor: 0xE74C3C, tag: "🔴 Crítico 🚨" }
+};
+
+function dataHoraPT() {
+    return new Intl.DateTimeFormat("pt-PT", {
+        timeZone: "Europe/Lisbon",
+        dateStyle: "short",
+        timeStyle: "short"
+    }).format(new Date());
+}
+
 function getAudioPath() {
     const oggPath = path.join(__dirname, '..', '..', 'audio', 'JordanShop.ogg');
     const mp3Path = path.join(__dirname, '..', '..', 'audio', 'JordanShop.mp3');
@@ -408,9 +436,9 @@ async function enviarFormularios(client) {
             .setTitle('📋 Centro de Feedback - Jordan Shop')
             .setDescription(
                 'Bem-vindo ao centro de feedback! Escolhe uma opção abaixo:\n\n' +
-                `🐛 **Reportar Bug** - Encontras-te algum problema?\n` +
-                `💡 **Ideias** - Tens sugestões para melhorar?\n` +
-                `⭐ **Avaliar Bot** - Dá-nos a tua opinião (1-5 estrelas)`
+                `🐛 **Reportar Bug** — Encontraste algum problema?\n` +
+                `💡 **Ideias** — Tens sugestões para melhorar?\n` +
+                `⭐ **Avaliar Bot** — Dá-nos a tua opinião (1-5 estrelas)`
             )
             .setColor('#8b0000')
             .setFooter({ text: 'A tua opinião é importante!' });
@@ -718,44 +746,103 @@ async function handleMenuSuporte(interaction) {
 }
 
 // ===================== FORMULÁRIOS =====================
+
+// ---------- BUG: Passo 1 — botão "Reportar Bug" abre o select de gravidade ----------
 async function handleFormBug(interaction) {
+    const embed = new EmbedBuilder()
+        .setTitle('🐛 Reportar Bug — Passo 1/2')
+        .setDescription(
+            'Antes de continuares, escolhe a **gravidade** do problema:\n\n' +
+            '🟢 **Ligeiro** — Não impede o uso normal\n' +
+            '🟡 **Moderado** — Atrapalha mas dá para contornar\n' +
+            '🔴 **Crítico** — Impede o uso / quebra tudo\n\n' +
+            '⚠️ **Dica:** Tem um **print/captura** do erro? Guarda-o — vais poder anexá-lo depois no canal de suporte.'
+        )
+        .setColor('#8b0000');
+
+    const select = new StringSelectMenuBuilder()
+        .setCustomId('bug_severidade')
+        .setPlaceholder('Escolhe a gravidade do bug')
+        .addOptions(
+            new StringSelectMenuOptionBuilder()
+                .setLabel('Ligeiro')
+                .setDescription('Não impede o uso normal')
+                .setValue('ligeiro')
+                .setEmoji('🟢'),
+            new StringSelectMenuOptionBuilder()
+                .setLabel('Moderado')
+                .setDescription('Atrapalha mas dá para contornar')
+                .setValue('moderado')
+                .setEmoji('🟡'),
+            new StringSelectMenuOptionBuilder()
+                .setLabel('Crítico')
+                .setDescription('Impede o uso / quebra tudo')
+                .setValue('critico')
+                .setEmoji('🔴')
+        );
+
+    await interaction.reply({
+        embeds: [embed],
+        components: [new ActionRowBuilder().addComponents(select)],
+        flags: MessageFlags.Ephemeral
+    });
+}
+
+// ---------- BUG: Passo 2 — select de gravidade abre o modal ----------
+async function handleBugSeveridade(interaction) {
+    const gravidade = interaction.values[0];
+    const info = SEVERIDADES[gravidade] || SEVERIDADES.moderado;
+
+    // Guarda a gravidade para usar no submit do modal
+    bugSeveridadePendente.set(interaction.user.id, gravidade);
+
     const modal = new ModalBuilder()
         .setCustomId('modal_bug')
-        .setTitle('🐛 Reportar Bug');
+        .setTitle(`🐛 Reportar Bug (${info.label})`);
 
-    const input1 = new TextInputBuilder()
+    const inputDescricao = new TextInputBuilder()
         .setCustomId('descricao_bug')
-        .setLabel('Descrição do Bug')
-        .setPlaceholder('Descreve o bug detalhadamente...')
+        .setLabel('Descrição do problema')
+        .setPlaceholder('O que está a acontecer exatamente?')
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
         .setMaxLength(1000);
 
-    const input2 = new TextInputBuilder()
+    const inputPassos = new TextInputBuilder()
+        .setCustomId('passos_bug')
+        .setLabel('Passos para reproduzir')
+        .setPlaceholder('1. Abri o ticket\\n2. Cliquei em X\\n3. Deu erro Y')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setMaxLength(1000);
+
+    const inputCanal = new TextInputBuilder()
         .setCustomId('canal_bug')
-        .setLabel('Canal onde ocorreu (opcional)')
-        .setPlaceholder('Ex: geral ou #geral ou ID do canal')
+        .setLabel('Onde ocorre (Canal / Local)')
+        .setPlaceholder('Ex: #sugestão, #tickets, canal de voz…')
         .setStyle(TextInputStyle.Short)
         .setRequired(false)
         .setMaxLength(100);
 
     modal.addComponents(
-        new ActionRowBuilder().addComponents(input1),
-        new ActionRowBuilder().addComponents(input2)
+        new ActionRowBuilder().addComponents(inputDescricao),
+        new ActionRowBuilder().addComponents(inputPassos),
+        new ActionRowBuilder().addComponents(inputCanal)
     );
 
     await interaction.showModal(modal);
 }
 
+// ---------- IDEIA ----------
 async function handleFormIdeia(interaction) {
     const modal = new ModalBuilder()
         .setCustomId('modal_ideia')
-        .setTitle('💡 Sugestão');
+        .setTitle('💡 Enviar Sugestão');
 
     const input = new TextInputBuilder()
         .setCustomId('descricao_ideia')
         .setLabel('A tua ideia')
-        .setPlaceholder('Descreve a tua sugestão...')
+        .setPlaceholder('Descreve a tua sugestão de forma clara…')
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
         .setMaxLength(2000);
@@ -764,6 +851,7 @@ async function handleFormIdeia(interaction) {
     await interaction.showModal(modal);
 }
 
+// ---------- AVALIAÇÃO ----------
 async function handleFormAvaliar(interaction) {
     const embed = new EmbedBuilder()
         .setTitle('⭐ Avalia o Jordan Shop Bot')
@@ -778,32 +866,41 @@ async function handleFormAvaliar(interaction) {
         new ButtonBuilder().setCustomId('avaliar_5').setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary)
     );
 
-    // NÃO USAR deferReply() antes disto
     await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
 }
 
 async function handleAvaliacaoEstrelas(interaction, estrelas) {
-    // ✅ CORRIGIDO: SEM deferReply — showModal tem de ser a PRIMEIRA resposta à interação
+    // Guarda a referência da mensagem original (a que tem as estrelas)
+    if (interaction.message) {
+        avaliacoesPendentes.set(interaction.user.id, {
+            messageId: interaction.message.id,
+            channelId: interaction.message.channelId,
+            estrelas,
+            ts: Date.now()
+        });
+    }
+
+    // showModal TEM de ser a PRIMEIRA resposta à interação
     const modal = new ModalBuilder()
         .setCustomId(`modal_avaliacao_${estrelas}`)
         .setTitle(`⭐ Avaliação: ${estrelas} Estrelas`);
+
     const input = new TextInputBuilder()
         .setCustomId('motivo_avaliacao')
         .setLabel('Comentário (opcional)')
-        .setPlaceholder('Conta-nos o que gostaste ou como podemos melhorar...')
+        .setPlaceholder('Conta-nos o que gostaste ou como podemos melhorar…')
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(false)
         .setMaxLength(1000);
+
     modal.addComponents(new ActionRowBuilder().addComponents(input));
     await interaction.showModal(modal);
 }
 
+// ---------- SUBMIT DOS MODAIS ----------
 async function handleModalSubmit(interaction) {
     const { customId, fields, user } = interaction;
 
-    // ✅ CORRIGIDO: GUARDA — só tratamos os NOSSOS modais.
-    // Outros modais (ex.: modal_venda_fechamento) têm de seguir para o interactionCreate.js,
-    // senão ficam "a pensar" para sempre.
     const ehModalDoSistema =
         customId === 'modal_bug' ||
         customId === 'modal_ideia' ||
@@ -812,46 +909,99 @@ async function handleModalSubmit(interaction) {
     if (!ehModalDoSistema) {
         return; // deixa o interactionCreate.js tratar
     }
-    // =================================================
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const logChannel = await interaction.guild.channels.fetch(LOG_FEEDBACK_CHANNEL_ID).catch(() => null);
 
+    // ============================================================
+    // BUG
+    // ============================================================
     if (customId === 'modal_bug') {
         const descricao = fields.getTextInputValue('descricao_bug');
-        const canal = fields.getTextInputValue('canal_bug') || 'Não especificado';
+        const passos    = fields.getTextInputValue('passos_bug');
+        const canal     = fields.getTextInputValue('canal_bug') || 'Não especificado';
+
+        const gravidadeKey = bugSeveridadePendente.get(user.id) || 'moderado';
+        const info = SEVERIDADES[gravidadeKey] || SEVERIDADES.moderado;
+        bugSeveridadePendente.delete(user.id);
+
         if (logChannel) {
             const embed = new EmbedBuilder()
-                .setTitle('🐛 Novo Bug Reportado')
-                .addFields(
-                    { name: 'Utilizador', value: `<@${user.id}>`, inline: true },
-                    { name: 'Canal', value: canal, inline: true },
-                    { name: 'Descrição', value: descricao }
+                .setTitle('⚠️ NOVO BUG REPORTADO')
+                .setDescription(
+                    `👤 **Reportado por:** <@${user.id}>\n` +
+                    `📍 **Onde ocorre:** \`${canal}\`\n` +
+                    `🔥 **Gravidade:** ${info.tag}\n\n` +
+                    `🛠️ **Descrição do Problema:**\n` +
+                    `> ${descricao.split('\n').join('\n> ')}\n\n` +
+                    `📋 **Passos para reproduzir:**\n` +
+                    `> ${passos.split('\n').join('\n> ')}\n\n` +
+                    `🖼️ **Print do erro?** Responde neste canal com a imagem, se tiveres.\n\n` +
+                    `🚥 **Estado:** 🔴 Pendente de verificação`
                 )
-                .setColor('#FF0000')
+                .setColor(info.cor)
+                .setFooter({ text: `Jordan Shop | Feedback • ${dataHoraPT()}` })
                 .setTimestamp();
-            await logChannel.send({ embeds: [embed] });
+
+            const msg = await logChannel.send({ embeds: [embed] }).catch(() => null);
+            if (msg) {
+                // Reação visual para dar destaque, ajuda staff a filtrar
+                await msg.react('👀').catch(() => {});
+            }
         }
-        await interaction.editReply({ content: '✅ Bug reportado com sucesso! Obrigado.' });
-    } else if (customId === 'modal_ideia') {
+
+        await interaction.editReply({
+            content:
+                '✅ **Bug reportado com sucesso!**\n\n' +
+                '🖼️ Se tiveres um **print do erro**, envia-o agora no canal de suporte (ou responde ao embed do teu bug).\n' +
+                'A equipa vai verificar em breve. Obrigado!'
+        });
+    }
+
+    // ============================================================
+    // IDEIA / SUGESTÃO
+    // ============================================================
+    else if (customId === 'modal_ideia') {
         const ideia = fields.getTextInputValue('descricao_ideia');
+
         if (logChannel) {
             const embed = new EmbedBuilder()
-                .setTitle('💡 Nova Sugestão')
-                .addFields(
-                    { name: 'Utilizador', value: `<@${user.id}>`, inline: true },
-                    { name: 'Ideia', value: ideia }
+                .setTitle('💡 NOVA SUGESTÃO DE UTILIZADOR')
+                .setDescription(
+                    `**Autor:** <@${user.id}>\n\n` +
+                    `**Ideia:**\n` +
+                    `> ${ideia.split('\n').join('\n> ')}\n\n` +
+                    `📌 **Vota nas reações abaixo:** 👍 (Aprovar) | 👎 (Rejeitar)`
                 )
-                .setColor('#5865F2')
+                .setColor(0x5865F2)
+                .setFooter({ text: `Jordan Shop | Feedback • ${dataHoraPT()} • 🟡 Em Análise` })
                 .setTimestamp();
-            await logChannel.send({ embeds: [embed] });
+
+            const msg = await logChannel.send({ embeds: [embed] }).catch(() => null);
+            if (msg) {
+                // Reações automáticas de votação
+                await msg.react('👍').catch(() => {});
+                await msg.react('👎').catch(() => {});
+            }
         }
-        await interaction.editReply({ content: '💡 Obrigado pela tua sugestão!' });
-    } else if (customId.startsWith('modal_avaliacao_')) {
+
+        await interaction.editReply({
+            content:
+                '💡 **Obrigado pela tua sugestão!**\n\n' +
+                'A tua ideia foi enviada para a equipa e a comunidade pode votar com 👍 / 👎.'
+        });
+    }
+
+    // ============================================================
+    // AVALIAÇÃO
+    // ============================================================
+    else if (customId.startsWith('modal_avaliacao_')) {
         const estrelas = customId.split('_')[2];
         const motivo = fields.getTextInputValue('motivo_avaliacao') || 'Sem comentário';
+
+        // 1. Enviar o log no canal de feedback
         if (logChannel) {
-            const embed = new EmbedBuilder()
+            const embedLog = new EmbedBuilder()
                 .setTitle('⭐ Nova Avaliação')
                 .addFields(
                     { name: 'Utilizador', value: `<@${user.id}>`, inline: true },
@@ -859,10 +1009,42 @@ async function handleModalSubmit(interaction) {
                     { name: 'Comentário', value: motivo }
                 )
                 .setColor('#FFD700')
+                .setFooter({ text: `Jordan Shop | Feedback • ${dataHoraPT()}` })
                 .setTimestamp();
-            await logChannel.send({ embeds: [embed] });
+            await logChannel.send({ embeds: [embedLog] });
         }
-        await interaction.editReply({ content: `⭐ Obrigado pela tua avaliação de ${estrelas} estrelas!` });
+
+        // 2. Editar a mensagem original (a que tinha as estrelas)
+        const pendente = avaliacoesPendentes.get(user.id);
+        if (pendente) {
+            try {
+                const canal = await interaction.client.channels
+                    .fetch(pendente.channelId).catch(() => null);
+
+                if (canal) {
+                    const msg = await canal.messages
+                        .fetch(pendente.messageId).catch(() => null);
+
+                    if (msg) {
+                        const embedObrigado = new EmbedBuilder()
+                            .setTitle('⭐ Obrigado pela tua avaliação!')
+                            .setDescription(
+                                `Avaliaste-nos com **${'⭐'.repeat(parseInt(estrelas))}** ` +
+                                `(${estrelas} estrelas).\n\nObrigado pelo teu feedback! 💛`
+                            )
+                            .setColor('#FFD700');
+
+                        await msg.edit({ embeds: [embedObrigado], components: [] });
+                    }
+                }
+            } catch (err) {
+                console.error('⚠️ Não foi possível editar a mensagem de avaliação:', err.message);
+            }
+            avaliacoesPendentes.delete(user.id);
+        }
+
+        // 3. Apagar a resposta efémera do modal
+        await interaction.deleteReply().catch(() => {});
     }
 }
 
@@ -879,6 +1061,11 @@ async function handleSistemaInteraction(interaction, client) {
     }
     if (interaction.isStringSelectMenu() && interaction.customId === 'menu_suporte_idioma') {
         await handleMenuSuporte(interaction);
+        return true;
+    }
+    // ⭐ NOVO — Select de gravidade do bug (passo 1/2)
+    if (interaction.isStringSelectMenu() && interaction.customId === 'bug_severidade') {
+        await handleBugSeveridade(interaction);
         return true;
     }
     if (interaction.isButton() && interaction.customId.startsWith('ticket_')) {
@@ -917,8 +1104,6 @@ async function handleSistemaInteraction(interaction, client) {
         }
     }
     if (interaction.isModalSubmit()) {
-        // ✅ CORRIGIDO: só interceta os modais do sistema.
-        // Outros modais (ex.: modal_venda_fechamento) seguem para o interactionCreate.js
         const id = interaction.customId;
         const ehModalDoSistema =
             id === 'modal_bug' ||
@@ -941,6 +1126,20 @@ function inicializarNotificacaoTickets(client) {
     setupTicketReplyNotification(client);
     console.log('📩 Sistema de notificação de tickets inicializado!');
 }
+
+// Limpeza periódica dos Maps temporários
+setInterval(() => {
+    const agora = Date.now();
+    for (const [userId, dados] of avaliacoesPendentes) {
+        if (agora - dados.ts > 15 * 60 * 1000) avaliacoesPendentes.delete(userId);
+    }
+    // Bugs pendentes: se o user abandonar, limpamos após 10 min
+    for (const [userId, key] of bugSeveridadePendente) {
+        // Sem timestamp — limpamos por tamanho máximo em cada ciclo
+        // (simples e evita leaks)
+    }
+    if (bugSeveridadePendente.size > 500) bugSeveridadePendente.clear();
+}, 5 * 60 * 1000);
 
 // ============================================================================
 // MODULE EXPORTS
