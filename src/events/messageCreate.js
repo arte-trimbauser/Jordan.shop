@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
 const COR_NX = 0x660000;
-const LOGS_CHANNEL_ID = "1437076921627181228";
+const LOGS_CHANNEL_ID = "1521916593402286191";
 const STAFF_IDS = [
     "924344854232834068",
     "996454465555136675",
