@@ -1,15 +1,16 @@
 // src/events/publicarMenus.js
-// Publica cada menu do Supabase no canal cujo ID = menu.id
+// Verifica se cada menu já existe no canal. Se sim, salta. Se não, envia.
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
 const { getMenus } = require("../menus-db");
 
 module.exports = async (client) => {
-    let publicados = 0;
+    let enviados = 0;
+    let jaExistentes = 0;
     let erros = 0;
 
     // ⭐ LÊ DO SUPABASE (não do menus.js hardcoded)
     const menus = await getMenus();
-    console.log(`📤 A publicar ${menus.length} menus (origem: Supabase)...`);
+    console.log(`📤 A verificar ${menus.length} menus (origem: Supabase)...`);
 
     for (const menu of menus) {
         try {
@@ -27,19 +28,20 @@ module.exports = async (client) => {
                 continue;
             }
 
-            // Apaga mensagens antigas do bot com o mesmo título (evita duplicados)
+            // ===== VERIFICA SE JÁ EXISTE =====
             const msgs = await canal.messages.fetch({ limit: 30 }).catch(() => null);
-            if (msgs) {
-                for (const m of msgs.values()) {
-                    if (m.author.id === client.user.id &&
-                        m.embeds[0]?.title === menu.title &&
-                        m.components.length > 0) {
-                        await m.delete().catch(() => {});
-                    }
-                }
+            const jaExiste = msgs && msgs.some(m =>
+                m.author.id === client.user.id &&
+                m.embeds[0]?.title === menu.title
+            );
+
+            if (jaExiste) {
+                console.log(`ℹ️ Menu "${menu.title}" já existe em #${canal.name} — ignorado.`);
+                jaExistentes++;
+                continue;
             }
 
-            // Constrói embed
+            // ===== NÃO EXISTE → ENVIA =====
             const embed = new EmbedBuilder()
                 .setTitle(menu.title)
                 .setDescription(menu.embedDesc || "Sem descrição")
@@ -52,7 +54,6 @@ module.exports = async (client) => {
                 embed.setThumbnail(menu.embedThumbnail);
             }
 
-            // Constrói select
             const components = [];
             if (menu.options?.length) {
                 const select = new StringSelectMenuBuilder()
@@ -69,15 +70,15 @@ module.exports = async (client) => {
             }
 
             await canal.send({ embeds: [embed], components });
-            console.log(`✅ Menu "${menu.title}" publicado em #${canal.name}`);
-            publicados++;
+            console.log(`✅ Menu "${menu.title}" enviado em #${canal.name}`);
+            enviados++;
 
             await new Promise(r => setTimeout(r, 1200));
         } catch (err) {
-            console.error(`❌ Erro ao publicar "${menu.title}":`, err.message);
+            console.error(`❌ Erro com "${menu.title}":`, err.message);
             erros++;
         }
     }
 
-    console.log(`📊 Menus — publicados: ${publicados} | erros: ${erros}`);
+    console.log(`📊 Menus — enviados: ${enviados} | já existiam: ${jaExistentes} | erros: ${erros}`);
 };
