@@ -178,6 +178,7 @@ app.post('/api/enviar-embed', async (req, res) => {
 app.use('/api/menus', require('./api/menus'));
 app.use('/api/emojis', require('./api/emojis'));
 app.use('/api/migrar-menus', require('./api/migrar-menus'));
+app.use('/api/enviar-dm', require('./api/enviar-dm'));
 
 // ==================== INICIALIZAÇÃO DOS EVENTOS ====================
 const inicializarBot = () => {
