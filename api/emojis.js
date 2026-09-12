@@ -1,7 +1,13 @@
-// BOT: api/emojis.js
-module.exports = async (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+// api/emojis.js
+const express = require('express');
+const router = express.Router();
+
+router.get('/', async (req, res) => {
     try {
+        if (!global.client || !global.client.isReady || !global.client.isReady()) {
+            return res.status(503).json({ success: false, error: 'Bot ainda não está pronto' });
+        }
+
         const GUILD_ID = process.env.GUILD_ID || '1393629457599828040';
         const guild = await global.client.guilds.fetch(GUILD_ID);
         const emojis = await guild.emojis.fetch();
@@ -16,7 +22,9 @@ module.exports = async (req, res) => {
 
         res.json({ success: true, emojis: lista });
     } catch (err) {
-        console.error(err);
+        console.error('Erro em /api/emojis:', err);
         res.status(500).json({ success: false, error: err.message });
     }
-};
+});
+
+module.exports = router;
