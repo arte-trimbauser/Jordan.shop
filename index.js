@@ -1,4 +1,4 @@
-// index.js – BOT + API /api/enviar-embed
+// index.js – BOT + API /api/enviar-embed + /api/menus + /api/emojis
 require('dotenv').config();
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
@@ -26,6 +26,9 @@ const client = new Client({
     ]
 });
 
+// ⭐ Torna o client acessível globalmente (usado pelas rotas /api/emojis)
+global.client = client;
+
 // ==================== SUPABASE ====================
 const { createClient } = require("@supabase/supabase-js");
 const supabase = createClient(
@@ -40,6 +43,15 @@ client.carrinhos = carrinhos;
 // ==================== EXPRESS ====================
 const app = express();
 app.use(express.json({ limit: "1mb" }));
+
+// ⭐ CORS (para poderes testar no browser directamente)
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') return res.sendStatus(200);
+    next();
+});
 
 app.get('/', (req, res) => {
     res.send('🚀 Jordan Shop Bot API - Online!');
@@ -159,6 +171,13 @@ app.post('/api/enviar-embed', async (req, res) => {
         res.status(500).send('Erro ao enviar embed: ' + error.message);
     }
 });
+
+// ============================================================
+// ⭐ ROTAS API — MENUS, EMOJIS, MIGRAÇÃO
+// ============================================================
+app.use('/api/menus', require('./api/menus'));
+app.use('/api/emojis', require('./api/emojis'));
+app.use('/api/migrar-menus', require('./api/migrar-menus'));
 
 // ==================== INICIALIZAÇÃO DOS EVENTOS ====================
 const inicializarBot = () => {
