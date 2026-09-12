@@ -7,13 +7,34 @@ const config = require("../config");
 const isStaff = require("../helpers/isStaff");
 const sendTranscript = require("../helpers/sendTranscript");
 const { getMenus } = require("../menus-db");
+const {
+    logTicketAberto,
+    logTicketAssumido,
+    logTicketFechado
+} = require("../helpers/ticketLogs");
+
 let menus = [];
 (async () => { try { menus = await getMenus(); } catch {} })();
 setInterval(async () => { try { menus = await getMenus(); } catch {} }, 60000);
+
 const cooldowns = new Map();
 const { handleChamarCommand, handleFecharTicketSaida } = require("../commands/chamarCommand");
 const { handleSistemaInteraction } = require("./sistemaCompleto");
 const { handleVerificacaoInteraction } = require("./sistemaVerificacao");
+
+// ============ HELPER: comunicar tickets ao site ============
+async function notificarSiteTicket(acao, dados) {
+    try {
+        const BOT_URL_INTERNAL = process.env.SITE_API_URL || 'https://jordan-shop-bot-site.vercel.app';
+        await fetch(`${BOT_URL_INTERNAL}/api/tickets`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ acao, ...dados })
+        });
+    } catch (err) {
+        console.warn('Não consegui notificar o site do ticket:', err.message);
+    }
+}
 
 // ==================== EMOJIS DE PAGAMENTO ====================
 const emojisPagamento = {
@@ -163,6 +184,12 @@ function duracaoDoProduto(tipoProd) {
 // APAGA CANAL COM RETRY
 // ============================================================
 function apagarCanalSeguro(channel) {
+    // ✅ Notifica o site que foi fechado
+    notificarSiteTicket('fechar', {
+        canal_id: channel.id,
+        staff: 'Sistema'
+    });
+
     setTimeout(() => {
         channel.delete().catch((e) => {
             console.error('Erro ao eliminar canal, a tentar novamente:', e);
@@ -174,8 +201,29 @@ function apagarCanalSeguro(channel) {
 // ============================================================
 // FECHO COM DECISÃO DE TRANSCRIPT
 // ============================================================
-async function fecharComDecisao(interaction, channel, member, forcarEnvio = false) {
+async function fecharComDecisao(interaction, channel, member, forcarEnvio = false, houveVenda = false) {
     const fechadoPor = member.displayName || member.user.username;
+
+    // ================== LOG DE FECHO ==================
+    try {
+        const [uid, met, pdr] = (channel.topic || "").split("|");
+        if (uid) {
+            const cliente = await interaction.client.users.fetch(uid).catch(() => null);
+            if (cliente) {
+                await logTicketFechado(interaction.client, {
+                    canal: channel,
+                    staff: member,
+                    user: cliente,
+                    produto: (pdr || "Produto").replace(/_/g, " "),
+                    metodo: `${emojisPagamento[met] || "💰"} ${metodoNomes[met] || met || "N/A"}`,
+                    venda: houveVenda
+                });
+            }
+        }
+    } catch (e) {
+        console.error("Erro no log de fecho:", e);
+    }
+    // ==================================================
 
     let totalMsgs = 0;
     try {
@@ -266,6 +314,10 @@ module.exports = (client) => {
                 }
                 if (interaction.commandName === "idcanais") {
                     const cmd = require("../commands/idcanais");
+                    return await cmd.execute(interaction, client);
+                }
+                if (interaction.commandName === "stats-tickets") {
+                    const cmd = require("../commands/stats-tickets");
                     return await cmd.execute(interaction, client);
                 }
                 if (interaction.commandName === "adicionar") {
@@ -511,6 +563,16 @@ module.exports = (client) => {
                     ]
                 });
 
+                // ✅ Notifica o site que foi criado
+                notificarSiteTicket('criar', {
+                    canal_id: ticket.id,
+                    canal_nome: ticket.name,
+                    cliente_id: user.id,
+                    cliente_nome: user.username,
+                    produto: tipoProd,
+                    metodo: metodo
+                });
+
                 const embedTicket = new EmbedBuilder()
                     .setTitle("Jordan Shop | Tickets")
                     .setDescription(
@@ -531,6 +593,15 @@ module.exports = (client) => {
                     embeds: [embedTicket],
                     components: [btns]
                 });
+
+                // ================== LOG DE ABERTURA ==================
+                await logTicketAberto(client, {
+                    canal: ticket,
+                    user,
+                    produto: produtoExibicao,
+                    metodo: `${emoji} ${metodoNome}`
+                }).catch(console.error);
+                // =====================================================
 
                 const rowGo = new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
@@ -582,20 +653,33 @@ module.exports = (client) => {
             }
 
             // ============================================================
-            // ASSUMIR TICKET (versão antiga)
+            // ASSUMIR TICKET
             // ============================================================
             if (cid === "claim_ticket") {
                 if (!isStaff(member)) return interaction.reply({ content: "Apenas Staff.", flags: [64] });
                 const [uid, met, pdr] = channel.topic?.split("|") || ["?", "Não definido", "Geral"];
                 const emj = emojisPagamento[met] || "💰";
-                const metodoNome = metodoNomes[met] || met;
-                const produtoExibicao = pdr.replace(/_/g, ' ');
+                const metodoNomeLocal = metodoNomes[met] || met;
+                const produtoExibicao = (pdr || "Geral").replace(/_/g, ' ');
+                const nomeStaff = member.displayName || member.user.username;
+
+                // ✅ Notifica o site que foi assumido
+                notificarSiteTicket('assumir', {
+                    canal_id: channel.id,
+                    staff: nomeStaff
+                });
+
                 const embedClaim = new EmbedBuilder()
                     .setTitle("🛡️ Ticket Assumido")
-                    .setDescription(`👤 **Staff:** <@${user.id}>\n**Produto:** ${produtoExibicao}\n**Método:** ${emj} ${metodoNome}`)
+                    .setDescription(
+                        `🧑‍💼 **Staff:** ${nomeStaff}\n` +
+                        `**Produto:** ${produtoExibicao}\n` +
+                        `**Método:** ${emj} ${metodoNomeLocal}`
+                    )
                     .setColor("#57f287")
                     .setFooter({ text: "Jordan Shop | Tickets" });
-                return await interaction.update({
+
+                await interaction.update({
                     embeds: [embedClaim],
                     components: [new ActionRowBuilder().addComponents(
                         new ButtonBuilder().setCustomId("claimed").setLabel("✅ Ticket Assumido").setStyle(ButtonStyle.Success).setDisabled(true),
@@ -603,6 +687,25 @@ module.exports = (client) => {
                         new ButtonBuilder().setCustomId("close_ticket").setLabel("❌ Fechar o Ticket").setStyle(ButtonStyle.Danger)
                     )]
                 });
+
+                // ================== LOG DE ASSUMIR ==================
+                try {
+                    const cliente = await client.users.fetch(uid).catch(() => null);
+                    if (cliente) {
+                        await logTicketAssumido(client, {
+                            canal: channel,
+                            staff: member,
+                            user: cliente,
+                            produto: produtoExibicao,
+                            metodo: `${emj} ${metodoNomeLocal}`
+                        });
+                    }
+                } catch (e) {
+                    console.error("Erro no log de assumir:", e);
+                }
+                // ====================================================
+
+                return;
             }
 
             // ============================================================
@@ -786,7 +889,7 @@ module.exports = (client) => {
             // ============================================================
             if (interaction.isButton() && cid === "venda_nao") {
                 await interaction.reply({ content: "🔒 A processar fecho...", flags: 64 });
-                await fecharComDecisao(interaction, channel, member, false);
+                await fecharComDecisao(interaction, channel, member, false, false);
                 return;
             }
 
@@ -834,7 +937,7 @@ module.exports = (client) => {
                     console.error('❌ Erro ao enviar embed de venda:', err);
                 }
 
-                await fecharComDecisao(interaction, channel, member, true);
+                await fecharComDecisao(interaction, channel, member, true, true);
                 return;
             }
 
