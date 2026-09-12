@@ -6,7 +6,9 @@ const TRANSCRIPT_CHANNEL_ID = "1424461544317517854";
 const SUPABASE_URL = "https://fdbmhgcfhdnnpwuodxzh.supabase.co";
 const SUPABASE_KEY = process.env.SUPABASE_KEY; // service_role
 const BUCKET = "transcripts";
+const MEDIA_BUCKET = "ticket-media"; // ⚠️ bucket PÚBLICO (ver nota no fim)
 const SITE_URL = "https://jordan-shop-bot-site.vercel.app";
+const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
 
 // ============================================================
 // HELPERS
@@ -20,6 +22,10 @@ function escapeHtml(value = "") {
         .replace(/'/g, "&#039;");
 }
 
+function sanitizeFileName(name = "") {
+    return String(name).replace(/[^\w.\-]/g, "_").slice(0, 120) || "ficheiro";
+}
+
 function formatDate(date) {
     if (!date) return "—";
     return new Intl.DateTimeFormat("pt-PT", {
@@ -29,44 +35,154 @@ function formatDate(date) {
     }).format(new Date(date));
 }
 
+// ============================================================
+// MEDIA PERSISTENTE (imagens que NÃO expiram)
+// ============================================================
+const mediaCache = new Map(); // url -> urlPersistente (evita downloads duplicados)
+
+async function fetchBuffer(url, maxBytes = MAX_FILE_SIZE) {
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (!buf.length || buf.length > maxBytes) return null;
+    return buf;
+}
+
+async function uploadMedia(path, buf, contentType = "application/octet-stream") {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${MEDIA_BUCKET}/${path}`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${SUPABASE_KEY}`,
+            "Content-Type": contentType,
+            "x-upsert": "true",
+        },
+        body: buf,
+    });
+    if (!res.ok) {
+        console.error("❌ Erro upload media:", path, res.status, await res.text().catch(() => ""));
+        return null;
+    }
+    return `${SUPABASE_URL}/storage/v1/object/public/${MEDIA_BUCKET}/${path}`;
+}
+
 /**
- * Formata texto Discord → HTML.
- * ⚠️ ORDEM IMPORTA:
- *   1) escapeHtml
- *   2) auto-link de URLs em TEXTO (regex exclui " ' < >) — assim NUNCA apanha
- *      URLs dentro de atributos HTML que vamos criar a seguir.
- *   3) só depois substituímos emojis personalizados por <img> (introduzem
- *      src="https://..." mas já não há mais passes de auto-link).
- *   4) mentions / markdown / blockquotes / etc.
+ * Descarrega uma imagem/ficheiro do Discord e guarda no Supabase.
+ * Retorna a URL persistente, ou a URL original se falhar (fallback).
  */
-function formatDiscordText(value = "") {
+async function persistUrl(url, folder, fileName, contentType) {
+    if (!url || !SUPABASE_KEY) return url;
+    if (mediaCache.has(url)) return mediaCache.get(url);
+
+    try {
+        const buf = await fetchBuffer(url);
+        if (!buf) { mediaCache.set(url, url); return url; }
+        const finalUrl = await uploadMedia(`${folder}/${sanitizeFileName(fileName)}`, buf, contentType || "application/octet-stream");
+        const result = finalUrl || url;
+        mediaCache.set(url, result);
+        return result;
+    } catch (err) {
+        console.error("⚠️ Falha ao persistir media:", err.message);
+        mediaCache.set(url, url);
+        return url;
+    }
+}
+
+// ============================================================
+// MENÇÕES — resolução de nomes reais (como no Discord)
+// ============================================================
+function buildMentionMaps(msg) {
+    return {
+        users: new Map(msg.mentions?.users?.map((u, id) => [id, u.username]) || []),
+        channels: new Map(msg.mentions?.channels?.map((c, id) => [id, c.name]) || []),
+        roles: new Map(msg.mentions?.roles?.map((r, id) => [id, r.name]) || []),
+    };
+}
+
+/** Pré-busca utilizadores mencionados que não estão no cache (max 25 para não travar) */
+async function prefetchMentions(sorted, guild, client) {
+    const users = new Map(), channels = new Map(), roles = new Map();
+
+    // Roles e canais vêm do guild (sempre disponíveis)
+    try {
+        for (const [id, r] of guild.roles.cache) roles.set(id, r.name);
+    } catch {}
+    try {
+        for (const [id, c] of guild.channels.cache) channels.set(id, c.name);
+    } catch {}
+
+    // Utilizadores: dos caches das mensagens primeiro
+    for (const msg of sorted) {
+        for (const [id, u] of msg.mentions?.users || []) users.set(id, u.username);
+    }
+
+    // Depois faz fetch dos que faltam (conteúdo + embeds)
+    const missing = new Set();
+    const scan = (text) => {
+        if (!text) return;
+        const re = /<@!?(\d+)>/g;
+        let m;
+        while ((m = re.exec(text)) !== null) if (!users.has(m[1])) missing.add(m[1]);
+    };
+    for (const msg of sorted) {
+        scan(msg.content);
+        for (const e of msg.embeds || []) {
+            scan(e.title); scan(e.description);
+            for (const f of e.fields || []) { scan(f.name); scan(f.value); }
+            scan(e.footer?.text); scan(e.author?.name);
+        }
+    }
+
+    let count = 0;
+    for (const id of missing) {
+        if (count++ >= 25) break; // segurança
+        const u = await client.users.fetch(id).catch(() => null);
+        if (u) users.set(id, u.username);
+    }
+    return { users, channels, roles, guildId: guild.id };
+}
+
+// ============================================================
+// FORMATAÇÃO DISCORD → HTML
+// ============================================================
+function formatDiscordText(value = "", ctx = null) {
     if (!value) return "";
     let text = escapeHtml(value);
 
-    // ===== 1. Auto-link de URLs PRIMEIRO (regex seguro) =====
-    // Exclui " ' ( ) < > para nunca apanhar URLs dentro de atributos HTML.
+    // ===== 1. Auto-link de URLs PRIMEIRO =====
     text = text.replace(
         /(https?:\/\/[^\s"'<>()]+)/g,
         (u) => `<a class="message-link" href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`
     );
 
-    // ===== 2. Emojis personalizados → <img> =====
+    // ===== 2. Emojis personalizados → <img> (CDN não expira) =====
     text = text.replace(/&lt;(a?):([\w~]+):(\d+)&gt;/g, (_, animated, name, id) => {
         const ext = animated ? "gif" : "png";
         return `<img class="emoji" src="https://cdn.discordapp.com/emojis/${id}.${ext}?size=48&quality=lossless" alt=":${name}:" title=":${name}:" loading="lazy">`;
     });
 
-    // ===== 3. Mentions =====
-    text = text.replace(/&lt;@!?(\d+)&gt;/g, '<span class="mention">@utilizador</span>');
-    text = text.replace(/&lt;#(\d+)&gt;/g, '<span class="mention">#canal</span>');
-    text = text.replace(/&lt;@&amp;(\d+)&gt;/g, '<span class="mention">@cargo</span>');
+    // ===== 3. MENÇÕES — nomes reais como no Discord =====
+    text = text.replace(/&lt;@!?(\d+)&gt;/g, (_, id) => {
+        const name = ctx?.users?.get(id);
+        return `<span class="mention mention-user" title="ID: ${id}">@${escapeHtml(name || "utilizador")}</span>`;
+    });
+    text = text.replace(/&lt;#(\d+)&gt;/g, (_, id) => {
+        const name = ctx?.channels?.get(id);
+        if (name && ctx?.guildId) {
+            return `<a class="mention mention-channel" href="https://discord.com/channels/${ctx.guildId}/${id}" target="_blank" rel="noopener noreferrer">#${escapeHtml(name)}</a>`;
+        }
+        return `<span class="mention mention-channel">#canal</span>`;
+    });
+    text = text.replace(/&lt;@&amp;(\d+)&gt;/g, (_, id) => {
+        const name = ctx?.roles?.get(id);
+        return `<span class="mention mention-role">@${escapeHtml(name || "cargo")}</span>`;
+    });
 
     // ===== 4. Blocos de código =====
     text = text.replace(/```([\s\S]*?)```/g, (_, c) => `<pre><code>${escapeHtml(c.trim())}</code></pre>`);
     text = text.replace(/`([^`\n]+)`/g, "<code>$1</code>");
 
     // ===== 5. Spoilers =====
-    text = text.replace(/\|\|([^|]+)\|\|/g, (_, c) => `<span class="spoiler">${formatDiscordText(c)}</span>`);
+    text = text.replace(/\|\|([^|]+)\|\|/g, (_, c) => `<span class="spoiler">${formatDiscordText(c, ctx)}</span>`);
 
     // ===== 6. Headers =====
     text = text.replace(/^### (.*)$/gm, "<h3>$1</h3>");
@@ -104,26 +220,33 @@ function renderImage(url, alt = "Imagem", className = "embed-image") {
     return `<a class="image-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer"><img class="${className}" src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" loading="lazy"></a>`;
 }
 
-function renderEmbed(embed) {
+async function renderEmbed(embed, ctx, ticketId) {
     if (!embed) return "";
-    const title = embed.title ? formatDiscordText(embed.title) : "";
-    const description = embed.description ? formatDiscordText(embed.description) : "";
+
+    // Persiste imagens do embed (thumbnails/icones de attachments Discord EXPIRAM)
+    if (embed.image?.url) embed.image.url = await persistUrl(embed.image.url, `${ticketId}/embeds`, `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.png`, "image/png");
+    if (embed.thumbnail?.url) embed.thumbnail.url = await persistUrl(embed.thumbnail.url, `${ticketId}/embeds`, `thumb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.png`, "image/png");
+    if (embed.author?.iconURL) embed.author.iconURL = await persistUrl(embed.author.iconURL, `${ticketId}/embeds`, `author-${Date.now()}.png`, "image/png");
+    if (embed.footer?.iconURL) embed.footer.iconURL = await persistUrl(embed.footer.iconURL, `${ticketId}/embeds`, `footer-${Date.now()}.png`, "image/png");
+
+    const title = embed.title ? formatDiscordText(embed.title, ctx) : "";
+    const description = embed.description ? formatDiscordText(embed.description, ctx) : "";
     const color = getEmbedColor(embed);
     const thumbnail = embed.thumbnail?.url ? renderImage(embed.thumbnail.url, "Thumbnail", "embed-thumbnail") : "";
     const image = embed.image?.url ? renderImage(embed.image.url, "Imagem do embed", "embed-image") : "";
     const author = embed.author?.name
-        ? `<div class="embed-author">${embed.author.iconURL ? `<img src="${escapeHtml(embed.author.iconURL)}">` : ""}<span>${formatDiscordText(embed.author.name)}</span></div>`
+        ? `<div class="embed-author">${embed.author.iconURL ? `<img src="${escapeHtml(embed.author.iconURL)}" alt="">` : ""}<span>${formatDiscordText(embed.author.name, ctx)}</span></div>`
         : "";
     let fields = "";
     if (Array.isArray(embed.fields) && embed.fields.length) {
         fields = `<div class="embed-fields">${embed.fields.map(f =>
             `<div class="embed-field ${f.inline ? "inline" : ""}">
-                <div class="embed-field-name">${formatDiscordText(f.name || "")}</div>
-                <div class="embed-field-value">${formatDiscordText(f.value || "")}</div>
+                <div class="embed-field-name">${formatDiscordText(f.name || "", ctx)}</div>
+                <div class="embed-field-value">${formatDiscordText(f.value || "", ctx)}</div>
             </div>`).join("")}</div>`;
     }
     const footer = embed.footer?.text
-        ? `<div class="embed-footer">${embed.footer.iconURL ? `<img src="${escapeHtml(embed.footer.iconURL)}">` : ""}<span>${formatDiscordText(embed.footer.text)}</span></div>`
+        ? `<div class="embed-footer">${embed.footer.iconURL ? `<img src="${escapeHtml(embed.footer.iconURL)}" alt="">` : ""}<span>${formatDiscordText(embed.footer.text, ctx)}</span>${embed.timestamp ? `<span class="embed-timestamp">• ${escapeHtml(formatDate(embed.timestamp))}</span>` : ""}</div>`
         : "";
     if (!title && !description && !fields && !thumbnail && !image && !author && !footer) return "";
     return `<div class="embed" style="--embed-color:${color}">
@@ -188,9 +311,14 @@ img{max-width:100%}
 .body{margin-top:3px;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--text)}
 .body.empty{color:var(--muted);font-style:italic}
 
+/* ===== MENÇÕES (estilo Discord) ===== */
+.mention{color:var(--mention);background:rgba(88,101,242,.30);border-radius:3px;padding:0 2px;font-weight:500;cursor:pointer;transition:background .12s,color .12s;text-decoration:none}
+.mention:hover{background:#5865f2;color:#fff}
+.mention-channel{color:#a4b0f7}
+.mention-role{color:#e6b26e;background:rgba(226,178,110,.18)}
+
 /* ===== INLINE ELEMENTS ===== */
 .emoji{width:1.375em;height:1.375em;vertical-align:-.35em;object-fit:contain;display:inline-block}
-.mention{color:var(--mention);background:rgba(88,101,242,.30);border-radius:3px;padding:0 2px;font-weight:500}
 .message-link{text-decoration:none;overflow-wrap:anywhere;word-break:break-word}
 .message-link:hover{text-decoration:underline}
 code{background:#1e1f22;border:1px solid rgba(255,255,255,.06);border-radius:4px;padding:1px 4px;color:#c9cdfb;font-family:'Consolas','Courier New',monospace;font-size:.9em}
@@ -201,7 +329,7 @@ h1,h2,h3{margin:8px 0 4px;color:var(--white);font-weight:700}
 pre{background:#1e1f22;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:8px 12px;overflow-x:auto;margin:6px 0}
 pre code{background:transparent;border:none;padding:0;font-size:13px;color:#dbdee1}
 
-/* ===== EMBEDS ===== */
+/* ===== EMBEDS (estilo Discord) ===== */
 .embed{max-width:680px;margin-top:8px;padding:12px 14px 14px;border-left:4px solid var(--embed-color,#5865f2);background:#2b2d31;border-radius:4px;position:relative}
 .embed-main{display:flex;gap:12px}
 .embed-content{flex:1;min-width:0}
@@ -210,18 +338,26 @@ pre code{background:transparent;border:none;padding:0;font-size:13px;color:#dbde
 .embed-author{color:var(--white);font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;margin-bottom:6px}
 .embed-author img,.embed-footer img{width:20px;height:20px;border-radius:50%;object-fit:cover}
 .embed-thumbnail{width:80px;height:80px;object-fit:cover;border-radius:4px;flex:0 0 80px}
-.embed-image{display:block;max-width:min(100%,560px);max-height:500px;object-fit:contain;border-radius:4px;margin-top:10px;background:#202225}
+.embed-image{display:block;max-width:min(100%,560px);max-height:500px;object-fit:contain;border-radius:4px;margin-top:10px;background:#202225;cursor:zoom-in;transition:filter .12s}
+.embed-image:hover{filter:brightness(1.12)}
 .image-link{display:inline-block;line-height:0}
 .embed-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:10px}
 .embed-field:not(.inline){grid-column:1/-1}
 .embed-field-name{color:var(--white);font-weight:700;font-size:13px;margin-bottom:2px}
 .embed-field-value{margin-top:2px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}
 .embed-footer{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:11px;margin-top:10px}
+.embed-timestamp{color:#6d7179}
+
+/* ===== REPLY ===== */
+.reply-ref{font-size:12px;color:#949ba4;margin-top:3px;display:flex;align-items:center;gap:5px}
+.reply-ref a{color:#c9cdfb;text-decoration:none}
+.reply-ref a:hover{text-decoration:underline}
 
 /* ===== ANEXOS ===== */
-.attachment{margin-top:8px;background:#1e1f22;border-radius:6px;padding:8px 10px;width:fit-content;max-width:100%}
+.attachment{margin-top:8px;background:#1e1f22;border:1px solid rgba(255,255,255,.05);border-radius:6px;padding:8px 10px;width:fit-content;max-width:100%}
 .attachment a{text-decoration:none;overflow-wrap:anywhere}
-.attachment-image{display:block;max-width:min(100%,560px);max-height:500px;border-radius:4px;margin-top:7px;object-fit:contain}
+.attachment-image{display:block;max-width:min(100%,560px);max-height:500px;border-radius:4px;margin-top:7px;object-fit:contain;cursor:zoom-in;transition:filter .12s}
+.attachment-image:hover{filter:brightness(1.12)}
 
 /* ===== DIVISOR DE DIA ===== */
 .system-divider{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin:22px 0;font-weight:500}
@@ -231,6 +367,12 @@ pre code{background:transparent;border:none;padding:0;font-size:13px;color:#dbde
 .footer{text-align:center;color:var(--muted);font-size:12px;padding:32px 16px 8px;border-top:1px solid rgba(255,255,255,.05);margin-top:32px}
 .footer a{color:#8b8f96;text-decoration:none}
 .footer a:hover{color:var(--link)}
+
+/* ===== LIGHTBOX (clicar nas imagens) ===== */
+#lightbox{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;cursor:zoom-out;backdrop-filter:blur(4px)}
+#lightbox.open{display:flex;animation:lbIn .15s ease}
+#lightbox img{max-width:92vw;max-height:92vh;border-radius:8px;box-shadow:0 12px 60px rgba(0,0,0,.6);cursor:default}
+@keyframes lbIn{from{opacity:0}to{opacity:1}}
 
 @media (max-width:700px){
     .topbar{padding:12px 14px}
@@ -244,16 +386,50 @@ pre code{background:transparent;border:none;padding:0;font-size:13px;color:#dbde
 }
 `;
 
+const LIGHTBOX_JS = `
+document.addEventListener('click', function(e){
+    var link = e.target.closest ? e.target.closest('a.image-link') : null;
+    if (!link) return;
+    e.preventDefault();
+    var lb = document.getElementById('lightbox');
+    var img = document.getElementById('lightbox-img');
+    img.src = link.getAttribute('href');
+    lb.classList.add('open');
+    document.body.style.overflow = 'hidden';
+});
+document.getElementById('lightbox').addEventListener('click', function(e){
+    if (e.target === this || e.target.id === 'lightbox-img') {
+        this.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+});
+document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') {
+        var lb = document.getElementById('lightbox');
+        lb.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+});
+`;
+
 // ============================================================
 // GERAR HTML DO TRANSCRIPT
 // ============================================================
 async function gerarHtml(channel, sorted, allMessages, ticketId) {
     const guildName = channel.guild?.name || "Servidor Discord";
-    const guildIcon = channel.guild?.iconURL?.({ extension: "png", size: 128 }) || "";
+    const guildIcon = await persistUrl(
+        channel.guild?.iconURL?.({ extension: "png", size: 128 }) || "",
+        `${ticketId}/server`,
+        "icon.png",
+        "image/png"
+    );
     const channelName = channel.name || `ticket-${ticketId}`;
     const topic = channel.topic || "";
     const createdAt = sorted[0]?.createdAt ? formatDate(sorted[0].createdAt) : "—";
     const generatedAt = formatDate(new Date());
+
+    // Resolução de menções (nomes reais)
+    const mentionCtx = await prefetchMentions(sorted, channel.guild, channel.client);
 
     // Extrai "aberto por / método / produto" do tópico "userId|método|produto"
     const [topicUserId, topicMetodo, topicProduto] = topic.split("|");
@@ -310,7 +486,13 @@ async function gerarHtml(channel, sorted, allMessages, ticketId) {
             html += `<div class="system-divider">${escapeHtml(day)}</div>`;
             lastDay = day;
         }
-        const avatar = msg.author?.displayAvatarURL?.({ extension: "png", size: 64 }) || "";
+
+        // ===== Avatar PERSISTENTE (não expira) =====
+        const avatarDiscord = msg.author?.displayAvatarURL?.({ extension: "png", size: 128 }) || "";
+        const avatar = avatarDiscord
+            ? await persistUrl(avatarDiscord, `${ticketId}/avatars`, `${msg.author.id}.png`, "image/png")
+            : "";
+
         const author =
             msg.member?.displayName ||
             msg.author?.globalName ||
@@ -318,7 +500,14 @@ async function gerarHtml(channel, sorted, allMessages, ticketId) {
             "Utilizador desconhecido";
         const botTag = msg.author?.bot ? `<span class="bot-tag">BOT</span>` : "";
         const time = formatDate(msg.createdAt);
-        const content = msg.content ? formatDiscordText(msg.content) : "";
+        const msgCtx = buildMentionMaps(msg);
+        // Mescla com o contexto global (garante nomes mesmo se o cache da msg falhar)
+        for (const [id, name] of mentionCtx.users) if (!msgCtx.users.has(id)) msgCtx.users.set(id, name);
+        msgCtx.channels = mentionCtx.channels;
+        msgCtx.roles = mentionCtx.roles;
+        msgCtx.guildId = mentionCtx.guildId;
+
+        const content = msg.content ? formatDiscordText(msg.content, msgCtx) : "";
         const edited = msg.editedTimestamp ? `<span class="edited">(editada)</span>` : "";
 
         html += `<article class="message" id="m-${escapeHtml(msg.id)}">
@@ -338,21 +527,26 @@ ${avatar ? `<img class="avatar" src="${escapeHtml(avatar)}" alt="" loading="lazy
                 ref?.author?.globalName ||
                 ref?.author?.username ||
                 "mensagem";
-            html += `<div class="reply-ref" style="font-size:12px;color:#949ba4;margin-top:3px">↪ Resposta a <a href="#m-${escapeHtml(msg.reference.messageId)}">${escapeHtml(ra)}</a></div>`;
+            html += `<div class="reply-ref">↪ Resposta a <a href="#m-${escapeHtml(msg.reference.messageId)}">${escapeHtml(ra)}</a></div>`;
         }
 
-        // Embeds
-        for (const embed of msg.embeds || []) html += renderEmbed(embed);
+        // Embeds (imagens persistidas dentro de renderEmbed)
+        for (const embed of msg.embeds || []) html += await renderEmbed(embed, msgCtx, ticketId);
 
-        // Attachments
+        // Attachments — imagens e ficheiros PERSISTENTES
         for (const att of msg.attachments.values()) {
+            const safeName = sanitizeFileName(att.name || `anexo-${att.id}`);
             const isImg = (att.contentType || "").startsWith("image/");
-            html += `<div class="attachment"><a href="${escapeHtml(att.url)}" target="_blank">📎 ${escapeHtml(att.name || "Anexo")}</a>${isImg ? renderImage(att.url, att.name, "attachment-image") : ""}</div>`;
+            const finalUrl = await persistUrl(att.url, `${ticketId}/anexos`, `${msg.id}-${safeName}`, att.contentType || "application/octet-stream");
+            const sizeMB = att.size ? (att.size / 1024 / 1024).toFixed(2) : null;
+            html += `<div class="attachment"><a href="${escapeHtml(finalUrl)}" target="_blank" rel="noopener noreferrer">📎 ${escapeHtml(att.name || "Anexo")}${sizeMB ? ` <span style="color:#6d7179">(${sizeMB} MB)</span>` : ""}</a>${isImg ? renderImage(finalUrl, att.name, "attachment-image") : ""}</div>`;
         }
 
         // Stickers
         for (const st of msg.stickers.values()) {
-            html += `<div class="attachment">🎨 Sticker: <strong>${escapeHtml(st.name || "Sticker")}</strong></div>`;
+            const stUrl = st.url || st.stickerURL?.() || "";
+            const finalSticker = stUrl ? await persistUrl(stUrl, `${ticketId}/stickers`, `${st.id}.png`, "image/png") : "";
+            html += `<div class="attachment">🎨 Sticker: <strong>${escapeHtml(st.name || "Sticker")}</strong>${finalSticker ? ` ${renderImage(finalSticker, st.name, "attachment-image")}` : ""}</div>`;
         }
 
         html += `</div></article>`;
@@ -361,9 +555,12 @@ ${avatar ? `<img class="avatar" src="${escapeHtml(avatar)}" alt="" loading="lazy
     html += `</section>
   <div class="footer">
     Fim do transcript • ${sorted.length} mensagens exportadas • Gerado em ${escapeHtml(generatedAt)}<br>
-    <a href="${SITE_URL}" target="_blank">${escapeHtml(SITE_URL.replace(/^https?:\/\//, ""))}</a>
+    <a href="${SITE_URL}" target="_blank" rel="noopener noreferrer">${escapeHtml(SITE_URL.replace(/^https?:\/\//, ""))}</a>
   </div>
 </main>
+
+<div id="lightbox"><img id="lightbox-img" alt=""></div>
+<script>${LIGHTBOX_JS}</script>
 </body></html>`;
 
     return { html, channelName };
@@ -393,7 +590,8 @@ module.exports = async function sendTranscript(channel, fechadoPor) {
             (a, b) => a.createdTimestamp - b.createdTimestamp
         );
 
-        // 2. Gerar HTML
+        // 2. Gerar HTML (com media persistente + menções reais)
+        mediaCache.clear(); // novo ticket = novo cache
         const ticketId = channel.id;
         const { html, channelName } = await gerarHtml(channel, sorted, allMessages, ticketId);
 
