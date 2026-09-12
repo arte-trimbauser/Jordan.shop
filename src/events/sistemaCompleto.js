@@ -37,7 +37,8 @@ const CANAL_VOZ_ID = "1492521949736472757";
 const CANAL_TICKET_ID = "1493942678612869311";
 const CANAL_FORMULARIO_ID = "1490783323780419664";
 const CATEGORIA_TICKETS_ID = "1490783459470475414";
-const LOG_CHANNEL_ID = process.env.LOG_CHANNEL_ID || "1495145643977478154";
+// ✅ Canal fixo exclusivo para feedback (bugs / ideias / avaliações)
+const LOG_FEEDBACK_CHANNEL_ID = "1495145643977478154";
 
 const EMOJIS = {
     pt: "<:Flag_of_Portugal:1492525538416267536>",
@@ -814,7 +815,7 @@ async function handleModalSubmit(interaction) {
     // =================================================
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const logChannel = await interaction.guild.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
+    const logChannel = await interaction.guild.channels.fetch(LOG_FEEDBACK_CHANNEL_ID).catch(() => null);
 
     if (customId === 'modal_bug') {
         const descricao = fields.getTextInputValue('descricao_bug');
