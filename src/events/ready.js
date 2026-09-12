@@ -121,7 +121,7 @@ try {
     setInterval(updateStatus, 5000);
 
     // 9. Log de arranque
-    const LOG_ID = "1437076921627181228";
+    const LOG_ID = "1393690238903128115";
     try {
         const logChannel = await client.channels.fetch(LOG_ID).catch(() => null);
         if (logChannel) {
