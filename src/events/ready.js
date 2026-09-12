@@ -29,25 +29,29 @@ module.exports = async (client) => {
     const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
     // 1. Slash commands básicos
-    try {
-        const adicionar = require("../commands/adicionar");
-        const carrinho = require("../commands/carrinho");
-const idcanais = require("../commands/idcanais");
-const commands = [
-    adicionar.data.toJSON(),
-    carrinho.data.toJSON(),
-    comandoVerificacao.toJSON(),
-    idcanais.data.toJSON()
-];
-        await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
-        await rest.put(
-            Routes.applicationGuildCommands(client.user.id, "1393629457599828040"),
-            { body: commands }
-        );
-        console.log(`✅ ${commands.length} comandos registados no servidor com sucesso!`);
-    } catch (err) {
-        console.error("❌ Erro ao registar slash commands:", err);
-    }
+try {
+    const adicionar = require("../commands/adicionar");
+    const carrinho = require("../commands/carrinho");
+    const idcanais = require("../commands/idcanais");
+    const statsTickets = require("../commands/stats-tickets"); // ⭐ NOVO
+
+    const commands = [
+        adicionar.data.toJSON(),
+        carrinho.data.toJSON(),
+        comandoVerificacao.toJSON(),
+        idcanais.data.toJSON(),
+        statsTickets.data.toJSON() // ⭐ NOVO
+    ];
+
+    await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
+    await rest.put(
+        Routes.applicationGuildCommands(client.user.id, "1393629457599828040"),
+        { body: commands }
+    );
+    console.log(`✅ ${commands.length} comandos registados no servidor com sucesso!`);
+} catch (err) {
+    console.error("❌ Erro ao registar slash commands:", err);
+}
 
     // 2. Comandos de voz
     try {
