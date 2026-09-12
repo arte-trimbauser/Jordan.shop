@@ -6,7 +6,10 @@ const {
 const config = require("../config");
 const isStaff = require("../helpers/isStaff");
 const sendTranscript = require("../helpers/sendTranscript");
-const menus = require("../menus");
+const { getMenus } = require("../menus-db");
+let menus = [];
+(async () => { try { menus = await getMenus(); } catch {} })();
+setInterval(async () => { try { menus = await getMenus(); } catch {} }, 60000);
 const cooldowns = new Map();
 const { handleChamarCommand, handleFecharTicketSaida } = require("../commands/chamarCommand");
 const { handleSistemaInteraction } = require("./sistemaCompleto");
@@ -711,36 +714,32 @@ module.exports = (client) => {
             // BOTÃO "SIM, HOUVE VENDA" – ABRIR MODAL
             // ============================================================
             if (interaction.isButton() && cid === "venda_sim") {
-        const topic = channel.topic || '';
-        const [userId, , produtoDoTopico] = topic.split('|');
-        const produtoPreenchido = produtoDoTopico ? produtoDoTopico.replace(/_/g, ' ') : 'Não especificado';
+                const topic = channel.topic || '';
+                const [userId, , produtoDoTopico] = topic.split('|');
+                const produtoPreenchido = produtoDoTopico ? produtoDoTopico.replace(/_/g, ' ') : 'Não especificado';
 
-            let compradorPreenchido = '';
-            if (userId) {
-            try {
-        const userTicket = await client.users.fetch(userId);
-            compradorPreenchido = `<@${userId}>/${userTicket.username}`;
-        } catch {
-            compradorPreenchido = 'Utilizador desconhecido';
-        }
-    }
+                let compradorPreenchido = '';
+                if (userId) {
+                    try {
+                        const userTicket = await client.users.fetch(userId);
+                        compradorPreenchido = `<@${userId}>/${userTicket.username}`;
+                    } catch {
+                        compradorPreenchido = 'Utilizador desconhecido';
+                    }
+                }
 
-    // ✅ NOVO: data em hora de Portugal
-        const formatadorData = new Intl.DateTimeFormat('pt-PT', {
-        timeZone: 'Europe/Lisbon',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
-        const dataHoje = formatadorData.format(new Date()).replace(/\//g, '-');
+                const formatadorData = new Intl.DateTimeFormat('pt-PT', {
+                    timeZone: 'Europe/Lisbon',
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                const dataHoje = formatadorData.format(new Date()).replace(/\//g, '-');
+                const duracaoAuto = duracaoDoProduto(produtoDoTopico || "");
 
-    // ✅ Duração auto-preenchida
-        const duracaoAuto = duracaoDoProduto(produtoDoTopico || "");
-
-        const modal = new ModalBuilder()
-        .setCustomId('modal_venda_fechamento')
-        .setTitle('📝 Registar Venda');
-
+                const modal = new ModalBuilder()
+                    .setCustomId('modal_venda_fechamento')
+                    .setTitle('📝 Registar Venda');
 
                 const compradorInput = new TextInputBuilder()
                     .setCustomId('venda_comprador').setLabel('Nome do Comprador')
@@ -757,7 +756,6 @@ module.exports = (client) => {
                     .setStyle(TextInputStyle.Short).setValue(produtoPreenchido)
                     .setRequired(true).setMaxLength(200);
 
-                // ✅ Duração com valor pré-preenchido
                 const duracaoInput = new TextInputBuilder()
                     .setCustomId('venda_duracao').setLabel('Duração do Produto')
                     .setStyle(TextInputStyle.Short)
@@ -808,11 +806,9 @@ module.exports = (client) => {
 
                 const produtoFmt = produtoFormatado(produtoTopico, produtoTopico || "Produto");
 
-                // ✅ Data só (sem horas) → formato :d
                 const unix = dataParaUnix(data);
                 const dataFormatada = `<t:${unix}:d>`;
 
-                // ✅ Roles como menções clicáveis
                 const labelRole = `<@&${ROLE_STAFF}> / <@&${ROLE_MODERADOR}>`;
                 const nomeStaff = member.displayName || member.user.username;
 
