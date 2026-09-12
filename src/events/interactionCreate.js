@@ -450,6 +450,15 @@ module.exports = (client) => {
                         content: `❌ <@${user.id}> (${user.username}) **não aceitou** os termos para abrir ticket de: \`${tipoRec}\` # 🔵 vpn-service`
                     }).catch(() => {});
                 }
+
+                // ✅ Notifica o site que os termos foram RECUSADOS
+                global._termosTemporarios = global._termosTemporarios || {};
+                global._termosTemporarios[user.id] = {
+                    aceitou: false,
+                    tipo: tipoRec,
+                    quando: new Date().toISOString()
+                };
+
                 return interaction.update({
                     content: "⚠️ Tens de aceitar os termos para abrir o teu ticket/pedido.",
                     embeds: [],
@@ -484,6 +493,14 @@ module.exports = (client) => {
                         await canalLogsTicket.send({ embeds: [embedLog] }).catch(() => {});
                     }
                 }
+
+                // ✅ Notifica o site que os termos foram ACEITOS (fica pendente até o ticket ser criado)
+                global._termosTemporarios = global._termosTemporarios || {};
+                global._termosTemporarios[user.id] = {
+                    aceitou: true,
+                    tipo: tipoAceito,
+                    quando: new Date().toISOString()
+                };
 
                 const menuPagamento = new StringSelectMenuBuilder()
                     .setCustomId(`pagamento_${tipoAceito}`)
@@ -563,21 +580,29 @@ module.exports = (client) => {
                     ]
                 });
 
-                // ✅ Notifica o site que foi criado
+                // ✅ Notifica o site que foi criado (com termos)
+                const termosInfo = global._termosTemporarios?.[user.id] || {};
                 notificarSiteTicket('criar', {
                     canal_id: ticket.id,
                     canal_nome: ticket.name,
                     cliente_id: user.id,
                     cliente_nome: user.username,
                     produto: tipoProd,
-                    metodo: metodo
+                    metodo: metodo,
+                    termos_aceitos: termosInfo.aceitou === true,
+                    termos_aceitos_em: termosInfo.quando || null
                 });
 
+                // Limpa depois de enviar
+                if (global._termosTemporarios) delete global._termosTemporarios[user.id];
+
+                // ✅ Embed do ticket agora mostra "Aberto por: @user"
                 const embedTicket = new EmbedBuilder()
                     .setTitle("Jordan Shop | Tickets")
                     .setDescription(
-                        `📦 **Produto:** ${produtoExibicao}\n` +
+                        `👤 **Aberto por:** <@${user.id}>\n` +
                         `🛡️ **Staff:** ⏳ Aguardando...\n` +
+                        `📦 **Produto:** ${produtoExibicao}\n` +
                         `💳 **Método:** ${emoji} ${metodoNome}`
                     )
                     .setColor("#2f3136");
@@ -669,12 +694,14 @@ module.exports = (client) => {
                     staff: nomeStaff
                 });
 
+                // ✅ Embed do ticket assumido agora mostra "Aberto por: @user"
                 const embedClaim = new EmbedBuilder()
                     .setTitle("🛡️ Ticket Assumido")
                     .setDescription(
+                        `👤 **Aberto por:** <@${uid}>\n` +
                         `🧑‍💼 **Staff:** ${nomeStaff}\n` +
-                        `**Produto:** ${produtoExibicao}\n` +
-                        `**Método:** ${emj} ${metodoNomeLocal}`
+                        `📦 **Produto:** ${produtoExibicao}\n` +
+                        `💳 **Método:** ${emj} ${metodoNomeLocal}`
                     )
                     .setColor("#57f287")
                     .setFooter({ text: "Jordan Shop | Tickets" });
@@ -1021,6 +1048,6 @@ async function fecharTicketComOuSemTranscript(interaction, channel, member) {
     await replyMethod.call(interaction, {
         embeds: [embedPergunta],
         components: [row],
-        flags: [64]
+        flags: 64
     });
 }
