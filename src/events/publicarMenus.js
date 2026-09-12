@@ -1,47 +1,47 @@
 // src/events/publicarMenus.js
-// Verifica se cada menu já existe no canal. Se sim, salta. Se não, envia.
+// Publica cada menu do menus.js no canal cujo ID corresponde ao menu.id
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
 const { getMenus } = require("../menus-db");
 
 module.exports = async (client) => {
-    let enviados = 0;
+    let publicados = 0;
     let jaExistentes = 0;
     let erros = 0;
 
-    // ⭐ LÊ DO SUPABASE (não do menus.js hardcoded)
     const menus = await getMenus();
-    console.log(`📤 A verificar ${menus.length} menus (origem: Supabase)...`);
+
+    console.log(`📤 A publicar ${menus.length} menus...`);
 
     for (const menu of menus) {
         try {
             const canal = await client.channels.fetch(menu.id).catch(() => null);
 
             if (!canal) {
-                console.log(`⚠️ Canal ${menu.id} não encontrado (menu: "${menu.title}")`);
+                console.log(`⚠️ Canal ${menu.id} não encontrado ou bot sem acesso (menu: "${menu.title}")`);
                 erros++;
                 continue;
             }
 
             if (!canal.isTextBased || !canal.isTextBased()) {
-                console.log(`⚠️ Canal ${menu.id} não é de texto`);
+                console.log(`⚠️ Canal ${menu.id} não é de texto (menu: "${menu.title}")`);
                 erros++;
                 continue;
             }
 
-            // ===== VERIFICA SE JÁ EXISTE =====
-            const msgs = await canal.messages.fetch({ limit: 30 }).catch(() => null);
-            const jaExiste = msgs && msgs.some(m =>
-                m.author.id === client.user.id &&
-                m.embeds[0]?.title === menu.title
-            );
-
-            if (jaExiste) {
-                console.log(`ℹ️ Menu "${menu.title}" já existe em #${canal.name} — ignorado.`);
-                jaExistentes++;
-                continue;
+            const msgs = await canal.messages.fetch({ limit: 20 }).catch(() => null);
+            if (msgs) {
+                const jaExiste = msgs.some(m =>
+                    m.author.id === client.user.id &&
+                    Array.isArray(m.embeds) &&
+                    m.embeds[0]?.title === menu.title
+                );
+                if (jaExiste) {
+                    console.log(`ℹ️ Menu "${menu.title}" já existe em #${canal.name} — ignorado.`);
+                    jaExistentes++;
+                    continue;
+                }
             }
 
-            // ===== NÃO EXISTE → ENVIA =====
             const embed = new EmbedBuilder()
                 .setTitle(menu.title)
                 .setDescription(menu.embedDesc || "Sem descrição")
@@ -50,35 +50,40 @@ module.exports = async (client) => {
             if (menu.embedImage && menu.embedImage.startsWith("http")) {
                 embed.setImage(menu.embedImage);
             }
-            if (menu.embedThumbnail && menu.embedThumbnail.startsWith("http")) {
-                embed.setThumbnail(menu.embedThumbnail);
+
+            if (!menu.options || menu.options.length === 0) {
+                console.log(`⚠️ Menu "${menu.title}" não tem opções — enviado apenas o embed.`);
+                await canal.send({ embeds: [embed] });
+                publicados++;
+                await new Promise(r => setTimeout(r, 1200));
+                continue;
             }
 
-            const components = [];
-            if (menu.options?.length) {
-                const select = new StringSelectMenuBuilder()
-                    .setCustomId("menu_produtos")
-                    .setPlaceholder("Escolhe uma opção")
-                    .addOptions(
-                        menu.options.slice(0, 25).map(o => ({
-                            label: (o.label || "Opção").slice(0, 100),
-                            description: (o.description || "Ver opções").slice(0, 100),
-                            value: o.value || String(Math.random())
-                        }))
-                    );
-                components.push(new ActionRowBuilder().addComponents(select));
-            }
+            const select = new StringSelectMenuBuilder()
+                .setCustomId("menu_produtos")
+                .setPlaceholder("Escolhe uma opção")
+                .addOptions(
+                    menu.options.slice(0, 25).map(o => ({
+                        label: (o.label || "Opção").slice(0, 100),
+                        description: (o.description || "Ver opções").slice(0, 100),
+                        value: o.value || String(Math.random())
+                    }))
+                );
 
-            await canal.send({ embeds: [embed], components });
-            console.log(`✅ Menu "${menu.title}" enviado em #${canal.name}`);
-            enviados++;
+            const row = new ActionRowBuilder().addComponents(select);
+
+            await canal.send({ embeds: [embed], components: [row] });
+
+            console.log(`✅ Menu "${menu.title}" publicado em #${canal.name}`);
+            publicados++;
 
             await new Promise(r => setTimeout(r, 1200));
+
         } catch (err) {
-            console.error(`❌ Erro com "${menu.title}":`, err.message);
+            console.error(`❌ Erro ao publicar "${menu.title}":`, err.message);
             erros++;
         }
     }
 
-    console.log(`📊 Menus — enviados: ${enviados} | já existiam: ${jaExistentes} | erros: ${erros}`);
+    console.log(`📊 Menus — publicados: ${publicados} | já existiam: ${jaExistentes} | erros: ${erros}`);
 };
