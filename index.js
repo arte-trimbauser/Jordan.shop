@@ -130,7 +130,9 @@ app.post('/api/enviar-embed', async (req, res) => {
         // ========== SELECT MENU ==========
         const components = [];
         if (produtos?.length) {
-            const menusLocais = require('./src/menus');
+            // ⭐ LÊ DO SUPABASE (com fallback para menus.js)
+            const { getMenus } = require('./src/menus-db');
+            const menusLocais = await getMenus();
 
             const selectMenu = new StringSelectMenuBuilder()
                 .setCustomId('menu_produtos')
@@ -169,6 +171,65 @@ app.post('/api/enviar-embed', async (req, res) => {
     } catch (error) {
         console.error('❌ Erro no /api/enviar-embed:', error);
         res.status(500).send('Erro ao enviar embed: ' + error.message);
+    }
+});
+
+// ============================================================
+// ⭐ API: /api/menus/reenviar — apaga mensagem antiga e reenvia
+// ============================================================
+app.post('/api/menus/reenviar', async (req, res) => {
+    try {
+        const { id } = req.body || {};
+        if (!id) return res.status(400).json({ success: false, error: 'id em falta' });
+
+        const { getMenus } = require('./src/menus-db');
+        const menus = await getMenus();
+        const menu = menus.find(m => String(m.id) === String(id));
+        if (!menu) return res.status(404).json({ success: false, error: 'Menu não encontrado' });
+
+        const canal = await client.channels.fetch(menu.id).catch(() => null);
+        if (!canal) return res.status(404).json({ success: false, error: 'Canal não encontrado' });
+
+        // 1. Apaga mensagens antigas do bot com este título
+        const msgs = await canal.messages.fetch({ limit: 30 }).catch(() => null);
+        if (msgs) {
+            for (const m of msgs.values()) {
+                if (m.author.id === client.user.id &&
+                    m.embeds[0]?.title === menu.title) {
+                    await m.delete().catch(() => {});
+                }
+            }
+        }
+
+        // 2. Reconstrói o embed
+        const embed = new EmbedBuilder()
+            .setTitle(menu.title)
+            .setDescription(menu.embedDesc || 'Sem descrição')
+            .setColor(menu.color || '#8b0000');
+
+        if (menu.embedImage && menu.embedImage.startsWith('http')) embed.setImage(menu.embedImage);
+        if (menu.embedThumbnail && menu.embedThumbnail.startsWith('http')) embed.setThumbnail(menu.embedThumbnail);
+
+        // 3. Reconstrói o select
+        const components = [];
+        if (menu.options?.length) {
+            const select = new StringSelectMenuBuilder()
+                .setCustomId('menu_produtos')
+                .setPlaceholder('Escolhe uma opção')
+                .addOptions(menu.options.slice(0, 25).map(o => ({
+                    label: (o.label || 'Opção').slice(0, 100),
+                    description: (o.description || 'Ver opções').slice(0, 100),
+                    value: o.value || String(Math.random())
+                })));
+            components.push(new ActionRowBuilder().addComponents(select));
+        }
+
+        await canal.send({ embeds: [embed], components });
+        console.log(`✅ Menu "${menu.title}" reenviado em #${canal.name}`);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Erro em /api/menus/reenviar:', err);
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 
