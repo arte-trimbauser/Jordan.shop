@@ -1,5 +1,10 @@
 // src/helpers/ticketLogs.js
-const { EmbedBuilder } = require("discord.js");
+const {
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle
+} = require("discord.js");
 
 // Canal onde os logs de tickets vão ser enviados
 const CANAL_LOGS_TICKETS = "1521916593402286191";
@@ -10,7 +15,7 @@ const CANAL_LOGS_TICKETS = "1521916593402286191";
 //   - Contagem por produto
 // (Continuam a ser logados no canal, só não inflacionam as stats)
 const IGNORAR_ABERTOS_POR = [
-    "996454465555136675", // Jordan (tu)
+    "996454465555136675", // Teno
 ];
 
 // ============ ESTATÍSTICAS EM MEMÓRIA ============
@@ -36,6 +41,23 @@ async function getCanal(client) {
     return client.channels.fetch(CANAL_LOGS_TICKETS).catch(() => null);
 }
 
+// ============ HELPER: botão "Ir para o Ticket" ============
+function botaoIrParaTicket(canal) {
+    try {
+        const guildId = canal?.guild?.id || canal?.guildId;
+        if (!guildId || !canal?.id) return null;
+
+        return new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setLabel("🎫 Ir para o Ticket")
+                .setStyle(ButtonStyle.Link)
+                .setURL(`https://discord.com/channels/${guildId}/${canal.id}`)
+        );
+    } catch {
+        return null;
+    }
+}
+
 // ===================== ABERTURA =====================
 async function logTicketAberto(client, { canal, user, produto, metodo }) {
     const ignorarStats = IGNORAR_ABERTOS_POR.includes(user.id);
@@ -57,7 +79,7 @@ async function logTicketAberto(client, { canal, user, produto, metodo }) {
             `**👤 Aberto por:** ${user.username}\n` +
             `**📦 Produto:** \`${produto}\`\n` +
             `**💳 Método:** ${metodo}\n` +
-            `**📁 Canal:** <#${canal.id}>\n` +
+            `**📁 Canal:** \`${canal.name}\`\n` +
             `**🕐 Data:** <t:${Math.floor(Date.now() / 1000)}:F>`
             + (ignorarStats ? `\n\n⚠️ *Ticket de teste/staff — não conta nas estatísticas.*` : "")
         )
@@ -68,7 +90,10 @@ async function logTicketAberto(client, { canal, user, produto, metodo }) {
         })
         .setTimestamp();
 
-    await canalLogs.send({ embeds: [embed] }).catch(() => {});
+    const row = botaoIrParaTicket(canal);
+    await canalLogs
+        .send({ embeds: [embed], components: row ? [row] : [] })
+        .catch(() => {});
 }
 
 // ===================== ASSUMIR =====================
@@ -86,17 +111,20 @@ async function logTicketAssumido(client, { canal, staff, user, produto, metodo }
         .setTitle("🛡️ Ticket Assumido")
         .setColor("#57f287")
         .setDescription(
-            `**🧑‍💼 Staff:** ${nomeStaff}\n` +
+            `**🧑💼 Staff:** ${nomeStaff}\n` +
             `**👤 Cliente:** ${user.username}\n` +
             `**📦 Produto:** \`${produto}\`\n` +
             `**💳 Método:** ${metodo}\n` +
-            `**📁 Canal:** <#${canal.id}>\n` +
+            `**📁 Canal:** \`${canal.name}\`\n` +
             `**🕐 Data:** <t:${Math.floor(Date.now() / 1000)}:F>`
         )
         .setFooter({ text: `📊 ${nomeStaff} já assumiu ${entry.assumidos} ticket(s)` })
         .setTimestamp();
 
-    await canalLogs.send({ embeds: [embed] }).catch(() => {});
+    const row = botaoIrParaTicket(canal);
+    await canalLogs
+        .send({ embeds: [embed], components: row ? [row] : [] })
+        .catch(() => {});
 }
 
 // ===================== FECHO =====================
@@ -118,17 +146,18 @@ async function logTicketFechado(client, { canal, staff, user, produto, metodo, v
         .setTitle(venda ? "💰 Ticket Fechado — Com Venda" : "🔒 Ticket Fechado")
         .setColor(venda ? "#f1c40f" : "#ed4245")
         .setDescription(
-            `**🧑‍💼 Fechado por:** ${nomeStaff}\n` +
+            `**🧑💼 Fechado por:** ${nomeStaff}\n` +
             `**👤 Cliente:** ${user.username}\n` +
             `**📦 Produto:** \`${produto}\`\n` +
             `**💳 Método:** ${metodo}\n` +
             `**💰 Venda:** ${venda ? "✅ Sim" : "❌ Não"}\n` +
-            `**📁 Canal:** <#${canal.id}>\n` +
+            `**📁 Canal:** \`${canal.name}\`\n` +
             `**🕐 Data:** <t:${Math.floor(Date.now() / 1000)}:F>`
         )
         .setFooter({ text: `📊 Total: ${stats.totalFechados} fechados | ${stats.totalVendas} vendas` })
         .setTimestamp();
 
+    // Sem botão: o canal vai ser apagado nos próximos segundos
     await canalLogs.send({ embeds: [embed] }).catch(() => {});
 }
 
