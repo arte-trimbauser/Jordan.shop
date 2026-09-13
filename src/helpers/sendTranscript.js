@@ -4,14 +4,17 @@ const { AttachmentBuilder, EmbedBuilder } = require("discord.js");
 // ============ CONFIG ============
 const TRANSCRIPT_CHANNEL_ID = "1424461544317517854";
 const SUPABASE_URL = "https://fdbmhgcfhdnnpwuodxzh.supabase.co";
-const SUPABASE_KEY = process.env.SUPABASE_KEY; // service_role
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const BUCKET = "transcripts";
-const MEDIA_BUCKET = "ticket-media"; // ⚠️ bucket PÚBLICO (ver nota no fim)
+const MEDIA_BUCKET = "ticket-media";
 const SITE_URL = "https://jordan-shop-bot-site.vercel.app";
-const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
+const MAX_FILE_SIZE = 15 * 1024 * 1024;
+
+// Agrupamento — mesmo que o Discord usa
+const GROUP_WINDOW_MS = 7 * 60 * 1000;
 
 // ============================================================
-// HELPERS
+// HELPERS BÁSICOS
 // ============================================================
 function escapeHtml(value = "") {
     return String(value)
@@ -35,10 +38,19 @@ function formatDate(date) {
     }).format(new Date(date));
 }
 
+function formatTimeShort(date) {
+    if (!date) return "";
+    return new Intl.DateTimeFormat("pt-PT", {
+        timeZone: "Europe/Lisbon",
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(new Date(date));
+}
+
 // ============================================================
-// MEDIA PERSISTENTE (imagens que NÃO expiram)
+// MEDIA PERSISTENTE
 // ============================================================
-const mediaCache = new Map(); // url -> urlPersistente (evita downloads duplicados)
+const mediaCache = new Map();
 
 async function fetchBuffer(url, maxBytes = MAX_FILE_SIZE) {
     const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
@@ -65,14 +77,9 @@ async function uploadMedia(path, buf, contentType = "application/octet-stream") 
     return `${SUPABASE_URL}/storage/v1/object/public/${MEDIA_BUCKET}/${path}`;
 }
 
-/**
- * Descarrega uma imagem/ficheiro do Discord e guarda no Supabase.
- * Retorna a URL persistente, ou a URL original se falhar (fallback).
- */
 async function persistUrl(url, folder, fileName, contentType) {
     if (!url || !SUPABASE_KEY) return url;
     if (mediaCache.has(url)) return mediaCache.get(url);
-
     try {
         const buf = await fetchBuffer(url);
         if (!buf) { mediaCache.set(url, url); return url; }
@@ -88,7 +95,7 @@ async function persistUrl(url, folder, fileName, contentType) {
 }
 
 // ============================================================
-// MENÇÕES — resolução de nomes reais (como no Discord)
+// MENÇÕES
 // ============================================================
 function buildMentionMaps(msg) {
     return {
@@ -98,24 +105,16 @@ function buildMentionMaps(msg) {
     };
 }
 
-/** Pré-busca utilizadores mencionados que não estão no cache (max 25 para não travar) */
 async function prefetchMentions(sorted, guild, client) {
     const users = new Map(), channels = new Map(), roles = new Map();
 
-    // Roles e canais vêm do guild (sempre disponíveis)
-    try {
-        for (const [id, r] of guild.roles.cache) roles.set(id, r.name);
-    } catch {}
-    try {
-        for (const [id, c] of guild.channels.cache) channels.set(id, c.name);
-    } catch {}
+    try { for (const [id, r] of guild.roles.cache) roles.set(id, r.name); } catch {}
+    try { for (const [id, c] of guild.channels.cache) channels.set(id, c.name); } catch {}
 
-    // Utilizadores: dos caches das mensagens primeiro
     for (const msg of sorted) {
         for (const [id, u] of msg.mentions?.users || []) users.set(id, u.username);
     }
 
-    // Depois faz fetch dos que faltam (conteúdo + embeds)
     const missing = new Set();
     const scan = (text) => {
         if (!text) return;
@@ -134,7 +133,7 @@ async function prefetchMentions(sorted, guild, client) {
 
     let count = 0;
     for (const id of missing) {
-        if (count++ >= 25) break; // segurança
+        if (count++ >= 25) break;
         const u = await client.users.fetch(id).catch(() => null);
         if (u) users.set(id, u.username);
     }
@@ -148,19 +147,16 @@ function formatDiscordText(value = "", ctx = null) {
     if (!value) return "";
     let text = escapeHtml(value);
 
-    // ===== 1. Auto-link de URLs PRIMEIRO =====
     text = text.replace(
         /(https?:\/\/[^\s"'<>()]+)/g,
         (u) => `<a class="message-link" href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`
     );
 
-    // ===== 2. Emojis personalizados → <img> (CDN não expira) =====
     text = text.replace(/&lt;(a?):([\w~]+):(\d+)&gt;/g, (_, animated, name, id) => {
         const ext = animated ? "gif" : "png";
         return `<img class="emoji" src="https://cdn.discordapp.com/emojis/${id}.${ext}?size=48&quality=lossless" alt=":${name}:" title=":${name}:" loading="lazy">`;
     });
 
-    // ===== 3. MENÇÕES — nomes reais como no Discord =====
     text = text.replace(/&lt;@!?(\d+)&gt;/g, (_, id) => {
         const name = ctx?.users?.get(id);
         return `<span class="mention mention-user" title="ID: ${id}">@${escapeHtml(name || "utilizador")}</span>`;
@@ -177,27 +173,19 @@ function formatDiscordText(value = "", ctx = null) {
         return `<span class="mention mention-role">@${escapeHtml(name || "cargo")}</span>`;
     });
 
-    // ===== 4. Blocos de código =====
     text = text.replace(/```([\s\S]*?)```/g, (_, c) => `<pre><code>${escapeHtml(c.trim())}</code></pre>`);
     text = text.replace(/`([^`\n]+)`/g, "<code>$1</code>");
-
-    // ===== 5. Spoilers =====
     text = text.replace(/\|\|([^|]+)\|\|/g, (_, c) => `<span class="spoiler">${formatDiscordText(c, ctx)}</span>`);
 
-    // ===== 6. Headers =====
     text = text.replace(/^### (.*)$/gm, "<h3>$1</h3>");
     text = text.replace(/^## (.*)$/gm, "<h2>$1</h2>");
     text = text.replace(/^# (.*)$/gm, "<h1>$1</h1>");
-
-    // ===== 7. Blockquotes =====
     text = text.replace(/^&gt; (.*)$/gm, "<blockquote>$1</blockquote>");
 
-    // ===== 8. Markdown links [txt](url) =====
     text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, t, u) =>
         `<a href="${escapeHtml(u)}" target="_blank" rel="noopener noreferrer">${t}</a>`
     );
 
-    // ===== 9. Bold / Italic / Underline / Strike =====
     text = text.replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>");
     text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
     text = text.replace(/__(.+?)__/g, "<u>$1</u>");
@@ -208,6 +196,9 @@ function formatDiscordText(value = "", ctx = null) {
     return text;
 }
 
+// ============================================================
+// EMBEDS
+// ============================================================
 function getEmbedColor(embed) {
     if (embed?.color === null || embed?.color === undefined) return "#5865f2";
     const n = Number(embed.color);
@@ -223,7 +214,6 @@ function renderImage(url, alt = "Imagem", className = "embed-image") {
 async function renderEmbed(embed, ctx, ticketId) {
     if (!embed) return "";
 
-    // Persiste imagens do embed (thumbnails/icones de attachments Discord EXPIRAM)
     if (embed.image?.url) embed.image.url = await persistUrl(embed.image.url, `${ticketId}/embeds`, `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.png`, "image/png");
     if (embed.thumbnail?.url) embed.thumbnail.url = await persistUrl(embed.thumbnail.url, `${ticketId}/embeds`, `thumb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.png`, "image/png");
     if (embed.author?.iconURL) embed.author.iconURL = await persistUrl(embed.author.iconURL, `${ticketId}/embeds`, `author-${Date.now()}.png`, "image/png");
@@ -237,6 +227,7 @@ async function renderEmbed(embed, ctx, ticketId) {
     const author = embed.author?.name
         ? `<div class="embed-author">${embed.author.iconURL ? `<img src="${escapeHtml(embed.author.iconURL)}" alt="">` : ""}<span>${formatDiscordText(embed.author.name, ctx)}</span></div>`
         : "";
+
     let fields = "";
     if (Array.isArray(embed.fields) && embed.fields.length) {
         fields = `<div class="embed-fields">${embed.fields.map(f =>
@@ -245,10 +236,13 @@ async function renderEmbed(embed, ctx, ticketId) {
                 <div class="embed-field-value">${formatDiscordText(f.value || "", ctx)}</div>
             </div>`).join("")}</div>`;
     }
+
     const footer = embed.footer?.text
         ? `<div class="embed-footer">${embed.footer.iconURL ? `<img src="${escapeHtml(embed.footer.iconURL)}" alt="">` : ""}<span>${formatDiscordText(embed.footer.text, ctx)}</span>${embed.timestamp ? `<span class="embed-timestamp">• ${escapeHtml(formatDate(embed.timestamp))}</span>` : ""}</div>`
         : "";
+
     if (!title && !description && !fields && !thumbnail && !image && !author && !footer) return "";
+
     return `<div class="embed" style="--embed-color:${color}">
         ${author}
         <div class="embed-main">
@@ -262,6 +256,191 @@ async function renderEmbed(embed, ctx, ticketId) {
         </div>
         ${image}
     </div>`;
+}
+
+// ============================================================
+// COMPONENTES (BOTÕES / SELECTS)
+// ============================================================
+function renderComponentEmoji(emoji) {
+    if (!emoji) return "";
+    if (emoji.id) {
+        const ext = emoji.animated ? "gif" : "png";
+        return `<img class="emoji comp-emoji" src="https://cdn.discordapp.com/emojis/${emoji.id}.${ext}?size=32&quality=lossless" alt=":${escapeHtml(emoji.name || "")}:" loading="lazy">`;
+    }
+    return `<span class="comp-emoji-unicode">${escapeHtml(emoji.name || "")}</span>`;
+}
+
+const BUTTON_STYLE_CLASS = {
+    1: "btn-primary",
+    2: "btn-secondary",
+    3: "btn-success",
+    4: "btn-danger",
+    5: "btn-link",
+};
+
+function renderButton(btn) {
+    if (!btn) return "";
+    const styleClass = BUTTON_STYLE_CLASS[btn.style] || "btn-secondary";
+    const emojiHtml = renderComponentEmoji(btn.emoji);
+    const labelHtml = btn.label ? escapeHtml(btn.label) : "";
+    const isLink = btn.style === 5 && btn.url;
+    const disabled = btn.disabled ? " disabled" : "";
+
+    if (isLink) {
+        const content = `${emojiHtml}${emojiHtml && labelHtml ? " " : ""}${labelHtml || escapeHtml(btn.url)}`;
+        return `<a class="btn btn-link${disabled}" href="${escapeHtml(btn.url)}" target="_blank" rel="noopener noreferrer">
+            <span class="btn-content">${content}</span>
+            <svg class="btn-ext" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3Zm-9 4h5v2H7v8h8v-3h2v5H5V7Z"/></svg>
+        </a>`;
+    }
+
+    const content = `${emojiHtml}${emojiHtml && labelHtml ? " " : ""}${labelHtml}`;
+    return `<span class="btn ${styleClass}${disabled}"><span class="btn-content">${content}</span></span>`;
+}
+
+function renderSelectOption(opt) {
+    if (!opt) return "";
+    const emojiHtml = renderComponentEmoji(opt.emoji);
+    const label = escapeHtml(opt.label || "");
+    const desc = opt.description ? `<div class="select-option-desc">${escapeHtml(opt.description)}</div>` : "";
+    return `<div class="select-option">
+        <div class="select-option-label">${emojiHtml}${emojiHtml && label ? " " : ""}${label}</div>
+        ${desc}
+    </div>`;
+}
+
+function renderSelectMenu(sel) {
+    if (!sel) return "";
+    const placeholder = escapeHtml(sel.placeholder || "Selecione uma opção...");
+    const options = Array.isArray(sel.options) ? sel.options : [];
+    const isDisabled = sel.disabled ? " disabled" : "";
+    const count = options.length;
+    const hint = sel.min_values !== undefined && sel.min_values !== null
+        ? ` (min ${sel.min_values} / max ${sel.max_values})`
+        : "";
+
+    const optionsHtml = options.length
+        ? `<div class="select-options">${options.slice(0, 25).map(renderSelectOption).join("")}</div>`
+        : "";
+
+    return `<div class="select-menu${isDisabled}">
+        <div class="select-header">
+            <span class="select-placeholder">${placeholder}</span>
+            <span class="select-meta">${count} opç${count === 1 ? "ão" : "ões"}${hint}</span>
+            <svg class="select-arrow" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
+        </div>
+        ${optionsHtml}
+    </div>`;
+}
+
+function renderComponents(msg) {
+    const rawRows = msg.components || [];
+    if (!rawRows.length) return "";
+
+    const rows = rawRows.map(c => (typeof c.toJSON === "function" ? c.toJSON() : c));
+    const out = [];
+
+    for (const row of rows) {
+        const comps = row?.components || [];
+        if (!comps.length) continue;
+
+        const children = comps.map(comp => {
+            const t = comp.type;
+            if (t === 2) return renderButton(comp);
+            if (t === 3 || t === 5 || t === 6 || t === 7 || t === 8) return renderSelectMenu(comp);
+            return "";
+        }).filter(Boolean);
+
+        if (children.length) {
+            out.push(`<div class="action-row">${children.join("")}</div>`);
+        }
+    }
+
+    return out.length ? `<div class="components">${out.join("")}</div>` : "";
+}
+
+function renderReactions(msg) {
+    const reactions = msg.reactions?.cache;
+    if (!reactions || !reactions.size) return "";
+    const items = [];
+    for (const r of reactions.values()) {
+        const emoji = r.emoji;
+        let emojiHtml;
+        if (emoji?.id) {
+            const ext = emoji.animated ? "gif" : "png";
+            emojiHtml = `<img class="emoji" src="https://cdn.discordapp.com/emojis/${emoji.id}.${ext}?size=32" alt=":${escapeHtml(emoji.name || "")}:" loading="lazy">`;
+        } else {
+            emojiHtml = `<span>${escapeHtml(emoji?.name || "?")}</span>`;
+        }
+        items.push(`<span class="reaction" title="${r.count} reação(ões)">${emojiHtml}<span class="reaction-count">${r.count}</span></span>`);
+    }
+    return items.length ? `<div class="reactions">${items.join("")}</div>` : "";
+}
+
+// ============================================================
+// ✨ DETEÇÃO DE TIPO DE ANEXO (novo)
+// ============================================================
+function getAttachmentKind(att, safeName = "") {
+    const ct = (att.contentType || "").toLowerCase();
+    const name = (safeName || att.name || "").toLowerCase();
+
+    if (ct.startsWith("image/")) return "image";
+    if (ct.startsWith("video/")) return "video";
+    if (ct.startsWith("audio/")) return "audio";
+
+    // Fallback por extensão
+    if (/\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i.test(name)) return "image";
+    if (/\.(mp4|webm|mov|mkv|m4v|avi)$/i.test(name)) return "video";
+    if (/\.(mp3|wav|ogg|oga|m4a|flac|opus|aac)$/i.test(name)) return "audio";
+
+    return "file";
+}
+
+// ✨ Preview de vídeo/áudio — NOVO
+function renderMediaPreview(url, kind, name) {
+    if (!url) return "";
+    if (kind === "video") {
+        return `<video class="media-video" controls preload="metadata" playsinline>
+            <source src="${escapeHtml(url)}" type="video/mp4">
+            O teu navegador não suporta vídeo. <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Abrir ficheiro</a>
+        </video>`;
+    }
+    if (kind === "audio") {
+        return `<div class="media-audio-wrap">
+            <audio class="media-audio" controls preload="metadata">
+                <source src="${escapeHtml(url)}">
+                O teu navegador não suporta áudio. <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Abrir ficheiro</a>
+            </audio>
+        </div>`;
+    }
+    return "";
+}
+
+// ============================================================
+// ✨ AGRUPAMENTO DE MENSAGENS — NOVO
+// ============================================================
+/**
+ * Devolve true se `curr` deve ser agrupada com `prev` (estilo Discord).
+ * Regras:
+ *  - mesmo autor
+ *  - mesma "identidade visual" (mesmo displayName)
+ *  - não é resposta
+ *  - não é mensagem de sistema
+ *  - < 7 minutos de diferença
+ *  - não houve mudança de dia (o divisor quebra grupo)
+ */
+function shouldGroup(prev, curr, sameDay) {
+    if (!prev || !sameDay) return false;
+    if (prev.system || curr.system) return false;
+    if (curr.reference?.messageId) return false;
+    if (prev.author?.id !== curr.author?.id) return false;
+
+    const prevName = prev.member?.displayName || prev.author?.globalName || prev.author?.username;
+    const currName = curr.member?.displayName || curr.author?.globalName || curr.author?.username;
+    if (prevName !== currName) return false;
+
+    const diff = curr.createdTimestamp - prev.createdTimestamp;
+    return diff >= 0 && diff < GROUP_WINDOW_MS;
 }
 
 // ============================================================
@@ -299,7 +478,9 @@ img{max-width:100%}
 
 /* ===== MENSAGENS ===== */
 .messages{padding-top:6px}
-.message{display:flex;gap:16px;padding:10px 8px 10px 0;border-radius:6px;transition:background .1s}
+.message{position:relative;display:flex;gap:16px;padding:2px 8px 2px 0;border-radius:6px;transition:background .1s}
+.message.first-in-group{margin-top:14px;padding-top:6px}
+.message:first-child.first-in-group{margin-top:0}
 .message:hover{background:rgba(255,255,255,.025)}
 .avatar{width:42px;height:42px;border-radius:50%;object-fit:cover;flex:0 0 42px;background:#202225}
 .message-content{min-width:0;flex:1}
@@ -308,17 +489,40 @@ img{max-width:100%}
 .bot-tag{background:#5865f2;color:#fff;border-radius:3px;padding:1px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-left:2px}
 .time{color:var(--muted);font-size:12px}
 .edited{color:var(--muted);font-size:10px}
-.body{margin-top:3px;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--text)}
+.body{margin-top:2px;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--text)}
 .body.empty{color:var(--muted);font-style:italic}
 
-/* ===== MENÇÕES (estilo Discord) ===== */
+/* ===== ✨ AGRUPAMENTO (estilo Discord) ===== */
+.message.grouped{padding-top:0;padding-bottom:0;margin-top:0}
+.message.grouped .message-content{padding-left:58px} /* 42px avatar + 16px gap */
+.message.grouped .avatar-slot{display:none}
+.message.grouped .body{margin-top:0}
+
+/* Avatar do grupo fica escondido mas mantém o espaço */
+.avatar-slot{width:42px;flex:0 0 42px;display:flex;align-items:flex-start}
+.message.grouped .avatar-slot{display:none}
+
+/* Timestamp flutuante aparece no hover, à esquerda (como no Discord) */
+.message.grouped .hover-time{
+    position:absolute;left:0;top:0;
+    width:56px;padding-top:2px;
+    text-align:right;
+    font-size:10.5px;color:#949ba4;
+    opacity:0;transition:opacity .12s;
+    pointer-events:none;user-select:none;
+}
+.message.grouped:hover .hover-time{opacity:1}
+
+/* ===== MENÇÕES ===== */
 .mention{color:var(--mention);background:rgba(88,101,242,.30);border-radius:3px;padding:0 2px;font-weight:500;cursor:pointer;transition:background .12s,color .12s;text-decoration:none}
 .mention:hover{background:#5865f2;color:#fff}
 .mention-channel{color:#a4b0f7}
 .mention-role{color:#e6b26e;background:rgba(226,178,110,.18)}
 
-/* ===== INLINE ELEMENTS ===== */
+/* ===== INLINE ===== */
 .emoji{width:1.375em;height:1.375em;vertical-align:-.35em;object-fit:contain;display:inline-block}
+.comp-emoji{width:1em;height:1em;vertical-align:-.15em}
+.comp-emoji-unicode{font-size:1.05em;line-height:1}
 .message-link{text-decoration:none;overflow-wrap:anywhere;word-break:break-word}
 .message-link:hover{text-decoration:underline}
 code{background:#1e1f22;border:1px solid rgba(255,255,255,.06);border-radius:4px;padding:1px 4px;color:#c9cdfb;font-family:'Consolas','Courier New',monospace;font-size:.9em}
@@ -329,7 +533,7 @@ h1,h2,h3{margin:8px 0 4px;color:var(--white);font-weight:700}
 pre{background:#1e1f22;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:8px 12px;overflow-x:auto;margin:6px 0}
 pre code{background:transparent;border:none;padding:0;font-size:13px;color:#dbdee1}
 
-/* ===== EMBEDS (estilo Discord) ===== */
+/* ===== EMBEDS ===== */
 .embed{max-width:680px;margin-top:8px;padding:12px 14px 14px;border-left:4px solid var(--embed-color,#5865f2);background:#2b2d31;border-radius:4px;position:relative}
 .embed-main{display:flex;gap:12px}
 .embed-content{flex:1;min-width:0}
@@ -348,6 +552,42 @@ pre code{background:transparent;border:none;padding:0;font-size:13px;color:#dbde
 .embed-footer{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:11px;margin-top:10px}
 .embed-timestamp{color:#6d7179}
 
+/* ===== COMPONENTES ===== */
+.components{margin-top:10px;display:flex;flex-direction:column;gap:8px;max-width:680px}
+.action-row{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:0 16px;min-height:32px;height:32px;border-radius:3px;font-size:14px;font-weight:500;font-family:inherit;text-decoration:none;border:none;cursor:default;line-height:1;gap:6px;user-select:none;transition:filter .12s,transform .05s;white-space:nowrap}
+.btn .btn-content{display:inline-flex;align-items:center;gap:6px}
+.btn:hover:not(.disabled){filter:brightness(1.15)}
+.btn:active:not(.disabled){transform:translateY(1px)}
+.btn-primary{background:#5865f2;color:#fff}
+.btn-secondary{background:#4f545c;color:#fff}
+.btn-success{background:#248046;color:#fff}
+.btn-danger{background:#da373c;color:#fff}
+.btn-link{background:#4f545c;color:#fff;cursor:pointer}
+.btn-link .btn-ext{opacity:.85;flex:0 0 auto}
+.btn-link:hover .btn-ext{opacity:1}
+.btn.disabled{opacity:.5;cursor:not-allowed}
+.btn.disabled:hover{filter:none;transform:none}
+
+.select-menu{background:#1e1f22;border:1px solid #111214;border-radius:4px;overflow:hidden;max-width:420px;min-width:220px;font-family:inherit}
+.select-menu.disabled{opacity:.55}
+.select-header{display:flex;align-items:center;gap:8px;padding:9px 12px;color:#b5bac1;font-size:14px}
+.select-placeholder{flex:1;color:#b5bac1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.select-meta{color:#6d7179;font-size:11px}
+.select-arrow{color:#b5bac1;flex:0 0 auto;opacity:.8}
+.select-options{border-top:1px solid #111214;background:#2b2d31;padding:4px 0;max-height:280px;overflow-y:auto}
+.select-option{padding:8px 12px;font-size:13px;color:#dbdee1;display:flex;flex-direction:column;gap:2px;transition:background .1s}
+.select-option:hover{background:rgba(88,101,242,.10)}
+.select-option-label{color:#f2f3f5;font-weight:500;display:flex;align-items:center;gap:6px}
+.select-option-desc{color:#949ba4;font-size:12px;margin-left:0}
+
+/* ===== REACTIONS ===== */
+.reactions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.reaction{display:inline-flex;align-items:center;gap:5px;background:rgba(88,101,242,.10);border:1px solid rgba(88,101,242,.30);border-radius:8px;padding:2px 8px;font-size:13px;color:#b5bac1;line-height:1.6}
+.reaction .emoji{width:16px;height:16px;vertical-align:-.25em}
+.reaction-count{font-weight:700;font-size:12px;color:#c9cdfb}
+
 /* ===== REPLY ===== */
 .reply-ref{font-size:12px;color:#949ba4;margin-top:3px;display:flex;align-items:center;gap:5px}
 .reply-ref a{color:#c9cdfb;text-decoration:none}
@@ -359,6 +599,44 @@ pre code{background:transparent;border:none;padding:0;font-size:13px;color:#dbde
 .attachment-image{display:block;max-width:min(100%,560px);max-height:500px;border-radius:4px;margin-top:7px;object-fit:contain;cursor:zoom-in;transition:filter .12s}
 .attachment-image:hover{filter:brightness(1.12)}
 
+/* ===== ✨ PREVIEW DE VÍDEO / ÁUDIO — NOVO ===== */
+.media-video{
+    display:block;
+    max-width:min(100%,560px);
+    max-height:500px;
+    border-radius:4px;
+    margin-top:7px;
+    background:#000;
+    outline:none;
+}
+.media-audio-wrap{
+    margin-top:8px;
+    padding:8px 10px;
+    background:#2b2d31;
+    border:1px solid rgba(255,255,255,.05);
+    border-radius:6px;
+    max-width:min(100%,560px);
+}
+.media-audio{
+    display:block;
+    width:100%;
+    min-width:280px;
+    max-width:540px;
+    height:44px;
+    outline:none;
+    background:transparent;
+    border-radius:6px;
+}
+/* Barra de vídeo nativa estilizada (WebKit) */
+.media-video::-webkit-media-controls-panel{
+    background-image:linear-gradient(transparent, rgba(0,0,0,.7));
+}
+.media-video::-webkit-media-controls-play-button,
+.media-video::-webkit-media-controls-volume-slider,
+.media-video::-webkit-media-controls-timeline{
+    filter:invert(1) hue-rotate(180deg);
+}
+
 /* ===== DIVISOR DE DIA ===== */
 .system-divider{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin:22px 0;font-weight:500}
 .system-divider::before,.system-divider::after{content:"";height:1px;background:rgba(255,255,255,.06);flex:1}
@@ -368,7 +646,7 @@ pre code{background:transparent;border:none;padding:0;font-size:13px;color:#dbde
 .footer a{color:#8b8f96;text-decoration:none}
 .footer a:hover{color:var(--link)}
 
-/* ===== LIGHTBOX (clicar nas imagens) ===== */
+/* ===== LIGHTBOX ===== */
 #lightbox{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;cursor:zoom-out;backdrop-filter:blur(4px)}
 #lightbox.open{display:flex;animation:lbIn .15s ease}
 #lightbox img{max-width:92vw;max-height:92vh;border-radius:8px;box-shadow:0 12px 60px rgba(0,0,0,.6);cursor:default}
@@ -381,8 +659,15 @@ pre code{background:transparent;border:none;padding:0;font-size:13px;color:#dbde
     .ticket-header h1{font-size:17px}
     .message{gap:10px}
     .avatar{width:36px;height:36px;flex-basis:36px}
+    .avatar-slot{width:36px;flex-basis:36px}
+    .message.grouped .message-content{padding-left:46px}
+    .message.grouped .hover-time{width:44px}
     .embed-main{flex-direction:column}
     .embed-thumbnail{width:64px;height:64px;flex-basis:64px}
+    .btn{padding:0 12px;font-size:13px}
+    .select-menu{max-width:100%}
+    .media-video{max-width:100%}
+    .media-audio{min-width:0}
 }
 `;
 
@@ -428,10 +713,8 @@ async function gerarHtml(channel, sorted, allMessages, ticketId) {
     const createdAt = sorted[0]?.createdAt ? formatDate(sorted[0].createdAt) : "—";
     const generatedAt = formatDate(new Date());
 
-    // Resolução de menções (nomes reais)
     const mentionCtx = await prefetchMentions(sorted, channel.guild, channel.client);
 
-    // Extrai "aberto por / método / produto" do tópico "userId|método|produto"
     const [topicUserId, topicMetodo, topicProduto] = topic.split("|");
     let abertoPor = "—";
     if (/^\d{17,19}$/.test(topicUserId || "")) {
@@ -476,22 +759,47 @@ async function gerarHtml(channel, sorted, allMessages, ticketId) {
 
   <section class="messages">`;
 
+    // ✨ Controlo de agrupamento
     let lastDay = "";
+    let prevMsg = null;
+    let prevDay = "";
+    let isFirstInGroup = true;
+
     for (const msg of sorted) {
+        // ===== Divisor de dia =====
         const day = new Intl.DateTimeFormat("pt-PT", {
             timeZone: "Europe/Lisbon",
             dateStyle: "full",
         }).format(new Date(msg.createdTimestamp));
+
+        const sameDay = day === prevDay;
+
         if (day !== lastDay) {
             html += `<div class="system-divider">${escapeHtml(day)}</div>`;
             lastDay = day;
+            // Novo dia → força novo grupo
+            isFirstInGroup = true;
         }
 
-        // ===== Avatar PERSISTENTE (não expira) =====
-        const avatarDiscord = msg.author?.displayAvatarURL?.({ extension: "png", size: 128 }) || "";
-        const avatar = avatarDiscord
-            ? await persistUrl(avatarDiscord, `${ticketId}/avatars`, `${msg.author.id}.png`, "image/png")
-            : "";
+        // ===== ✨ Decidir se agrupa =====
+        const grouped = shouldGroup(prevMsg, msg, sameDay && !isFirstInGroup === false ? sameDay : sameDay);
+        // (a condição acima é só para clareza; o `isFirstInGroup` já força grupo novo após divisor)
+
+        if (isFirstInGroup) {
+            // já foi forçado pelo divisor; se não houve divisor, agrupa normalmente
+        }
+
+        // Recalcular agrupamento (mais simples):
+        const shouldBeGrouped = shouldGroup(prevMsg, msg, sameDay) && !isFirstInGroup;
+
+        // ===== Avatar (só se não agrupada) =====
+        let avatar = "";
+        if (!shouldBeGrouped) {
+            const avatarDiscord = msg.author?.displayAvatarURL?.({ extension: "png", size: 128 }) || "";
+            avatar = avatarDiscord
+                ? await persistUrl(avatarDiscord, `${ticketId}/avatars`, `${msg.author.id}.png`, "image/png")
+                : "";
+        }
 
         const author =
             msg.member?.displayName ||
@@ -500,8 +808,9 @@ async function gerarHtml(channel, sorted, allMessages, ticketId) {
             "Utilizador desconhecido";
         const botTag = msg.author?.bot ? `<span class="bot-tag">BOT</span>` : "";
         const time = formatDate(msg.createdAt);
+        const timeShort = formatTimeShort(msg.createdAt);
+
         const msgCtx = buildMentionMaps(msg);
-        // Mescla com o contexto global (garante nomes mesmo se o cache da msg falhar)
         for (const [id, name] of mentionCtx.users) if (!msgCtx.users.has(id)) msgCtx.users.set(id, name);
         msgCtx.channels = mentionCtx.channels;
         msgCtx.roles = mentionCtx.roles;
@@ -510,16 +819,33 @@ async function gerarHtml(channel, sorted, allMessages, ticketId) {
         const content = msg.content ? formatDiscordText(msg.content, msgCtx) : "";
         const edited = msg.editedTimestamp ? `<span class="edited">(editada)</span>` : "";
 
-        html += `<article class="message" id="m-${escapeHtml(msg.id)}">
-${avatar ? `<img class="avatar" src="${escapeHtml(avatar)}" alt="" loading="lazy">` : `<div class="avatar"></div>`}
+        const authorColor = msg.member?.displayHexColor && msg.member.displayHexColor !== "#000000"
+            ? msg.member.displayHexColor
+            : null;
+        const authorStyle = authorColor ? ` style="color:${escapeHtml(authorColor)}"` : "";
+
+        // ===== ✨ Bloco da mensagem =====
+        if (shouldBeGrouped) {
+            // Mensagem agrupada: sem avatar, sem author-line, com hover-time
+            html += `<article class="message grouped" id="m-${escapeHtml(msg.id)}">
+  <span class="hover-time" title="${escapeHtml(time)}">${escapeHtml(timeShort)}</span>
+  <div class="message-content">
+    <div class="body ${content ? "" : "empty"}">${content || "Sem texto"}</div>`;
+        } else {
+            // Primeira mensagem do grupo
+            html += `<article class="message first-in-group" id="m-${escapeHtml(msg.id)}">
+${avatar
+    ? `<div class="avatar-slot"><img class="avatar" src="${escapeHtml(avatar)}" alt="" loading="lazy"></div>`
+    : `<div class="avatar-slot"></div>`}
 <div class="message-content">
   <div class="author-line">
-    <span class="author">${escapeHtml(author)}</span>${botTag}
+    <span class="author"${authorStyle}>${escapeHtml(author)}</span>${botTag}
     <span class="time">${escapeHtml(time)}</span>${edited}
   </div>
   <div class="body ${content ? "" : "empty"}">${content || "Sem texto"}</div>`;
+        }
 
-        // Reply reference
+        // Reply
         if (msg.reference?.messageId) {
             const ref = allMessages.get(msg.reference.messageId);
             const ra =
@@ -530,16 +856,39 @@ ${avatar ? `<img class="avatar" src="${escapeHtml(avatar)}" alt="" loading="lazy
             html += `<div class="reply-ref">↪ Resposta a <a href="#m-${escapeHtml(msg.reference.messageId)}">${escapeHtml(ra)}</a></div>`;
         }
 
-        // Embeds (imagens persistidas dentro de renderEmbed)
+        // Embeds
         for (const embed of msg.embeds || []) html += await renderEmbed(embed, msgCtx, ticketId);
 
-        // Attachments — imagens e ficheiros PERSISTENTES
+        // Componentes
+        html += renderComponents(msg);
+
+        // Reactions
+        html += renderReactions(msg);
+
+        // Anexos — com preview de vídeo/áudio
         for (const att of msg.attachments.values()) {
             const safeName = sanitizeFileName(att.name || `anexo-${att.id}`);
-            const isImg = (att.contentType || "").startsWith("image/");
-            const finalUrl = await persistUrl(att.url, `${ticketId}/anexos`, `${msg.id}-${safeName}`, att.contentType || "application/octet-stream");
+            const kind = getAttachmentKind(att, safeName);
+            const finalUrl = await persistUrl(
+                att.url,
+                `${ticketId}/anexos`,
+                `${msg.id}-${safeName}`,
+                att.contentType || "application/octet-stream"
+            );
             const sizeMB = att.size ? (att.size / 1024 / 1024).toFixed(2) : null;
-            html += `<div class="attachment"><a href="${escapeHtml(finalUrl)}" target="_blank" rel="noopener noreferrer">📎 ${escapeHtml(att.name || "Anexo")}${sizeMB ? ` <span style="color:#6d7179">(${sizeMB} MB)</span>` : ""}</a>${isImg ? renderImage(finalUrl, att.name, "attachment-image") : ""}</div>`;
+            const icon = kind === "image" ? "🖼️" : kind === "video" ? "🎬" : kind === "audio" ? "🎵" : "📎";
+
+            html += `<div class="attachment">
+  <a href="${escapeHtml(finalUrl)}" target="_blank" rel="noopener noreferrer">${icon} ${escapeHtml(att.name || "Anexo")}${sizeMB ? ` <span style="color:#6d7179">(${sizeMB} MB)</span>` : ""}</a>`;
+
+            if (kind === "image") {
+                html += renderImage(finalUrl, att.name, "attachment-image");
+            } else if (kind === "video" || kind === "audio") {
+                // ✨ PREVIEW DE VÍDEO / ÁUDIO — NOVO
+                html += renderMediaPreview(finalUrl, kind, att.name);
+            }
+
+            html += `</div>`;
         }
 
         // Stickers
@@ -550,6 +899,11 @@ ${avatar ? `<img class="avatar" src="${escapeHtml(avatar)}" alt="" loading="lazy
         }
 
         html += `</div></article>`;
+
+        // ✨ Atualizar estado para a próxima iteração
+        prevMsg = msg;
+        prevDay = day;
+        isFirstInGroup = false;
     }
 
     html += `</section>
@@ -573,7 +927,6 @@ module.exports = async function sendTranscript(channel, fechadoPor) {
     try {
         if (!channel) throw new Error("Canal não fornecido");
 
-        // 1. Buscar TODAS as mensagens
         const allMessages = new Map();
         let lastId = null;
         while (true) {
@@ -590,12 +943,10 @@ module.exports = async function sendTranscript(channel, fechadoPor) {
             (a, b) => a.createdTimestamp - b.createdTimestamp
         );
 
-        // 2. Gerar HTML (com media persistente + menções reais)
-        mediaCache.clear(); // novo ticket = novo cache
+        mediaCache.clear();
         const ticketId = channel.id;
         const { html, channelName } = await gerarHtml(channel, sorted, allMessages, ticketId);
 
-        // 3. Upload para Supabase Storage
         let verLink = "";
 
         if (!SUPABASE_KEY) {
@@ -627,7 +978,6 @@ module.exports = async function sendTranscript(channel, fechadoPor) {
             }
         }
 
-        // 4. Enviar para o canal dos transcripts
         const logChannel = await channel.client.channels
             .fetch(TRANSCRIPT_CHANNEL_ID)
             .catch(() => null);
@@ -649,7 +999,6 @@ module.exports = async function sendTranscript(channel, fechadoPor) {
         const fallbackUrl = sent.attachments.first()?.url || "";
         const linkFinal = verLink || fallbackUrl || "https://discord.com";
 
-        // Extrai quem abriu o ticket
         let abertoPor = "Desconhecido";
         try {
             const openerId = (channel.topic || "").split("|")[0];
@@ -659,7 +1008,6 @@ module.exports = async function sendTranscript(channel, fechadoPor) {
             }
         } catch {}
 
-        // 5. Embed final
         const embedFinal = new EmbedBuilder()
             .setTitle("📄 Transcrição Arquivada")
             .setDescription(`🔗 **Ver Online:** [Clique Aqui](${linkFinal})`)
