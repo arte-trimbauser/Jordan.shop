@@ -867,14 +867,27 @@ async function handleFormAvaliar(interaction) {
     );
 
     await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
+
+    // ✅ Guarda o TOKEN desta interação (é a que criou a mensagem efémera)
+    // para mais tarde podermos editar a mensagem quando o user submeter o modal
+    avaliacoesPendentes.set(interaction.user.id, {
+        token: interaction.token,
+        applicationId: interaction.applicationId,
+        estrelas: null,
+        ts: Date.now()
+    });
 }
 
 async function handleAvaliacaoEstrelas(interaction, estrelas) {
-    // Guarda a referência da mensagem original (a que tem as estrelas)
-    if (interaction.message) {
+    // ✅ Atualiza o estado pendente com as estrelas escolhidas
+    const pendente = avaliacoesPendentes.get(interaction.user.id);
+    if (pendente) {
+        pendente.estrelas = estrelas;
+    } else {
+        // Caso raro: o token original perdeu-se — guarda o atual como fallback
         avaliacoesPendentes.set(interaction.user.id, {
-            messageId: interaction.message.id,
-            channelId: interaction.message.channelId,
+            token: interaction.token,
+            applicationId: interaction.applicationId,
             estrelas,
             ts: Date.now()
         });
@@ -997,6 +1010,7 @@ async function handleModalSubmit(interaction) {
     // ============================================================
     else if (customId.startsWith('modal_avaliacao_')) {
         const estrelas = customId.split('_')[2];
+        const numEstrelas = parseInt(estrelas) || 0;
         const motivo = fields.getTextInputValue('motivo_avaliacao') || 'Sem comentário';
 
         // 1. Enviar o log no canal de feedback
@@ -1005,37 +1019,39 @@ async function handleModalSubmit(interaction) {
                 .setTitle('⭐ Nova Avaliação')
                 .addFields(
                     { name: 'Utilizador', value: `<@${user.id}>`, inline: true },
-                    { name: 'Avaliação', value: '⭐'.repeat(parseInt(estrelas)), inline: true },
-                    { name: 'Comentário', value: motivo }
+                    { name: 'Avaliação', value: `\`${'⭐'.repeat(numEstrelas)}\``, inline: true },
+                    { name: 'Comentário', value: `\`${motivo}\`` }
                 )
                 .setColor('#FFD700')
-                .setFooter({ text: `Jordan Shop | Feedback • ${dataHoraPT()}` })
+                .setFooter({ text: 'Jordan Shop | Feedback' })
                 .setTimestamp();
             await logChannel.send({ embeds: [embedLog] });
         }
 
-        // 2. Editar a mensagem original (a que tinha as estrelas)
+        // 2. Editar a mensagem original efémera (a que tinha as estrelas)
+        //    Usa o endpoint de webhook com o token da interação original
         const pendente = avaliacoesPendentes.get(user.id);
-        if (pendente) {
+        if (pendente && pendente.token && pendente.applicationId) {
             try {
-                const canal = await interaction.client.channels
-                    .fetch(pendente.channelId).catch(() => null);
+                const titulo = numEstrelas === 1
+                    ? '⭐ Obrigado pela tua avaliação de 1 estrela!'
+                    : `⭐ Obrigado pela tua avaliação de ${numEstrelas} estrelas!`;
 
-                if (canal) {
-                    const msg = await canal.messages
-                        .fetch(pendente.messageId).catch(() => null);
-
-                    if (msg) {
-                        const embedObrigado = new EmbedBuilder()
-                            .setTitle('⭐ Obrigado pela tua avaliação!')
-                            .setDescription(
-                                `Avaliaste-nos com **${'⭐'.repeat(parseInt(estrelas))}** ` +
-                                `(${estrelas} estrelas).\n\nObrigado pelo teu feedback! 💛`
-                            )
-                            .setColor('#FFD700');
-
-                        await msg.edit({ embeds: [embedObrigado], components: [] });
-                    }
+                const url = `https://discord.com/api/v10/webhooks/${pendente.applicationId}/${pendente.token}/messages/@original`;
+                const resp = await fetch(url, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        embeds: [{
+                            title: titulo,
+                            color: 0xFFD700
+                        }],
+                        components: []
+                    })
+                });
+                if (!resp.ok) {
+                    const txt = await resp.text().catch(() => '');
+                    console.error('⚠️ Erro ao editar mensagem de avaliação:', resp.status, txt);
                 }
             } catch (err) {
                 console.error('⚠️ Não foi possível editar a mensagem de avaliação:', err.message);
@@ -1046,7 +1062,6 @@ async function handleModalSubmit(interaction) {
         // 3. Apagar a resposta efémera do modal
         await interaction.deleteReply().catch(() => {});
     }
-}
 
 // ============================================================================
 // 13. HANDLER PRINCIPAL
