@@ -1062,6 +1062,7 @@ async function handleModalSubmit(interaction) {
         // 3. Apagar a resposta efémera do modal
         await interaction.deleteReply().catch(() => {});
     }
+}  // ← ADICIONA ESTA CHAVETA (fecha a função handleModalSubmit)
 
 // ============================================================================
 // 13. HANDLER PRINCIPAL
